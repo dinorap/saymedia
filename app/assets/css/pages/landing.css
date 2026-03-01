@@ -1,0 +1,400 @@
+/**
+ * Trang chủ - Landing (giống ảnh: navy + xanh điện, gọn đẹp)
+ */
+.landing-page {
+  min-height : 100vh;
+  background : var(--bg-deep);
+  color      : var(--text-primary);
+  font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+  overflow-x : hidden;
+  position   : relative;
+  background-image:
+    radial-gradient(ellipse 140% 90% at 75% 35%, rgba(1, 123, 251, 0.12) 0%, transparent 50%),
+    radial-gradient(1.5px 1.5px at 10% 20%, rgba(1, 123, 251, 0.4), transparent),
+    radial-gradient(1.5px 1.5px at 90% 75%, rgba(1, 123, 251, 0.35), transparent),
+    radial-gradient(1px 1px at 50% 50%, rgba(1, 123, 251, 0.2), transparent),
+    radial-gradient(1px 1px at 25% 80%, rgba(1, 123, 251, 0.25), transparent);
+  background-size: 100% 100%, 260px 200px, 240px 180px, 200px 200px, 220px 220px;
+}
+
+.landing-page .header {
+  display        : flex;
+  justify-content: space-between;
+  align-items    : center;
+  padding        : 22px 150px;
+  border-bottom  : 1px solid rgba(1, 123, 251, 0.3);
+  background     : var(--bg-nav);
+  backdrop-filter: blur(12px);
+  box-shadow     : 0 0 20px rgba(1, 123, 251, 0.08), 0 1px 0 rgba(1, 123, 251, 0.15);
+}
+
+.landing-page .logo {
+  display        : flex;
+  align-items    : center;
+  text-decoration: none;
+}
+
+.landing-page .logo-img {
+  height    : 56px;
+  width     : auto;
+  display   : block;
+  object-fit: contain;
+}
+
+.landing-page .nav-links {
+  display    : flex;
+  align-items: center;
+  gap        : 8px;
+}
+
+.landing-page .nav-links a {
+  color          : var(--text-primary);
+  text-decoration: none;
+  font-size      : 18px;
+  font-weight    : 500;
+  padding        : 10px 16px;
+  border-radius  : 8px;
+  transition     : var(--transition-fast);
+  letter-spacing : 0.01em;
+}
+
+.landing-page .nav-links a:hover {
+  color      : var(--blue-bright);
+  background : rgba(1, 123, 251, 0.1);
+  text-shadow: 0 0 15px var(--blue-glow), 0 0 30px rgba(1, 123, 251, 0.4);
+}
+
+.landing-page .auth-buttons {
+  display    : flex;
+  align-items: center;
+  gap        : 16px;
+}
+
+.landing-page .lang-switcher {
+  display    : flex;
+  align-items: center;
+  gap        : 4px;
+}
+
+.landing-page .lang-btn {
+  background   : none;
+  border       : none;
+  color        : var(--text-secondary);
+  font-size    : 15px;
+  font-weight  : 600;
+  cursor       : pointer;
+  padding      : 6px 10px;
+  border-radius: 6px;
+  transition   : var(--transition-fast);
+}
+
+.landing-page .lang-btn:hover {
+  color: var(--text-primary);
+}
+
+.landing-page .lang-btn.active {
+  color      : var(--blue-bright);
+  text-shadow: 0 0 12px var(--blue-glow), 0 0 25px rgba(1, 123, 251, 0.5);
+}
+
+.landing-page .lang-sep {
+  color      : rgba(255, 255, 255, 0.35);
+  font-size  : 14px;
+  user-select: none;
+}
+
+.landing-page .btn-login,
+.landing-page .btn-primary,
+.landing-page .btn-secondary {
+  padding      : 10px 24px;
+  border-radius: 10px;
+  cursor       : pointer;
+  font-weight  : 600;
+  font-size    : 15px;
+  transition   : var(--transition-fast);
+}
+
+.landing-page .btn-login {
+  background: transparent;
+  color     : var(--text-primary);
+  border    : 1px solid rgba(1, 123, 251, 0.5);
+  box-shadow: 0 0 15px rgba(1, 123, 251, 0.2);
+}
+
+.landing-page .btn-login:hover {
+  border-color: var(--blue-bright);
+  background  : var(--blue-soft);
+  color       : var(--blue-bright);
+  box-shadow  : 0 0 25px var(--blue-glow), 0 0 50px rgba(1, 123, 251, 0.25);
+}
+
+.landing-page .user-dropdown {
+  position: relative;
+}
+
+.landing-page .btn-user-name {
+  background   : transparent;
+  color        : var(--text-primary);
+  border       : 1px solid rgba(1, 123, 251, 0.5);
+  padding      : 10px 24px;
+  border-radius: 10px;
+  font-weight  : 600;
+  font-size    : 15px;
+  cursor       : pointer;
+  transition   : var(--transition-fast);
+}
+
+.landing-page .btn-user-name:hover {
+  border-color: var(--blue-bright);
+  background  : var(--blue-soft);
+  color       : var(--blue-bright);
+}
+
+.landing-page .user-dropdown-menu {
+  position     : absolute;
+  top          : 100%;
+  right        : 0;
+  margin-top   : 8px;
+  min-width    : 140px;
+  background   : var(--bg-nav);
+  border       : 1px solid rgba(1, 123, 251, 0.45);
+  border-radius: 10px;
+  box-shadow   : 0 8px 32px rgba(0, 0, 0, 0.4);
+  overflow     : visible;
+  z-index      : 100;
+}
+
+.landing-page .user-dropdown-menu::before {
+  content : '';
+  position: absolute;
+  top     : -8px;
+  left    : 0;
+  right   : 0;
+  height  : 8px;
+}
+
+.landing-page .dropdown-item {
+  display   : block;
+  width     : 100%;
+  padding   : 12px 16px;
+  text-align: left;
+  background: none;
+  border    : none;
+  color     : var(--text-primary);
+  font-size : 15px;
+  cursor    : pointer;
+  transition: var(--transition-fast);
+}
+
+.landing-page .dropdown-item:hover {
+  background: rgba(1, 123, 251, 0.15);
+  color     : var(--blue-bright);
+}
+
+.landing-page .profile-modal-overlay {
+  position       : fixed;
+  inset          : 0;
+  background     : rgba(0, 0, 0, 0.6);
+  display        : flex;
+  align-items    : center;
+  justify-content: center;
+  z-index        : 1000;
+}
+
+.landing-page .profile-modal {
+  background   : var(--bg-nav);
+  border       : 1px solid rgba(1, 123, 251, 0.45);
+  border-radius: 14px;
+  padding      : 24px;
+  min-width    : 320px;
+  box-shadow   : 0 0 40px rgba(1, 123, 251, 0.2);
+}
+
+.landing-page .profile-modal-title {
+  margin   : 0 0 16px 0;
+  font-size: 18px;
+  color    : var(--blue-bright);
+}
+
+.landing-page .profile-modal-body p {
+  margin: 0 0 8px 0;
+  color : var(--text-secondary);
+}
+
+.landing-page .profile-modal-close {
+  margin-top   : 16px;
+  padding      : 8px 20px;
+  background   : rgba(1, 123, 251, 0.2);
+  border       : 1px solid var(--blue-border);
+  color        : var(--text-primary);
+  border-radius: 8px;
+  cursor       : pointer;
+  font-weight  : 600;
+}
+
+.landing-page .profile-modal-close:hover {
+  background: var(--blue-soft);
+  color     : var(--blue-bright);
+}
+
+.landing-page .btn-primary {
+  background  : var(--btn-primary-bg);
+  color       : #fff;
+  border      : none;
+  padding     : 14px 32px;
+  margin-right: 12px;
+  box-shadow  : var(--btn-primary-glow);
+}
+
+.landing-page .btn-primary:hover {
+  box-shadow: 0 0 32px var(--blue-glow);
+  transform : translateY(-1px);
+}
+
+.landing-page .btn-secondary {
+  background: transparent;
+  color     : var(--text-primary);
+  border    : 1px solid rgba(1, 123, 251, 0.5);
+  padding   : 14px 32px;
+  box-shadow: 0 0 15px rgba(1, 123, 251, 0.15);
+}
+
+.landing-page .btn-secondary:hover {
+  border-color: var(--blue-bright);
+  color       : var(--blue-bright);
+  box-shadow  : 0 0 25px var(--blue-glow), 0 0 45px rgba(1, 123, 251, 0.3);
+  transform   : translateY(-1px);
+}
+
+.landing-page .hero {
+  display        : flex;
+  justify-content: space-between;
+  align-items    : center;
+  padding        : 90px 150px 100px;
+  min-height     : 58vh;
+}
+
+.landing-page .hero-content {
+  flex     : 1;
+  max-width: 620px;
+}
+
+.landing-page .hero-content h1 {
+  font-size     : 58px;
+  line-height   : 1.18;
+  margin-bottom : 24px;
+  color         : var(--text-primary);
+  font-weight   : 700;
+  letter-spacing: -0.02em;
+}
+
+.landing-page .highlight {
+  background             : linear-gradient(90deg, #0160e0, #017BFB);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip        : text;
+  font-weight            : 700;
+  filter                 : drop-shadow(0 0 8px rgba(1, 123, 251, 0.6));
+}
+
+.landing-page .hero-content p {
+  color         : var(--text-secondary);
+  font-size     : 19px;
+  line-height   : 1.5;
+  margin-bottom : 44px;
+  letter-spacing: 0.01em;
+}
+
+.landing-page .cta-buttons {
+  display    : flex;
+  align-items: center;
+  gap        : 16px;
+  flex-wrap  : wrap;
+}
+
+.landing-page .hero-image {
+  flex           : 1;
+  display        : flex;
+  justify-content: flex-end;
+  position       : relative;
+}
+
+.landing-page .hero-decor {
+  width        : 320px;
+  height       : 320px;
+  border-radius: 50%;
+  background   :
+    radial-gradient(circle at 30% 30%, rgba(1, 123, 251, 0.2) 0%, transparent 50%),
+    radial-gradient(circle, rgba(1, 123, 251, 0.12) 0%, transparent 62%);
+  border    : 1px solid var(--blue-border);
+  box-shadow: 0 0 40px rgba(1, 123, 251, 0.2), 0 0 80px rgba(1, 123, 251, 0.1), inset 0 0 60px rgba(1, 123, 251, 0.06);
+  position  : relative;
+}
+
+.landing-page .glow-orb {
+  position     : absolute;
+  top          : 50%;
+  left         : 50%;
+  transform    : translate(-50%, -50%);
+  width        : 200px;
+  height       : 200px;
+  background   : var(--blue-bright);
+  border-radius: 50%;
+  filter       : blur(65px);
+  opacity      : 0.6;
+  box-shadow   : 0 0 80px var(--blue-glow), 0 0 150px rgba(1, 123, 251, 0.4);
+}
+
+.landing-page .stats-container {
+  display        : flex;
+  justify-content: center;
+  gap            : 24px;
+  padding        : 0 150px 80px;
+  margin-top     : -20px;
+}
+
+.landing-page .stat-card {
+  display        : flex;
+  align-items    : center;
+  background     : rgba(5, 15, 35, 0.75);
+  border         : 1px solid rgba(1, 123, 251, 0.45);
+  padding        : 24px 32px;
+  border-radius  : 14px;
+  backdrop-filter: blur(12px);
+  width          : 260px;
+  box-shadow     : 0 0 25px rgba(1, 123, 251, 0.15), 0 4px 28px rgba(0, 0, 0, 0.35);
+  transition     : var(--transition-fast);
+}
+
+.landing-page .stat-card:hover {
+  border-color: var(--blue-bright);
+  box-shadow  : 0 0 35px var(--blue-glow), 0 0 60px rgba(1, 123, 251, 0.2), 0 8px 32px rgba(0, 0, 0, 0.25);
+  transform   : translateY(-4px);
+}
+
+.landing-page .stat-icon {
+  font-size    : 32px;
+  margin-right : 18px;
+  background   : var(--blue-soft);
+  padding      : 12px;
+  border-radius: 10px;
+  border       : 1px solid var(--blue-border);
+  box-shadow   : 0 0 18px rgba(1, 123, 251, 0.25);
+  flex-shrink  : 0;
+}
+
+.landing-page .stat-info h3 {
+  margin        : 0 0 4px 0;
+  font-size     : 26px;
+  font-weight   : 700;
+  color         : var(--blue-bright);
+  text-shadow   : 0 0 15px var(--blue-glow), 0 0 30px rgba(1, 123, 251, 0.4);
+  letter-spacing: -0.02em;
+}
+
+.landing-page .stat-info p {
+  margin     : 0;
+  font-size  : 13px;
+  color      : var(--text-secondary);
+  line-height: 1.35;
+}

@@ -1,0 +1,1012 @@
+<template>
+  <div class="users-page">
+    <div class="tabs">
+      <button
+        v-if="isSuperAdmin"
+        type="button"
+        class="tab-btn"
+        :class="{ active: activeTab === 'admins' }"
+        @click="activeTab = 'admins'"
+      >
+        {{ $t("admin.adminsList") }}
+      </button>
+      <button
+        type="button"
+        class="tab-btn"
+        :class="{ active: activeTab === 'users' }"
+        @click="activeTab = 'users'"
+      >
+        {{ $t("admin.usersList") }}
+      </button>
+    </div>
+
+    <!-- Tab: Admins -->
+    <div v-show="activeTab === 'admins'" class="tab-panel">
+      <div class="panel-header">
+        <button type="button" class="btn-add" @click="openAdminModal()">
+          + {{ $t("admin.add") }}
+        </button>
+      </div>
+      <div class="table-wrap card">
+        <div v-if="loadingAdmins" class="table-loading">
+          {{ $t("admin.loading") }}
+        </div>
+        <div v-else-if="!admins.length" class="table-empty">
+          {{ $t("admin.noData") }}
+        </div>
+        <table v-else class="data-table">
+          <thead>
+            <tr>
+              <th>{{ $t("admin.id") }}</th>
+              <th>{{ $t("admin.username") }}</th>
+              <th>{{ $t("admin.role") }}</th>
+              <th>{{ $t("admin.refCode") }}</th>
+              <th>{{ $t("admin.isActive") }}</th>
+              <th>{{ $t("admin.createdAt") }}</th>
+              <th class="th-actions">{{ $t("admin.actions") }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="a in admins" :key="a.id">
+              <td>{{ a.id }}</td>
+              <td>{{ a.username }}</td>
+              <td>
+                <span
+                  class="badge"
+                  :class="
+                    a.role === 'admin_0' ? 'badge--primary' : 'badge--secondary'
+                  "
+                >
+                  {{
+                    a.role === "admin_0"
+                      ? $t("admin.admin0")
+                      : $t("admin.admin1")
+                  }}
+                </span>
+              </td>
+              <td>
+                <code class="ref-code">{{ a.ref_code }}</code>
+              </td>
+              <td>
+                <span
+                  class="badge"
+                  :class="a.is_active ? 'badge--success' : 'badge--muted'"
+                >
+                  {{ a.is_active ? $t("admin.active") : $t("admin.blocked") }}
+                </span>
+              </td>
+              <td>{{ formatDate(a.created_at) }}</td>
+              <td class="td-actions">
+                <button
+                  type="button"
+                  class="btn-icon"
+                  :title="a.is_active ? $t('admin.lock') : $t('admin.unlock')"
+                  @click="toggleAdminLock(a)"
+                >
+                  {{ a.is_active ? "🔒" : "🔓" }}
+                </button>
+                <button
+                  type="button"
+                  class="btn-icon"
+                  :title="$t('admin.edit')"
+                  @click="openAdminModal(a)"
+                >
+                  ✏️
+                </button>
+                <button
+                  v-if="a.id !== 1"
+                  type="button"
+                  class="btn-icon btn-icon--danger"
+                  :title="$t('admin.delete')"
+                  @click="deleteAdmin(a)"
+                >
+                  🗑️
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Tab: Users -->
+    <div v-show="activeTab === 'users'" class="tab-panel">
+      <div class="users-toolbar">
+        <div v-if="isSuperAdmin" class="filter-group">
+          <label>{{ $t("admin.filterByAdmin") }}</label>
+          <select
+            v-model="userFilterAdmin"
+            class="input input--sm"
+            @change="() => fetchUsers(1)"
+          >
+            <option value="">{{ $t("admin.allAdmins") }}</option>
+            <option v-for="a in admins" :key="a.id" :value="a.id">
+              {{ a.username }}
+            </option>
+          </select>
+        </div>
+        <div class="search-group">
+          <label>{{ $t("admin.search") }}</label>
+          <input
+            v-model="userSearch"
+            type="text"
+            class="input input--sm"
+            :placeholder="$t('admin.search')"
+            @keyup.enter="() => fetchUsers(1)"
+          />
+          <button type="button" class="btn-search" @click="() => fetchUsers(1)">
+            🔍
+          </button>
+        </div>
+        <button type="button" class="btn-add btn-add--right" @click="openUserModal()">
+          + {{ $t("admin.add") }}
+        </button>
+      </div>
+      <div class="table-wrap card">
+        <div v-if="loadingUsers" class="table-loading">
+          {{ $t("admin.loading") }}
+        </div>
+        <div v-else-if="!users.length" class="table-empty">
+          {{ $t("admin.noData") }}
+        </div>
+        <table v-else class="data-table">
+          <thead>
+            <tr>
+              <th>{{ $t("admin.id") }}</th>
+              <th>{{ $t("admin.username") }}</th>
+              <th>{{ $t("admin.email") }}</th>
+              <th>{{ $t("admin.adminId") }}</th>
+              <th>{{ $t("admin.status") }}</th>
+              <th>{{ $t("admin.createdAt") }}</th>
+              <th class="th-actions">{{ $t("admin.actions") }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="u in users" :key="u.id">
+              <td>{{ u.id }}</td>
+              <td>{{ u.username }}</td>
+              <td>{{ u.email }}</td>
+              <td>{{ u.admin_username || "-" }}</td>
+              <td>
+                <span
+                  class="badge"
+                  :class="
+                    u.status === 'active' ? 'badge--success' : 'badge--muted'
+                  "
+                >
+                  {{
+                    u.status === "active"
+                      ? $t("admin.active")
+                      : $t("admin.blocked")
+                  }}
+                </span>
+              </td>
+              <td>{{ formatDate(u.created_at) }}</td>
+              <td class="td-actions">
+                <button
+                  type="button"
+                  class="btn-icon"
+                  :title="
+                    u.status === 'active'
+                      ? $t('admin.lock')
+                      : $t('admin.unlock')
+                  "
+                  @click="toggleUserLock(u)"
+                >
+                  {{ u.status === "active" ? "🔒" : "🔓" }}
+                </button>
+                <button
+                  type="button"
+                  class="btn-icon"
+                  :title="$t('admin.edit')"
+                  @click="openUserModal(u)"
+                >
+                  ✏️
+                </button>
+                <button
+                  type="button"
+                  class="btn-icon btn-icon--danger"
+                  :title="$t('admin.delete')"
+                  @click="deleteUser(u)"
+                >
+                  🗑️
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div v-if="userPagination.totalPages > 1" class="pagination">
+        <button
+          type="button"
+          class="btn-page"
+          :disabled="userPagination.page <= 1"
+          @click="goToUserPage(userPagination.page - 1)"
+        >
+          {{ $t("admin.prev") }}
+        </button>
+        <span class="page-info">
+          {{ $t("admin.page") }} {{ userPagination.page }} {{ $t("admin.of") }}
+          {{ userPagination.totalPages }} ({{ userPagination.total }}
+          {{ $t("admin.records") }})
+        </span>
+        <button
+          type="button"
+          class="btn-page"
+          :disabled="userPagination.page >= userPagination.totalPages"
+          @click="goToUserPage(userPagination.page + 1)"
+        >
+          {{ $t("admin.next") }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Modal: Admin -->
+    <Teleport to="body">
+      <div
+        v-if="adminModalOpen"
+        class="modal-overlay"
+        @click.self="adminModalOpen = false"
+      >
+        <div class="modal">
+          <h3 class="modal-title">
+            {{ editingAdmin ? $t("admin.edit") : $t("admin.addAdmin") }}
+          </h3>
+          <form class="modal-form" @submit.prevent="saveAdmin">
+            <div class="form-row">
+              <label>{{ $t("admin.username") }}</label>
+              <input
+                v-model="adminForm.username"
+                type="text"
+                class="input"
+                required
+                :disabled="!!editingAdmin"
+              />
+            </div>
+            <div v-if="!editingAdmin" class="form-row">
+              <label>{{ $t("admin.password") }}</label>
+              <input
+                v-model="adminForm.password"
+                type="password"
+                class="input"
+                :required="!editingAdmin"
+              />
+            </div>
+            <div class="form-row">
+              <label>{{ $t("admin.role") }}</label>
+              <select v-model="adminForm.role" class="input">
+                <option value="admin_0">{{ $t("admin.admin0") }}</option>
+                <option value="admin_1">{{ $t("admin.admin1") }}</option>
+              </select>
+            </div>
+            <div v-if="editingAdmin" class="form-row">
+              <label>{{ $t("admin.isActive") }}</label>
+              <select v-model="adminForm.is_active" class="input">
+                <option :value="true">{{ $t("admin.active") }}</option>
+                <option :value="false">{{ $t("admin.blocked") }}</option>
+              </select>
+            </div>
+            <p v-if="adminError" class="error-msg">{{ adminError }}</p>
+            <div class="modal-actions">
+              <button
+                type="button"
+                class="btn-secondary"
+                @click="adminModalOpen = false"
+              >
+                {{ $t("admin.cancel") }}
+              </button>
+              <button type="submit" class="btn-primary" :disabled="adminSaving">
+                {{ adminSaving ? "..." : $t("admin.save") }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- Modal: User -->
+    <Teleport to="body">
+      <div
+        v-if="userModalOpen"
+        class="modal-overlay"
+        @click.self="userModalOpen = false"
+      >
+        <div class="modal">
+          <h3 class="modal-title">
+            {{ editingUser ? $t("admin.edit") : $t("admin.addUser") }}
+          </h3>
+          <form class="modal-form" @submit.prevent="saveUser">
+            <div class="form-row">
+              <label>{{ $t("admin.username") }}</label>
+              <input
+                v-model="userForm.username"
+                type="text"
+                class="input"
+                required
+                :disabled="!!editingUser"
+              />
+            </div>
+            <div class="form-row">
+              <label>{{ $t("admin.email") }}</label>
+              <input
+                v-model="userForm.email"
+                type="email"
+                class="input"
+                required
+                :disabled="!!editingUser"
+              />
+            </div>
+            <div v-if="!editingUser" class="form-row">
+              <label>{{ $t("admin.password") }}</label>
+              <input
+                v-model="userForm.password"
+                type="password"
+                class="input"
+                required
+              />
+            </div>
+            <div v-if="isSuperAdmin" class="form-row">
+              <label>{{ $t("admin.selectAdmin") }}</label>
+              <select
+                v-model="userForm.admin_id"
+                class="input"
+                :required="!editingUser"
+              >
+                <option v-for="a in admins" :key="a.id" :value="a.id">
+                  {{ a.username }}
+                </option>
+              </select>
+            </div>
+            <div v-if="editingUser" class="form-row">
+              <label>{{ $t("admin.status") }}</label>
+              <select v-model="userForm.status" class="input">
+                <option value="active">{{ $t("admin.active") }}</option>
+                <option value="blocked">{{ $t("admin.blocked") }}</option>
+              </select>
+            </div>
+            <p v-if="userError" class="error-msg">{{ userError }}</p>
+            <div class="modal-actions">
+              <button
+                type="button"
+                class="btn-secondary"
+                @click="userModalOpen = false"
+              >
+                {{ $t("admin.cancel") }}
+              </button>
+              <button type="submit" class="btn-primary" :disabled="userSaving">
+                {{ userSaving ? "..." : $t("admin.save") }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </Teleport>
+  </div>
+</template>
+
+<script setup>
+definePageMeta({ layout: "admin", middleware: ["admin"] });
+
+const { t } = useI18n();
+const roleCookie = useCookie("user_role", { path: "/" });
+const isSuperAdmin = computed(() => roleCookie.value === "admin_0");
+
+const activeTab = ref("users");
+watch(
+  isSuperAdmin,
+  (v) => {
+    if (v) activeTab.value = "admins";
+    else if (activeTab.value === "admins") activeTab.value = "users";
+  },
+  { immediate: true },
+);
+
+const admins = ref([]);
+const users = ref([]);
+const loadingAdmins = ref(true);
+const loadingUsers = ref(true);
+
+const userFilterAdmin = ref("");
+const userSearch = ref("");
+const userPage = ref(1);
+const userPagination = ref({ page: 1, limit: 10, total: 0, totalPages: 1 });
+
+async function fetchAdmins() {
+  loadingAdmins.value = true;
+  try {
+    const res = await $fetch("/api/admin/admins");
+    if (res?.success && res.data) admins.value = res.data;
+  } catch (e) {
+    console.error("[admins]", e);
+    admins.value = [];
+  } finally {
+    loadingAdmins.value = false;
+  }
+}
+
+async function fetchUsers(page = 1) {
+  userPage.value = page;
+  loadingUsers.value = true;
+  try {
+    const params = new URLSearchParams();
+    if (userFilterAdmin.value) params.set("admin_id", userFilterAdmin.value);
+    if (userSearch.value.trim()) params.set("search", userSearch.value.trim());
+    params.set("page", String(page));
+    params.set("limit", "10");
+    const res = await $fetch(`/api/admin/users?${params}`);
+    if (res?.success && res.data) users.value = res.data;
+    if (res?.pagination) userPagination.value = res.pagination;
+  } catch (e) {
+    console.error("[users]", e);
+    users.value = [];
+  } finally {
+    loadingUsers.value = false;
+  }
+}
+
+function goToUserPage(page) {
+  if (page >= 1 && page <= userPagination.value.totalPages) fetchUsers(page);
+}
+
+function formatDate(val) {
+  if (!val) return "-";
+  const d = new Date(val);
+  return d.toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+// Admin modal
+const adminModalOpen = ref(false);
+const editingAdmin = ref(null);
+const adminForm = reactive({
+  username: "",
+  password: "",
+  role: "admin_1",
+  is_active: true,
+});
+const adminError = ref("");
+const adminSaving = ref(false);
+
+function openAdminModal(admin = null) {
+  editingAdmin.value = admin;
+  adminForm.username = admin?.username ?? "";
+  adminForm.password = "";
+  adminForm.role = admin?.role ?? "admin_1";
+  adminForm.is_active = admin ? !!admin.is_active : true;
+  adminError.value = "";
+  adminModalOpen.value = true;
+}
+
+async function saveAdmin() {
+  adminError.value = "";
+  adminSaving.value = true;
+  try {
+    if (editingAdmin.value) {
+      await $fetch(`/api/admin/admins/${editingAdmin.value.id}`, {
+        method: "PUT",
+        body: { role: adminForm.role, is_active: adminForm.is_active },
+      });
+      adminModalOpen.value = false;
+      await fetchAdmins();
+    } else {
+      await $fetch("/api/admin/admins", {
+        method: "POST",
+        body: {
+          username: adminForm.username,
+          password: adminForm.password,
+          role: adminForm.role,
+        },
+      });
+      adminModalOpen.value = false;
+      await fetchAdmins();
+    }
+  } catch (e) {
+    adminError.value = e?.data?.statusMessage || e?.message || "Lỗi";
+  } finally {
+    adminSaving.value = false;
+  }
+}
+
+async function toggleAdminLock(a) {
+  try {
+    await $fetch(`/api/admin/admins/${a.id}`, {
+      method: "PUT",
+      body: { is_active: !a.is_active },
+    });
+    await fetchAdmins();
+  } catch (e) {
+    alert(e?.data?.statusMessage || "Lỗi");
+  }
+}
+
+async function deleteAdmin(a) {
+  if (!confirm(`${t("admin.confirmDelete")}\n${a.username}`)) return;
+  try {
+    await $fetch(`/api/admin/admins/${a.id}`, { method: "DELETE" });
+    await fetchAdmins();
+  } catch (e) {
+    alert(e?.data?.statusMessage || "Lỗi");
+  }
+}
+
+// User modal
+const userModalOpen = ref(false);
+const editingUser = ref(null);
+const userForm = reactive({
+  username: "",
+  email: "",
+  password: "",
+  admin_id: "",
+  status: "active",
+});
+const userError = ref("");
+const userSaving = ref(false);
+
+function openUserModal(user = null) {
+  editingUser.value = user;
+  userForm.username = user?.username ?? "";
+  userForm.email = user?.email ?? "";
+  userForm.password = "";
+  userForm.admin_id = user
+    ? String(user.admin_id)
+    : admins.value[0]?.id
+      ? String(admins.value[0].id)
+      : "";
+  userForm.status = user?.status ?? "active";
+  userError.value = "";
+  userModalOpen.value = true;
+}
+
+async function saveUser() {
+  userError.value = "";
+  userSaving.value = true;
+  try {
+    if (editingUser.value) {
+      const body = { status: userForm.status };
+      if (isSuperAdmin.value) body.admin_id = parseInt(userForm.admin_id, 10);
+      await $fetch(`/api/admin/users/${editingUser.value.id}`, {
+        method: "PUT",
+        body,
+      });
+      userModalOpen.value = false;
+      await fetchUsers(userPage.value);
+    } else {
+      await $fetch("/api/admin/users", {
+        method: "POST",
+        body: {
+          username: userForm.username,
+          email: userForm.email,
+          password: userForm.password,
+          admin_id: isSuperAdmin.value
+            ? parseInt(userForm.admin_id, 10)
+            : undefined,
+        },
+      });
+      userModalOpen.value = false;
+      await fetchUsers(userPage.value);
+    }
+  } catch (e) {
+    userError.value = e?.data?.statusMessage || e?.message || "Lỗi";
+  } finally {
+    userSaving.value = false;
+  }
+}
+
+async function toggleUserLock(u) {
+  try {
+    await $fetch(`/api/admin/users/${u.id}`, {
+      method: "PUT",
+      body: { status: u.status === "active" ? "blocked" : "active" },
+    });
+    await fetchUsers(userPage.value);
+  } catch (e) {
+    alert(e?.data?.statusMessage || "Lỗi");
+  }
+}
+
+async function deleteUser(u) {
+  if (!confirm(`${t("admin.confirmDelete")}\n${u.username}`)) return;
+  try {
+    await $fetch(`/api/admin/users/${u.id}`, { method: "DELETE" });
+    await fetchUsers(userPage.value);
+  } catch (e) {
+    alert(e?.data?.statusMessage || "Lỗi");
+  }
+}
+
+onMounted(() => {
+  if (isSuperAdmin.value) fetchAdmins();
+  fetchUsers();
+});
+</script>
+
+<style scoped>
+.users-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
+  max-width: none;
+}
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid rgba(1, 123, 251, 0.2);
+}
+
+.tab-btn {
+  padding: 0.6rem 1.25rem;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: 8px 8px 0 0;
+  transition:
+    color var(--transition-fast),
+    background var(--transition-fast);
+}
+
+.tab-btn:hover {
+  color: var(--text-primary);
+  background: rgba(1, 123, 251, 0.08);
+}
+
+.tab-btn.active {
+  color: var(--blue-bright);
+  background: rgba(1, 123, 251, 0.12);
+  border-bottom: 2px solid var(--blue-bright);
+  margin-bottom: -1px;
+}
+
+.tab-panel {
+  margin-top: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.section-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.btn-add {
+  padding: 0.5rem 1rem;
+  background: var(--blue-bright);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: opacity var(--transition-fast);
+}
+
+.btn-add:hover {
+  opacity: 0.9;
+}
+
+.table-wrap {
+  overflow-x: auto;
+  padding: 1rem;
+}
+
+.table-loading,
+.table-empty {
+  text-align: center;
+  padding: 2rem;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.data-table th,
+.data-table td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid rgba(1, 123, 251, 0.15);
+}
+
+.data-table th {
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.th-actions {
+  width: 160px;
+  text-align: center;
+}
+
+.td-actions {
+  display: flex;
+  gap: 6px;
+
+  align-items: center;
+  flex-wrap: nowrap;
+}
+
+.btn-icon {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(1, 123, 251, 0.15);
+  border: 1px solid rgba(1, 123, 251, 0.3);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background var(--transition-fast);
+}
+
+.btn-icon:hover {
+  background: rgba(1, 123, 251, 0.25);
+}
+
+.btn-icon--danger:hover {
+  background: rgba(255, 100, 100, 0.2);
+  border-color: rgba(255, 100, 100, 0.4);
+}
+
+.data-table td {
+  color: var(--text-primary);
+}
+
+.data-table tbody tr:hover {
+  background: rgba(1, 123, 251, 0.05);
+}
+
+.ref-code {
+  font-family: monospace;
+  font-size: 0.85em;
+  background: rgba(1, 123, 251, 0.15);
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.25rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.badge--primary {
+  background: rgba(1, 123, 251, 0.25);
+  color: var(--blue-bright);
+}
+
+.badge--secondary {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-secondary);
+}
+
+.badge--success {
+  background: rgba(39, 174, 96, 0.2);
+  color: #27ae60;
+}
+
+.badge--muted {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-muted);
+}
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.modal {
+  background: var(--bg-card);
+  border: 1px solid var(--blue-border);
+  border-radius: 12px;
+  padding: 1.5rem;
+  max-width: 420px;
+  width: 100%;
+  box-shadow: 0 0 40px rgba(1, 123, 251, 0.2);
+}
+
+.modal-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0 0 1.25rem 0;
+  color: var(--text-primary);
+}
+
+.modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.form-row label {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.form-row .input {
+  padding: 0.6rem 0.9rem;
+  background: rgba(5, 15, 35, 0.9);
+  border: 1px solid rgba(1, 123, 251, 0.3);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+}
+
+.form-row .input:focus {
+  outline: none;
+  border-color: var(--blue-bright);
+}
+
+.form-row select.input {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23017BFB' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  padding-right: 2rem;
+}
+
+.form-row select.input option,
+.form-row select.input optgroup {
+  background: #0d1629;
+  color: #e8ecf1;
+}
+
+.error-msg {
+  color: #ff6b6b;
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+  margin-top: 0.5rem;
+}
+
+.btn-primary {
+  padding: 0.5rem 1.25rem;
+  background: var(--blue-bright);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-secondary {
+  padding: 0.5rem 1.25rem;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+  border: 1px solid rgba(1, 123, 251, 0.3);
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.users-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: flex-end;
+  padding: 0.75rem 1rem;
+  background: rgba(5, 15, 35, 0.5);
+  border: 1px solid rgba(1, 123, 251, 0.2);
+  border-radius: 10px;
+}
+
+.users-toolbar .btn-add--right {
+  margin-left: auto;
+}
+
+.users-toolbar .filter-group,
+.users-toolbar .search-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.users-toolbar label {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.users-toolbar .input--sm {
+  padding: 0.45rem 0.75rem;
+  min-width: 140px;
+}
+
+.users-toolbar .search-group .input--sm {
+  min-width: 180px;
+}
+
+.btn-search {
+  padding: 0.45rem 0.75rem;
+  background: rgba(1, 123, 251, 0.2);
+  border: 1px solid rgba(1, 123, 251, 0.4);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.btn-search:hover {
+  background: rgba(1, 123, 251, 0.3);
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 1rem;
+  margin-top: 0.5rem;
+}
+
+.btn-page {
+  padding: 0.4rem 1rem;
+  background: rgba(1, 123, 251, 0.2);
+  border: 1px solid rgba(1, 123, 251, 0.4);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.btn-page:hover:not(:disabled) {
+  background: rgba(1, 123, 251, 0.3);
+}
+
+.btn-page:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.page-info {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+</style>

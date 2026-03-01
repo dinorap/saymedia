@@ -1,0 +1,42 @@
+/**
+ * Design system - SayMedia AI style
+ * Dùng cho toàn bộ giao diện: tối, xanh dương phát sáng, futuristic
+ */
+:root {
+  /* Nền & chính */
+  --bg-deep: #0a0e17;
+  --bg-dark: #0d1220;
+  --bg-card: #111827;
+  --bg-nav: rgba(10, 14, 23, 0.92);
+
+  /* Xanh dương - accent & glow */
+  --blue-bright: #00d4ff;
+  --blue-glow: rgba(0, 212, 255, 0.5);
+  --blue-border: rgba(0, 212, 255, 0.6);
+  --blue-soft: rgba(0, 212, 255, 0.15);
+
+  /* Chữ */
+  --text-primary: #ffffff;
+  --text-secondary: rgba(255, 255, 255, 0.85);
+  --text-muted: rgba(255, 255, 255, 0.6);
+
+  /* Nút & form */
+  --btn-primary-bg: linear-gradient(135deg, #0066cc 0%, #00a3e0 100%);
+  --btn-primary-glow: 0 0 20px var(--blue-glow);
+  --btn-secondary-bg: rgba(30, 40, 60, 0.9);
+  --btn-secondary-border: rgba(255, 255, 255, 0.2);
+  --input-bg: rgba(255, 255, 255, 0.06);
+  --input-border: rgba(255, 255, 255, 0.12);
+  --input-focus-border: var(--blue-border);
+  --input-focus-glow: 0 0 12px var(--blue-glow);
+
+  /* Hiệu ứng */
+  --transition-fast: 0.2s ease;
+  --transition-glow: 0.3s ease;
+}
+
+body {
+  background-color: var(--bg-deep);
+  color: var(--text-primary);
+  font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+}

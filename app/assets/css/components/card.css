@@ -1,0 +1,30 @@
+/**
+ * Card - khung nội dung (auth, dashboard)
+ */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--blue-border);
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: 0 0 32px var(--blue-glow);
+}
+
+.card-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0 0 1rem 0;
+  color: var(--text-primary);
+}
+
+.info {
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.info-success {
+  color: var(--blue-bright);
+}
+
+.info-muted {
+  color: var(--text-muted);
+}

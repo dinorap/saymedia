@@ -1,0 +1,43 @@
+/**
+ * Design system - Tạp Hóa MMO (xanh #017BFB)
+ */
+:root {
+  /* Nền - xanh đậm */
+  --bg-deep: #030614;
+  --bg-dark: #050a1a;
+  --bg-card: rgba(5, 15, 35, 0.85);
+  --bg-nav: rgba(3, 10, 25, 0.95);
+
+  /* Xanh #017BFB - accent */
+  --blue-bright: #017BFB;
+  --blue-electric: #2a8fff;
+  --blue-glow: rgba(1, 123, 251, 0.5);
+  --blue-border: rgba(1, 123, 251, 0.65);
+  --blue-soft: rgba(1, 123, 251, 0.15);
+  --neon-shadow: 0 0 15px rgba(1, 123, 251, 0.45), 0 0 30px rgba(1, 123, 251, 0.2);
+
+  /* Chữ */
+  --text-primary: #ffffff;
+  --text-secondary: rgba(255, 255, 255, 0.88);
+  --text-muted: rgba(255, 255, 255, 0.55);
+
+  /* Nút & form */
+  --btn-primary-bg: linear-gradient(135deg, #0160e0 0%, #017BFB 100%);
+  --btn-primary-glow: 0 0 20px rgba(1, 123, 251, 0.5), 0 0 40px rgba(1, 123, 251, 0.2);
+  --btn-secondary-bg: transparent;
+  --btn-secondary-border: rgba(1, 123, 251, 0.7);
+  --input-bg: rgba(0, 30, 80, 0.5);
+  --input-border: rgba(1, 123, 251, 0.3);
+  --input-focus-border: var(--blue-border);
+  --input-focus-glow: 0 0 15px var(--blue-glow);
+
+  /* Hiệu ứng */
+  --transition-fast: 0.2s ease;
+  --transition-glow: 0.3s ease;
+}
+
+body {
+  background-color: var(--bg-deep);
+  color: var(--text-primary);
+  font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+}
