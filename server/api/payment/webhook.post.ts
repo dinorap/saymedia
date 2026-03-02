@@ -1,5 +1,6 @@
 import pool from '../../utils/db'
 import { ensurePaymentSchema, PAYMENT_EXPIRE_MINUTES } from '../../utils/payment'
+import { addAuditLog } from '../../utils/audit'
 
 function extractTransId(content: string) {
   const match = content.match(/AUTO([A-Z0-9]+)-/i)
@@ -55,6 +56,13 @@ export default defineEventHandler(async (event) => {
   if (tx.status !== 'pending') return { success: true, matched: true, status: tx.status }
   if (Number(tx.age_seconds || 0) > PAYMENT_EXPIRE_MINUTES * 60) {
     await pool.query(`UPDATE payment_transactions SET status = 'cancelled' WHERE trans_id = ?`, [tx.trans_id])
+    await addAuditLog({
+      actorType: 'system',
+      action: 'payment_expired',
+      targetType: 'payment_transaction',
+      targetId: tx.trans_id,
+      metadata: { reason: 'expired_in_webhook', amount: transferAmount },
+    })
     return { success: true, matched: true, status: 'expired' }
   }
 
@@ -63,6 +71,14 @@ export default defineEventHandler(async (event) => {
     [transferAmount, tx.trans_id]
   )
   await pool.query(`UPDATE users SET credit = credit + ? WHERE id = ?`, [transferAmount, tx.user_id])
+
+  await addAuditLog({
+    actorType: 'system',
+    action: 'payment_success',
+    targetType: 'payment_transaction',
+    targetId: tx.trans_id,
+    metadata: { amount: transferAmount, user_id: tx.user_id, source: 'webhook' },
+  })
 
   return { success: true, matched: true, status: 'success', trans_id: tx.trans_id }
 })

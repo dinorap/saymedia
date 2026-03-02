@@ -109,8 +109,8 @@ async function register() {
         password: form.value.password,
       },
     })
-    success.value = "Đăng ký thành công! Đang chuyển đến trang đăng nhập..."
-    setTimeout(() => navigateTo("/login"), 1500)
+    success.value = "Đăng ký thành công! Hãy đăng nhập để bắt đầu sử dụng."
+    setTimeout(() => navigateTo("/login?next=/profile"), 1200)
   } catch (e) {
     error.value = e.data?.statusMessage || "Đăng ký thất bại!"
   } finally {

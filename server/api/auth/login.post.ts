@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken'
 import pool from '../../utils/db'
 import { consumeOtp } from '../../utils/otpStore'
 import { checkLoginRateLimit, recordLoginFailure, clearLoginFailure } from '../../utils/rateLimit'
+import { addAuditLog } from '../../utils/audit'
 
 export default defineEventHandler(async (event) => {
   const body = await readBody(event)
@@ -18,10 +19,23 @@ export default defineEventHandler(async (event) => {
       const entry = consumeOtp(email)
       if (!entry || entry.code !== String(otp).trim()) {
         recordLoginFailure(event)
+        await addAuditLog({
+          actorType: 'system',
+          action: 'login_failed_otp',
+          targetType: 'email',
+          targetId: email,
+        })
         throw createError({ statusCode: 401, statusMessage: 'Mã OTP không đúng hoặc đã hết hạn!' })
       }
       const [users]: any = await pool.query('SELECT * FROM users WHERE email = ?', [email])
       if (users.length === 0) {
+        await addAuditLog({
+          actorType: 'system',
+          action: 'login_failed_otp',
+          targetType: 'email',
+          targetId: email,
+          metadata: { reason: 'email_not_found' },
+        })
         throw createError({ statusCode: 401, statusMessage: 'Email chưa đăng ký!' })
       }
       const user = users[0]
@@ -60,12 +74,18 @@ export default defineEventHandler(async (event) => {
       if (isValid) {
         clearLoginFailure(event)
         const token = jwt.sign(
-          { id: admin.id, username: admin.username, role: admin.role }, 
-          jwtSecret, 
+          { id: admin.id, username: admin.username, role: admin.role },
+          jwtSecret,
           { expiresIn: '7d' }
         );
-        
-        setCookie(event, 'auth_token', token, { httpOnly: true, maxAge: 60 * 60 * 24 * 7, path: '/' });
+
+        setCookie(event, 'auth_token', token, {
+          httpOnly: true,
+          maxAge: 60 * 60 * 24 * 7,
+          path: '/',
+          sameSite: 'lax',
+          secure: process.env.NODE_ENV === 'production',
+        });
         setCookie(event, 'user_role', admin.role, { path: '/' }); // Frontend đọc để chia UI / bẻ lái
         return { success: true, role: admin.role, message: 'Admin login thành công!' };
       }
@@ -74,7 +94,7 @@ export default defineEventHandler(async (event) => {
     // 2. Nếu không phải admin, kiểm tra trong bảng users (username hoặc email)
     const [users]: any = await pool.query('SELECT * FROM users WHERE username = ? OR email = ?', [loginInput, loginInput]);
     
-    if (users.length > 0) {
+      if (users.length > 0) {
       const user = users[0];
       if (user.status === 'blocked') {
         recordLoginFailure(event)
@@ -85,18 +105,30 @@ export default defineEventHandler(async (event) => {
       if (isValid) {
         clearLoginFailure(event)
         const token = jwt.sign(
-          { id: user.id, username: user.username, role: 'user', admin_id: user.admin_id }, 
-          jwtSecret, 
+          { id: user.id, username: user.username, role: 'user', admin_id: user.admin_id },
+          jwtSecret,
           { expiresIn: '30d' }
         );
-        
-        setCookie(event, 'auth_token', token, { httpOnly: true, maxAge: 60 * 60 * 24 * 30, path: '/' });
+
+        setCookie(event, 'auth_token', token, {
+          httpOnly: true,
+          maxAge: 60 * 60 * 24 * 30,
+          path: '/',
+          sameSite: 'lax',
+          secure: process.env.NODE_ENV === 'production',
+        });
         setCookie(event, 'user_role', 'user', { path: '/' });
         return { success: true, role: 'user', message: 'Khách login thành công!' };
       }
     }
 
     recordLoginFailure(event)
+    await addAuditLog({
+      actorType: 'system',
+      action: 'login_failed_password',
+      targetType: 'username_or_email',
+      targetId: String(body.username || body.email || ''),
+    })
     throw createError({ statusCode: 401, statusMessage: 'Sai tài khoản hoặc mật khẩu!' });
   } catch (error: any) {
     if (error.statusCode) {

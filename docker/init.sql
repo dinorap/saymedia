@@ -68,6 +68,20 @@ CREATE TABLE IF NOT EXISTS recent_orders_feed (
 );
 CREATE INDEX idx_recent_orders_created_at ON recent_orders_feed(created_at);
 
+-- Log bảo mật / tài chính
+CREATE TABLE IF NOT EXISTS audit_logs (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    actor_type ENUM('user', 'admin', 'system') NOT NULL,
+    actor_id INT NULL,
+    action VARCHAR(100) NOT NULL,
+    target_type VARCHAR(50) NULL,
+    target_id VARCHAR(100) NULL,
+    metadata JSON NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX idx_audit_created_at ON audit_logs(created_at);
+CREATE INDEX idx_audit_action ON audit_logs(action);
+
 -- Dev only: superadmin / 123456. Production: tạo admin qua tool, không hardcode mật khẩu trong SQL.
 INSERT INTO admins (username, password_hash, role, ref_code)
 VALUES ('superadmin', '$2b$10$hMSE6SHtfvgS1YrqwMXmIOdgTv7mp3yhIBpfLOOmiMaDnBvkhC0Cq', 'admin_0', 'ADMIN0_ROOT');

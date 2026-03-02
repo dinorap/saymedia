@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import pool from '../../utils/db'
+import { addAuditLog } from '../../utils/audit'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'chuoi_bi_mat_jwt_ngau_nhien_cua_sep_123456'
 const COOKIE_NAME = 'register_ref_claim'
@@ -47,6 +48,14 @@ export default defineEventHandler(async (event) => {
       'INSERT INTO users (username, email, password_hash, admin_id) VALUES (?, ?, ?, ?)',
       [username.trim(), email.trim(), hashedPassword, adminId]
     );
+
+    await addAuditLog({
+      actorType: 'system',
+      action: 'user_registered',
+      targetType: 'user',
+      targetId: result.insertId,
+      metadata: { admin_id: adminId, email: email.trim() },
+    })
 
     return { 
       success: true, 

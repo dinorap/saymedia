@@ -1,10 +1,15 @@
 import jwt from 'jsonwebtoken'
 import pool from '../../../utils/db'
 import { ensurePaymentSchema, PAYMENT_EXPIRE_MINUTES } from '../../../utils/payment'
+import { addAuditLog } from '../../../utils/audit'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'chuoi_bi_mat_jwt_ngau_nhien_cua_sep_123456'
 
 export default defineEventHandler(async (event) => {
+  if (process.env.NODE_ENV === 'production' && process.env.PAYMENT_TEST_ENABLED !== 'true') {
+    throw createError({ statusCode: 404, statusMessage: 'Not found' })
+  }
+
   const token = getCookie(event, 'auth_token')
   if (!token) throw createError({ statusCode: 401, statusMessage: 'Chưa đăng nhập' })
 
@@ -45,6 +50,15 @@ export default defineEventHandler(async (event) => {
 
   await pool.query(`UPDATE payment_transactions SET status = 'success' WHERE trans_id = ?`, [transId])
   await pool.query(`UPDATE users SET credit = credit + ? WHERE id = ?`, [tx.amount, decoded.id])
+
+  await addAuditLog({
+    actorType: 'user',
+    actorId: decoded.id,
+    action: 'payment_success_test',
+    targetType: 'payment_transaction',
+    targetId: transId,
+    metadata: { amount: tx.amount, source: 'simulate-payment' },
+  })
 
   const [urows]: any = await pool.query('SELECT credit FROM users WHERE id = ? LIMIT 1', [decoded.id])
   return {

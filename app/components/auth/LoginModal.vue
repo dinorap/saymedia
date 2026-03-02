@@ -103,6 +103,7 @@ defineProps({
 defineEmits(['update:modelValue', 'switch-to-register'])
 
 const roleCookie = useCookie('user_role', { path: '/' })
+const route = useRoute()
 const step = ref(1)
 const username = ref('')
 const password = ref('')
@@ -125,8 +126,13 @@ async function loginWithPassword() {
       body: { username: username.value.trim(), password: password.value }
     })
     roleCookie.value = res.role
-    if (res.role === 'admin_0' || res.role === 'admin_1') await navigateTo('/admin')
-    else await navigateTo('/')
+    if (res.role === 'admin_0' || res.role === 'admin_1') {
+      await navigateTo('/admin')
+    } else {
+      const next = typeof route.query.next === 'string' ? route.query.next : ''
+      if (next && next.startsWith('/')) await navigateTo(next)
+      else await navigateTo('/')
+    }
   } catch (e) {
     error.value = e.data?.statusMessage || 'Sai thông tin đăng nhập!'
   } finally {
@@ -165,8 +171,13 @@ async function verifyOtp() {
       body: { email: email.value.trim(), otp: otp.value.trim() }
     })
     roleCookie.value = res.role
-    if (res.role === 'admin_0' || res.role === 'admin_1') await navigateTo('/admin')
-    else await navigateTo('/')
+    if (res.role === 'admin_0' || res.role === 'admin_1') {
+      await navigateTo('/admin')
+    } else {
+      const next = typeof route.query.next === 'string' ? route.query.next : ''
+      if (next && next.startsWith('/')) await navigateTo(next)
+      else await navigateTo('/')
+    }
   } catch (e) {
     error.value = e.data?.statusMessage || 'Mã OTP không đúng hoặc hết hạn!'
   } finally {

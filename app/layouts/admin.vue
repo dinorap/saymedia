@@ -16,13 +16,13 @@
           <span class="sidebar-item-icon" aria-hidden="true">▣</span>
           <span class="sidebar-item-label">{{ $t("admin.dashboard") }}</span>
         </NuxtLink>
-        <NuxtLink to="/admin/centers" class="sidebar-item">
-          <span class="sidebar-item-icon" aria-hidden="true">▦</span>
-          <span class="sidebar-item-label">{{ $t("admin.centers") }}</span>
-        </NuxtLink>
         <NuxtLink to="/admin/users" class="sidebar-item">
           <span class="sidebar-item-icon" aria-hidden="true">👥</span>
           <span class="sidebar-item-label">{{ $t("admin.users") }}</span>
+        </NuxtLink>
+        <NuxtLink to="/admin/orders" class="sidebar-item">
+          <span class="sidebar-item-icon" aria-hidden="true">🧾</span>
+          <span class="sidebar-item-label">{{ $t("admin.orders") }}</span>
         </NuxtLink>
         <NuxtLink to="/admin/deposits" class="sidebar-item">
           <span class="sidebar-item-icon" aria-hidden="true">💰</span>
@@ -51,11 +51,27 @@
           class="sidebar-profile"
           @click="showChangePassword = true"
         >
-          <div class="sidebar-profile-avatar" />
+          <div class="sidebar-profile-avatar">
+            <span>
+              {{
+                (currentUser?.username || $t("admin.profileName"))
+                  .charAt(0)
+                  .toUpperCase()
+              }}
+            </span>
+          </div>
           <span class="sidebar-profile-name">{{
             currentUser?.username || $t("admin.profileName")
           }}</span>
           <span class="sidebar-profile-chevron" aria-hidden="true">›</span>
+        </button>
+        <button
+          v-if="registerRefLink"
+          type="button"
+          class="sidebar-ref-btn"
+          @click="copyRegisterRefLink"
+        >
+          🔗 Copy link đăng ký
         </button>
       </div>
     </aside>
@@ -182,6 +198,13 @@ const pwForm = reactive({
 });
 const pwError = ref("");
 const pwSaving = ref(false);
+const registerRefLink = computed(() => {
+  if (!currentUser.value?.ref_code) return "";
+  if (import.meta.client) {
+    return `${window.location.origin}/register?ref=${currentUser.value.ref_code}`;
+  }
+  return `/register?ref=${currentUser.value.ref_code}`;
+});
 
 onMounted(async () => {
   try {
@@ -234,8 +257,8 @@ async function submitChangePassword() {
 const pageTitle = computed(() => {
   const name = route.name?.toString() || "";
   if (name === "admin") return t("admin.dashboard");
-  if (name.includes("centers")) return t("admin.centers");
   if (name.includes("users")) return t("admin.users");
+  if (name.includes("orders")) return t("admin.orders");
   if (name.includes("deposits")) return t("admin.deposits");
   if (name.includes("products")) return t("admin.products");
   if (name.includes("services")) return t("admin.services");
@@ -257,5 +280,25 @@ function logout() {
     });
   }
   return navigateTo("/");
+}
+
+async function copyRegisterRefLink() {
+  if (!registerRefLink.value) return;
+  try {
+    await navigator.clipboard.writeText(registerRefLink.value);
+    showToast(
+      locale.value === "vi"
+        ? "Đã copy link giới thiệu đăng ký"
+        : "Registration referral link copied",
+      "success",
+    );
+  } catch {
+    showToast(
+      locale.value === "vi"
+        ? "Không thể copy, vui lòng thử lại"
+        : "Failed to copy link",
+      "error",
+    );
+  }
 }
 </script>

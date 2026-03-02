@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import pool from '../../utils/db'
+import { addAuditLog } from '../../utils/audit'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'chuoi_bi_mat_jwt_ngau_nhien_cua_sep_123456'
 
@@ -39,6 +40,13 @@ export default defineEventHandler(async (event) => {
     }
     const hashedPassword = await bcrypt.hash(new_password, 10)
     await pool.query('UPDATE admins SET password_hash = ? WHERE id = ?', [hashedPassword, decoded.id])
+    await addAuditLog({
+      actorType: 'admin',
+      actorId: decoded.id,
+      action: 'change_password',
+      targetType: 'admin',
+      targetId: decoded.id,
+    })
     return { success: true, message: 'Đổi mật khẩu thành công!' }
   }
 
@@ -52,5 +60,12 @@ export default defineEventHandler(async (event) => {
   }
   const hashedPassword = await bcrypt.hash(new_password, 10)
   await pool.query('UPDATE users SET password_hash = ? WHERE id = ?', [hashedPassword, decoded.id])
+  await addAuditLog({
+    actorType: 'user',
+    actorId: decoded.id,
+    action: 'change_password',
+    targetType: 'user',
+    targetId: decoded.id,
+  })
   return { success: true, message: 'Đổi mật khẩu thành công!' }
 })

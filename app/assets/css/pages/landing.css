@@ -21,9 +21,9 @@
   display        : flex;
   justify-content: space-between;
   align-items    : center;
-  padding        : 22px 150px;
+  padding        : 16px 150px;
   border-bottom  : 1px solid rgba(1, 123, 251, 0.3);
-  background     : var(--bg-nav);
+  background     : rgb(4 15 39 / 95%);
   backdrop-filter: blur(12px);
   box-shadow     : 0 0 20px rgba(1, 123, 251, 0.08), 0 1px 0 rgba(1, 123, 251, 0.15);
 }

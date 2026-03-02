@@ -1,28 +1,109 @@
 <template>
   <div class="profile-page">
-    <header class="profile-header">
-      <NuxtLink to="/" class="profile-logo">
-        <img src="/logo.png" alt="SayMedia AI" class="profile-logo-img" />
+    <header class="header">
+      <NuxtLink to="/" class="logo">
+        <img src="/logo.png" alt="SayMedia AI" class="logo-img" />
       </NuxtLink>
-      <h1 class="profile-title">{{ $t("auth.profile") }}</h1>
-      <NuxtLink to="/" class="profile-back"> ← {{ $t("nav.home") }} </NuxtLink>
+      <nav class="nav-links">
+        <a href="#">{{ $t("nav.home") }}</a>
+        <a href="#">{{ $t("nav.services") }}</a>
+        <a href="#">{{ $t("nav.pricing") }}</a>
+        <a href="#">{{ $t("nav.contact") }}</a>
+      </nav>
+      <div class="auth-buttons">
+        <div class="lang-switcher">
+          <button
+            type="button"
+            class="lang-btn"
+            :class="{ active: locale === 'en' }"
+            @click="setLocale('en')"
+          >
+            EN
+          </button>
+          <span class="lang-sep">|</span>
+          <button
+            type="button"
+            class="lang-btn"
+            :class="{ active: locale === 'vi' }"
+            @click="setLocale('vi')"
+          >
+            VI
+          </button>
+        </div>
+        <template v-if="currentUser">
+          <div
+            class="user-dropdown"
+            @mouseenter="showDropdown = true"
+            @mouseleave="showDropdown = false"
+          >
+            <button type="button" class="btn-user-name">
+              {{ currentUser.username }}
+            </button>
+            <div v-show="showDropdown" class="user-dropdown-menu">
+              <button type="button" class="dropdown-item" @click="goProfile">
+                {{ $t("auth.profile") }}
+              </button>
+              <button type="button" class="dropdown-item" @click="doLogout">
+                {{ $t("auth.logout") }}
+              </button>
+            </div>
+          </div>
+        </template>
+        <button v-else class="btn-login" @click="navigateTo('/login')">
+          {{ $t("auth.login") }}
+        </button>
+      </div>
     </header>
 
     <main class="profile-main">
       <section class="profile-card" v-if="!loading && user">
-        <h2 class="profile-card-title">{{ $t("auth.profile") }}</h2>
-        <p class="profile-field">
-          <strong>{{ $t("admin.username") }}:</strong>
-          <span>{{ user.username }}</span>
-        </p>
-        <p v-if="user.email" class="profile-field">
-          <strong>{{ $t("admin.email") }}:</strong>
-          <span>{{ user.email }}</span>
-        </p>
-        <p class="profile-field">
-          <strong>Số dư:</strong>
-          <span>{{ formatVnd(user.credit || 0) }} điểm</span>
-        </p>
+        <div class="profile-card-header">
+          <div class="profile-avatar">
+            <span>{{ user.username?.charAt(0)?.toUpperCase() }}</span>
+          </div>
+          <div>
+            <h2 class="profile-card-title">{{ user.username }}</h2>
+            <p v-if="user.email" class="profile-subtitle">
+              {{ user.email }}
+            </p>
+          </div>
+        </div>
+
+        <div class="profile-grid">
+          <div class="profile-info">
+            <p class="profile-field">
+              <span class="profile-label">{{ $t("admin.username") }}</span>
+              <span class="profile-value">{{ user.username }}</span>
+            </p>
+            <p v-if="user.email" class="profile-field">
+              <span class="profile-label">{{ $t("admin.email") }}</span>
+              <span class="profile-value">{{ user.email }}</span>
+            </p>
+          </div>
+
+          <div class="profile-balance">
+            <p class="profile-balance-label">Số dư hiện tại</p>
+            <p class="profile-balance-value">
+              {{ formatVnd(user.credit || 0) }}
+              <span class="profile-balance-unit">điểm</span>
+            </p>
+          </div>
+        </div>
+
+        <div class="profile-stats">
+          <div class="profile-stat-card">
+            <p class="profile-stat-label">Lượt nạp gần đây</p>
+            <p class="profile-stat-value">{{ quickStats.depositCount }}</p>
+          </div>
+          <div class="profile-stat-card">
+            <p class="profile-stat-label">Đơn hàng của bạn</p>
+            <p class="profile-stat-value">{{ quickStats.orderCount }}</p>
+          </div>
+        </div>
+
+        <div v-if="Number(user.credit || 0) <= 0" class="profile-tip">
+          Bạn chưa có điểm. Hãy nạp tiền để bắt đầu sử dụng dịch vụ nhanh hơn.
+        </div>
 
         <div class="profile-actions">
           <button
@@ -38,6 +119,13 @@
             @click="showDepositModal = true"
           >
             Nạp tiền
+          </button>
+          <button
+            type="button"
+            class="btn-secondary"
+            @click="showOrderHistoryModal = true"
+          >
+            {{ $t("admin.orders") }}
           </button>
           <button
             type="button"
@@ -134,6 +222,11 @@
       :model-value="showHistoryModal"
       @update:model-value="showHistoryModal = $event"
     />
+
+    <OrderHistoryModal
+      :model-value="showOrderHistoryModal"
+      @update:model-value="showOrderHistoryModal = $event"
+    />
   </div>
 </template>
 
@@ -141,7 +234,8 @@
 import { useI18n } from "vue-i18n";
 import PaymentModal from "~/components/payment/PaymentModal.vue";
 import PaymentHistoryModal from "~/components/payment/PaymentHistoryModal.vue";
-const { t, locale } = useI18n();
+import OrderHistoryModal from "~/components/OrderHistoryModal.vue";
+const { t, locale, setLocale } = useI18n();
 const { show: showToast } = useToast();
 
 const user = ref(null);
@@ -149,6 +243,11 @@ const loading = ref(true);
 const errorMessage = ref("");
 const showDepositModal = ref(false);
 const showHistoryModal = ref(false);
+const showOrderHistoryModal = ref(false);
+const quickStats = reactive({
+  depositCount: 0,
+  orderCount: 0,
+});
 
 const showChangePassword = ref(false);
 const pwForm = reactive({
@@ -158,6 +257,9 @@ const pwForm = reactive({
 });
 const pwError = ref("");
 const pwSaving = ref(false);
+
+const showDropdown = ref(false);
+const currentUser = ref(null);
 
 async function loadProfile() {
   try {
@@ -177,7 +279,45 @@ async function loadProfile() {
   }
 }
 
-onMounted(loadProfile);
+async function loadQuickStats() {
+  try {
+    const [depositRes, orderRes] = await Promise.all([
+      $fetch("/api/payment/history"),
+      $fetch("/api/orders/my"),
+    ]);
+    quickStats.depositCount = Array.isArray(depositRes?.data)
+      ? depositRes.data.length
+      : 0;
+    quickStats.orderCount = Array.isArray(orderRes?.data)
+      ? orderRes.data.length
+      : 0;
+  } catch {
+    quickStats.depositCount = 0;
+    quickStats.orderCount = 0;
+  }
+}
+
+onMounted(async () => {
+  await loadProfile();
+  await loadQuickStats();
+  if (user.value) {
+    currentUser.value = user.value;
+  }
+});
+
+async function doLogout() {
+  try {
+    await $fetch("/api/auth/logout", { method: "POST" });
+  } catch {}
+  currentUser.value = null;
+  showDropdown.value = false;
+  return navigateTo("/");
+}
+
+function goProfile() {
+  showDropdown.value = false;
+  navigateTo("/profile");
+}
 
 function formatVnd(v) {
   return (Number(v) || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
@@ -188,6 +328,7 @@ async function onDepositSuccess(payload) {
     user.value.credit = payload?.newCredit ?? user.value.credit;
   }
   await loadProfile();
+  await loadQuickStats();
 }
 
 async function submitChangePassword() {
@@ -243,34 +384,186 @@ async function submitChangePassword() {
   color: var(--text-primary);
 }
 
-.profile-header {
+.profile-page .header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 150px;
+  border-bottom: 1px solid rgba(1, 123, 251, 0.3);
+  background: rgb(4 15 39 / 95%);
+  backdrop-filter: blur(12px);
+  box-shadow:
+    0 0 20px rgba(1, 123, 251, 0.08),
+    0 1px 0 rgba(1, 123, 251, 0.15);
+}
+
+.profile-page .logo {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 1.25rem 2rem;
-  background: var(--bg-nav);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.profile-logo-img {
-  height: 32px;
-}
-
-.profile-title {
-  font-size: 1.1rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.profile-back {
-  font-size: 0.9rem;
-  color: var(--text-secondary);
   text-decoration: none;
 }
 
-.profile-back:hover {
-  color: var(--blue-electric);
+.profile-page .logo-img {
+  height: 56px;
+  width: auto;
+  display: block;
+  object-fit: contain;
+}
+
+.profile-page .nav-links {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.profile-page .nav-links a {
+  color: var(--text-primary);
+  text-decoration: none;
+  font-size: 18px;
+  font-weight: 500;
+  padding: 10px 16px;
+  border-radius: 8px;
+  transition: var(--transition-fast);
+  letter-spacing: 0.01em;
+}
+
+.profile-page .nav-links a:hover {
+  color: var(--blue-bright);
+  background: rgba(1, 123, 251, 0.1);
+  text-shadow:
+    0 0 15px var(--blue-glow),
+    0 0 30px rgba(1, 123, 251, 0.4);
+}
+
+.profile-page .auth-buttons {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.profile-page .lang-switcher {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.profile-page .lang-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: 6px;
+  transition: var(--transition-fast);
+}
+
+.profile-page .lang-btn:hover {
+  color: var(--text-primary);
+}
+
+.profile-page .lang-btn.active {
+  color: var(--blue-bright);
+  text-shadow:
+    0 0 12px var(--blue-glow),
+    0 0 25px rgba(1, 123, 251, 0.5);
+}
+
+.profile-page .lang-sep {
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 14px;
+  user-select: none;
+}
+
+.profile-page .btn-login,
+.profile-page .btn-primary,
+.profile-page .btn-secondary {
+  padding: 10px 24px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 15px;
+  transition: var(--transition-fast);
+}
+
+.profile-page .btn-login {
+  background: transparent;
+  color: var(--text-primary);
+  border: 1px solid rgba(1, 123, 251, 0.5);
+  box-shadow: 0 0 15px rgba(1, 123, 251, 0.2);
+}
+
+.profile-page .btn-login:hover {
+  border-color: var(--blue-bright);
+  background: var(--blue-soft);
+  color: var(--blue-bright);
+  box-shadow:
+    0 0 25px var(--blue-glow),
+    0 0 50px rgba(1, 123, 251, 0.25);
+}
+
+.profile-page .user-dropdown {
+  position: relative;
+}
+
+.profile-page .btn-user-name {
+  background: transparent;
+  color: var(--text-primary);
+  border: 1px solid rgba(1, 123, 251, 0.5);
+  padding: 10px 24px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 15px;
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.profile-page .btn-user-name:hover {
+  border-color: var(--blue-bright);
+  background: var(--blue-soft);
+  color: var(--blue-bright);
+}
+
+.profile-page .user-dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 8px;
+  min-width: 140px;
+  background: var(--bg-nav);
+  border: 1px solid rgba(1, 123, 251, 0.45);
+  border-radius: 10px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  overflow: visible;
+  z-index: 100;
+}
+
+.profile-page .user-dropdown-menu::before {
+  content: "";
+  position: absolute;
+  top: -8px;
+  left: 0;
+  right: 0;
+  height: 8px;
+}
+
+.profile-page .dropdown-item {
+  display: block;
+  width: 100%;
+  padding: 12px 16px;
+  text-align: left;
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  font-size: 15px;
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.profile-page .dropdown-item:hover {
+  background: rgba(1, 123, 251, 0.15);
+  color: var(--blue-bright);
 }
 
 .profile-main {
@@ -283,7 +576,7 @@ async function submitChangePassword() {
 
 .profile-card {
   width: 100%;
-  max-width: 480px;
+  max-width: 560px;
   background: var(--bg-card);
   border-radius: 1rem;
   padding: 2rem;
@@ -291,26 +584,148 @@ async function submitChangePassword() {
   border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
+.profile-card-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.profile-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 999px;
+  background: rgba(1, 123, 251, 0.15);
+  border: 1px solid rgba(1, 123, 251, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.2rem;
+  color: var(--blue-electric);
+}
+
 .profile-card-title {
-  font-size: 1.3rem;
-  margin-bottom: 1rem;
+  font-size: 1.25rem;
+  margin: 0;
+}
+
+.profile-subtitle {
+  margin-top: 0.25rem;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.profile-grid {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 1.5rem;
+  align-items: stretch;
+}
+
+@media (max-width: 640px) {
+  .profile-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+}
+
+.profile-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
 .profile-field {
-  margin-bottom: 0.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
   font-size: 0.95rem;
 }
 
-.profile-field strong {
-  display: inline-block;
-  min-width: 120px;
+.profile-label {
+  font-size: 0.85rem;
   color: var(--text-secondary);
+}
+
+.profile-value {
+  font-weight: 500;
+}
+
+.profile-balance {
+  padding: 0.8rem 1rem;
+  border-radius: 0.9rem;
+  background: rgba(1, 123, 251, 0.12);
+  border: 1px solid rgba(1, 123, 251, 0.45);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.profile-balance-label {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-secondary);
+  margin: 0 0 0.25rem;
+}
+
+.profile-balance-value {
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 600;
+}
+
+.profile-balance-unit {
+  margin-left: 0.25rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.profile-stats {
+  margin-top: 1rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.profile-stat-card {
+  border: 1px solid rgba(1, 123, 251, 0.25);
+  background: rgba(1, 123, 251, 0.07);
+  border-radius: 0.75rem;
+  padding: 0.7rem 0.9rem;
+}
+
+.profile-stat-label {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+
+.profile-stat-value {
+  margin: 0.25rem 0 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.profile-tip {
+  margin-top: 0.9rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: 0.7rem;
+  border: 1px solid rgba(250, 204, 21, 0.35);
+  background: rgba(250, 204, 21, 0.1);
+  color: #fde68a;
+  font-size: 0.86rem;
 }
 
 .profile-actions {
   margin-top: 1.5rem;
   display: flex;
   justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.75rem;
 }
 
 .profile-card--error {

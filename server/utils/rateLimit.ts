@@ -1,3 +1,5 @@
+import { addAuditLog } from './audit'
+
 /**
  * Rate limit đơn giản cho đăng nhập - chống brute force
  * Lưu theo IP, tối đa 5 lần thất bại / 15 phút
@@ -26,6 +28,14 @@ export function checkLoginRateLimit(event: any): void {
     }
     if (entry.count >= MAX_ATTEMPTS) {
       const mins = Math.ceil((entry.resetAt - now) / 60000)
+      // ghi log khi IP bị rate limit
+      addAuditLog({
+        actorType: 'system',
+        action: 'login_rate_limited',
+        targetType: 'ip',
+        targetId: key,
+        metadata: { attempts: entry.count, windowMinutes: WINDOW_MS / 60000 },
+      }).catch(() => {})
       throw createError({
         statusCode: 429,
         statusMessage: `Đăng nhập thất bại quá nhiều. Thử lại sau ${mins} phút.`
