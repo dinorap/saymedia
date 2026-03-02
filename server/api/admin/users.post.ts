@@ -7,16 +7,18 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 401, statusMessage: 'Chưa đăng nhập' })
   }
 
+  if (currentUser.role !== 'admin_0') {
+    throw createError({ statusCode: 403, statusMessage: 'Chỉ Super Admin mới tạo được người dùng' })
+  }
+
   const body = await readBody(event)
   const { username, email, password, admin_id } = body
   if (!username?.trim() || !email?.trim() || !password) {
     throw createError({ statusCode: 400, statusMessage: 'Thiếu username, email hoặc password' })
   }
 
-  let targetAdminId = parseInt(admin_id, 10)
-  if (currentUser.role === 'admin_1') {
-    targetAdminId = currentUser.id
-  } else if (!targetAdminId || isNaN(targetAdminId)) {
+  const targetAdminId = parseInt(admin_id, 10)
+  if (!targetAdminId || isNaN(targetAdminId)) {
     throw createError({ statusCode: 400, statusMessage: 'Chọn Admin phụ trách' })
   }
 

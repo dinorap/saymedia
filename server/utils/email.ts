@@ -48,7 +48,7 @@ export async function sendOtpEmail(
 ): Promise<boolean> {
   const trans = getTransporter()
   if (!trans) return false
-  const subject = `Mã OTP ${purpose === 'đăng ký' ? 'Đăng ký' : 'Đăng nhập'} - Tạp Hóa MMO`
+  const subject = `Mã OTP ${purpose === 'đăng ký' ? 'Đăng ký' : 'Đăng nhập'} - SayMedia AI`
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
       <h2 style="color: #0d1220;">Mã OTP ${purpose === 'đăng ký' ? 'Đăng ký' : 'Đăng nhập'}</h2>
@@ -78,7 +78,7 @@ export async function sendOtpEmail(
 export async function sendNewPasswordEmail(to: string, newPassword: string): Promise<boolean> {
   const trans = getTransporter()
   if (!trans) return false
-  const subject = 'Mật khẩu mới - Tạp Hóa MMO'
+  const subject = 'Mật khẩu mới - SayMedia AI'
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
       <h2 style="color: #0d1220;">Mật khẩu mới</h2>

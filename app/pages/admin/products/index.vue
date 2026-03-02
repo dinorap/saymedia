@@ -1,5 +1,5 @@
 <template>
-  <div class="services-page">
+  <div class="products-page">
     <div class="list-toolbar">
       <div class="search-group">
         <label>{{ $t("admin.search") }}</label>
@@ -25,7 +25,7 @@
         <thead>
           <tr>
             <th>{{ $t("admin.id") }}</th>
-            <th>{{ $t("admin.serviceName") || "Tên dịch vụ" }}</th>
+            <th>{{ $t("admin.productName") || "Tên sản phẩm" }}</th>
             <th>{{ $t("admin.description") || "Mô tả" }}</th>
             <th>{{ $t("admin.status") }}</th>
             <th>{{ $t("admin.createdAt") }}</th>
@@ -79,11 +79,11 @@
       >
         <div class="modal">
           <h3 class="modal-title">
-            {{ editing ? $t("admin.edit") : ($t("admin.addService") || "Thêm dịch vụ") }}
+            {{ editing ? $t("admin.edit") : ($t("admin.addProduct") || "Thêm sản phẩm") }}
           </h3>
           <form class="modal-form" @submit.prevent="save">
             <div class="form-row">
-              <label>{{ $t("admin.serviceName") || "Tên dịch vụ" }}</label>
+              <label>{{ $t("admin.productName") || "Tên sản phẩm" }}</label>
               <input
                 v-model="form.name"
                 type="text"
@@ -195,7 +195,7 @@ onMounted(() => fetchList());
 </script>
 
 <style scoped>
-.services-page {
+.products-page {
   display: flex;
   flex-direction: column;
   gap: 1rem;

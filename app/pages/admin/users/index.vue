@@ -47,8 +47,8 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="a in admins" :key="a.id">
-              <td>{{ a.id }}</td>
+            <tr v-for="(a, idx) in admins" :key="a.id">
+              <td>{{ idx + 1 }}</td>
               <td>{{ a.username }}</td>
               <td>
                 <span
@@ -138,7 +138,12 @@
             🔍
           </button>
         </div>
-        <button type="button" class="btn-add btn-add--right" @click="openUserModal()">
+        <button
+          v-if="isSuperAdmin"
+          type="button"
+          class="btn-add btn-add--right"
+          @click="openUserModal()"
+        >
           + {{ $t("admin.add") }}
         </button>
       </div>
@@ -155,18 +160,18 @@
               <th>{{ $t("admin.id") }}</th>
               <th>{{ $t("admin.username") }}</th>
               <th>{{ $t("admin.email") }}</th>
-              <th>{{ $t("admin.adminId") }}</th>
+              <th v-if="isSuperAdmin">{{ $t("admin.adminId") }}</th>
               <th>{{ $t("admin.status") }}</th>
               <th>{{ $t("admin.createdAt") }}</th>
               <th class="th-actions">{{ $t("admin.actions") }}</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="u in users" :key="u.id">
-              <td>{{ u.id }}</td>
+            <tr v-for="(u, idx) in users" :key="u.id">
+              <td>{{ (userPagination.page - 1) * userPagination.limit + idx + 1 }}</td>
               <td>{{ u.username }}</td>
               <td>{{ u.email }}</td>
-              <td>{{ u.admin_username || "-" }}</td>
+              <td v-if="isSuperAdmin">{{ u.admin_username || "-" }}</td>
               <td>
                 <span
                   class="badge"
