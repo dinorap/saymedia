@@ -92,7 +92,8 @@ const productNames = [
 const displayList = ref([]);
 const realOrders = ref([]);
 const MAX_ITEMS = 20;
-const INTERVAL_MS = 6000;
+const MIN_INTERVAL_MS = 30000;
+const MAX_INTERVAL_MS = 60000;
 const timeTick = ref(0);
 
 function shuffleArray(arr) {
@@ -211,16 +212,29 @@ const displayWithTime = computed(() => {
 
 let intervalId;
 let timeIntervalId;
+
+function scheduleNextFake() {
+  const delay =
+    MIN_INTERVAL_MS +
+    Math.floor(Math.random() * (MAX_INTERVAL_MS - MIN_INTERVAL_MS));
+  if (intervalId) clearTimeout(intervalId);
+  intervalId = setTimeout(() => {
+    addOneFake();
+    scheduleNextFake();
+  }, delay);
+}
+
 onMounted(async () => {
   await fetchRealOrders();
   buildInitialList();
-  intervalId = setInterval(addOneFake, INTERVAL_MS);
+  scheduleNextFake();
   timeIntervalId = setInterval(() => {
     timeTick.value++;
   }, 1000);
 });
+
 onUnmounted(() => {
-  if (intervalId) clearInterval(intervalId);
+  if (intervalId) clearTimeout(intervalId);
   if (timeIntervalId) clearInterval(timeIntervalId);
 });
 </script>
