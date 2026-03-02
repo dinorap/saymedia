@@ -43,7 +43,15 @@ export default defineEventHandler(async (event) => {
   const [[{ total }]]: any = await pool.query(countQuery, params)
 
   const dataQuery = `
-    SELECT u.id, u.username, u.email, u.admin_id, u.status, u.created_at, a.username AS admin_username
+    SELECT
+      u.id,
+      u.username,
+      u.email,
+      u.admin_id,
+      u.status,
+      u.created_at,
+      u.credit,
+      a.username AS admin_username
     FROM users u
     LEFT JOIN admins a ON u.admin_id = a.id
     ${whereClause}

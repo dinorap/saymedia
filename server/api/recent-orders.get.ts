@@ -1,30 +1,32 @@
 import pool from '../utils/db'
+import { ensureSocialProofSchema } from '../utils/socialProof'
 
 /**
- * API công khai: lấy đơn hàng gần đây (completed) để hiển thị social proof.
- * Trả về: username, product (mô tả), timeAgo
+ * API công khai: lấy feed "Đơn hàng gần đây" (tối đa 20 bản ghi).
+ * Ưu tiên đọc từ bảng recent_orders_feed để giữ trạng thái qua F5.
  */
 export default defineEventHandler(async () => {
   try {
+    await ensureSocialProofSchema()
+
     const [rows]: any = await pool.query(
-      `SELECT o.id, o.amount, o.created_at, u.username
-       FROM orders o
-       JOIN users u ON o.user_id = u.id
-       WHERE o.status = 'completed'
-       ORDER BY o.created_at DESC
-       LIMIT 20`
+      `
+        SELECT id, display_name, item_name, is_fake, created_at
+        FROM recent_orders_feed
+        ORDER BY created_at DESC
+        LIMIT 20
+      `,
     )
-    return rows.map((r: any) => {
-      const minutes = Math.max(1, Math.floor((Date.now() - new Date(r.created_at).getTime()) / 60000))
-      return {
-        id: `real-${r.id}`,
-        name: r.username,
-        product: `Dịch vụ ${Number(r.amount).toLocaleString('vi-VN')}đ`,
-        minutes,
-        isReal: true,
-      }
-    })
+
+    return rows.map((r: any) => ({
+      id: `feed-${r.id}`,
+      name: r.display_name,
+      product: r.item_name,
+      created_at: r.created_at,
+      isFake: !!r.is_fake,
+    }))
   } catch (e) {
     return []
   }
 })
+

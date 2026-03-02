@@ -19,8 +19,26 @@
           <strong>{{ $t("admin.email") }}:</strong>
           <span>{{ user.email }}</span>
         </p>
+        <p class="profile-field">
+          <strong>Số dư:</strong>
+          <span>{{ formatVnd(user.credit || 0) }} điểm</span>
+        </p>
 
         <div class="profile-actions">
+          <button
+            type="button"
+            class="btn-secondary"
+            @click="showHistoryModal = true"
+          >
+            {{ $t("payment.history.title") }}
+          </button>
+          <button
+            type="button"
+            class="btn-secondary"
+            @click="showDepositModal = true"
+          >
+            Nạp tiền
+          </button>
           <button
             type="button"
             class="btn-primary"
@@ -105,17 +123,32 @@
         </div>
       </div>
     </Teleport>
+
+    <PaymentModal
+      :model-value="showDepositModal"
+      @update:model-value="showDepositModal = $event"
+      @success="onDepositSuccess"
+    />
+
+    <PaymentHistoryModal
+      :model-value="showHistoryModal"
+      @update:model-value="showHistoryModal = $event"
+    />
   </div>
 </template>
 
 <script setup>
 import { useI18n } from "vue-i18n";
+import PaymentModal from "~/components/payment/PaymentModal.vue";
+import PaymentHistoryModal from "~/components/payment/PaymentHistoryModal.vue";
 const { t, locale } = useI18n();
 const { show: showToast } = useToast();
 
 const user = ref(null);
 const loading = ref(true);
 const errorMessage = ref("");
+const showDepositModal = ref(false);
+const showHistoryModal = ref(false);
 
 const showChangePassword = ref(false);
 const pwForm = reactive({
@@ -126,7 +159,7 @@ const pwForm = reactive({
 const pwError = ref("");
 const pwSaving = ref(false);
 
-onMounted(async () => {
+async function loadProfile() {
   try {
     const data = await $fetch("/api/auth/me");
     if (data?.success && data.user) {
@@ -142,7 +175,20 @@ onMounted(async () => {
   } finally {
     loading.value = false;
   }
-});
+}
+
+onMounted(loadProfile);
+
+function formatVnd(v) {
+  return (Number(v) || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+}
+
+async function onDepositSuccess(payload) {
+  if (user.value) {
+    user.value.credit = payload?.newCredit ?? user.value.credit;
+  }
+  await loadProfile();
+}
 
 async function submitChangePassword() {
   pwError.value = "";

@@ -11,4 +11,11 @@ const pool = mysql.createPool({
   queueLimit: 0
 });
 
+// Đảm bảo mọi kết nối từ app đều dùng múi giờ +07:00 (Asia/Ho_Chi_Minh)
+// để CURRENT_TIMESTAMP và việc convert TIMESTAMP hiển thị đúng theo giờ VN.
+// mysql2/promise pool vẫn hỗ trợ sự kiện "connection" từ pool gốc.
+(pool as any).on('connection', (connection: any) => {
+  connection.query("SET time_zone = '+07:00'");
+});
+
 export default pool;

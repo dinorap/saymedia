@@ -11,15 +11,23 @@ export default defineEventHandler(async (event) => {
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as { id: number; username: string; role: string; admin_id?: number }
-    const user: { id: number; username: string; role: string; admin_id?: number; email?: string } = {
+    const user: { id: number; username: string; role: string; admin_id?: number; email?: string; credit?: number } = {
       id: decoded.id,
       username: decoded.username,
       role: decoded.role,
       admin_id: decoded.admin_id
     }
     if (decoded.role === 'user') {
-      const [rows]: any = await pool.query('SELECT email FROM users WHERE id = ?', [decoded.id])
-      if (rows.length > 0) user.email = rows[0].email
+      try {
+        const [rows]: any = await pool.query('SELECT email, credit FROM users WHERE id = ?', [decoded.id])
+        if (rows.length > 0) {
+          user.email = rows[0].email
+          user.credit = Number(rows[0].credit || 0)
+        }
+      } catch {
+        const [rows]: any = await pool.query('SELECT email FROM users WHERE id = ?', [decoded.id])
+        if (rows.length > 0) user.email = rows[0].email
+      }
     }
     return { success: true, user }
   } catch {

@@ -137,7 +137,14 @@ const saving = ref(false);
 
 function formatDate(val) {
   if (!val) return "-";
-  return new Date(val).toLocaleDateString(undefined, {
+  let d;
+  if (typeof val === "string" && val.includes(" ")) {
+    d = new Date(val.replace(" ", "T") + "Z");
+  } else {
+    d = new Date(val);
+  }
+  return d.toLocaleString("vi-VN", {
+    timeZone: "Asia/Ho_Chi_Minh",
     year: "numeric",
     month: "2-digit",
     day: "2-digit",

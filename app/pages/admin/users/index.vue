@@ -160,6 +160,7 @@
               <th>{{ $t("admin.id") }}</th>
               <th>{{ $t("admin.username") }}</th>
               <th>{{ $t("admin.email") }}</th>
+              <th>{{ $t("admin.credit") }}</th>
               <th v-if="isSuperAdmin">{{ $t("admin.adminId") }}</th>
               <th>{{ $t("admin.status") }}</th>
               <th>{{ $t("admin.createdAt") }}</th>
@@ -168,9 +169,12 @@
           </thead>
           <tbody>
             <tr v-for="(u, idx) in users" :key="u.id">
-              <td>{{ (userPagination.page - 1) * userPagination.limit + idx + 1 }}</td>
+              <td>
+                {{ (userPagination.page - 1) * userPagination.limit + idx + 1 }}
+              </td>
               <td>{{ u.username }}</td>
               <td>{{ u.email }}</td>
+              <td>{{ formatVnd(u.credit || 0) }}</td>
               <td v-if="isSuperAdmin">{{ u.admin_username || "-" }}</td>
               <td>
                 <span
@@ -455,14 +459,25 @@ function goToUserPage(page) {
 
 function formatDate(val) {
   if (!val) return "-";
-  const d = new Date(val);
-  return d.toLocaleDateString(undefined, {
+  let d;
+  if (typeof val === "string" && val.includes(" ")) {
+    // Chuẩn hóa dạng "YYYY-MM-DD HH:mm:ss" thành UTC rồi hiển thị theo giờ VN
+    d = new Date(val.replace(" ", "T") + "Z");
+  } else {
+    d = new Date(val);
+  }
+  return d.toLocaleString("vi-VN", {
+    timeZone: "Asia/Ho_Chi_Minh",
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+function formatVnd(v) {
+  return (Number(v) || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 }
 
 // Admin modal

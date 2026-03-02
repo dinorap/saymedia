@@ -171,6 +171,7 @@ function mergeAndShuffle(real, fake) {
 function addOneFake() {
   const item = createFakeItem();
   displayList.value = [item, ...displayList.value].slice(0, MAX_ITEMS);
+  persistItemToFeed(item, true);
 }
 
 async function fetchRealOrders() {
@@ -179,6 +180,21 @@ async function fetchRealOrders() {
     realOrders.value = Array.isArray(data) ? data : [];
   } catch {
     realOrders.value = [];
+  }
+}
+
+async function persistItemToFeed(item, isFake) {
+  try {
+    await $fetch("/api/recent-orders", {
+      method: "POST",
+      body: {
+        name: item.name,
+        product: item.product,
+        isFake,
+      },
+    });
+  } catch {
+    // feed phụ, lỗi thì bỏ qua
   }
 }
 
@@ -193,6 +209,12 @@ function buildInitialList() {
     fake.push(item);
   }
   displayList.value = mergeAndShuffle(real, fake);
+
+  if (!real.length && fake.length) {
+    fake.forEach((item) => {
+      persistItemToFeed(item, true);
+    });
+  }
 }
 
 const displayWithTime = computed(() => {

@@ -24,6 +24,10 @@
           <span class="sidebar-item-icon" aria-hidden="true">👥</span>
           <span class="sidebar-item-label">{{ $t("admin.users") }}</span>
         </NuxtLink>
+        <NuxtLink to="/admin/deposits" class="sidebar-item">
+          <span class="sidebar-item-icon" aria-hidden="true">💰</span>
+          <span class="sidebar-item-label">{{ $t("admin.deposits") }}</span>
+        </NuxtLink>
         <NuxtLink to="/admin/products" class="sidebar-item">
           <span class="sidebar-item-icon" aria-hidden="true">🛒</span>
           <span class="sidebar-item-label">{{ $t("admin.products") }}</span>
@@ -232,6 +236,7 @@ const pageTitle = computed(() => {
   if (name === "admin") return t("admin.dashboard");
   if (name.includes("centers")) return t("admin.centers");
   if (name.includes("users")) return t("admin.users");
+  if (name.includes("deposits")) return t("admin.deposits");
   if (name.includes("products")) return t("admin.products");
   if (name.includes("services")) return t("admin.services");
   if (name.includes("revenue")) return t("admin.revenue");
