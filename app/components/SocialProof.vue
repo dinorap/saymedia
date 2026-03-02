@@ -21,107 +21,13 @@
 </template>
 
 <script setup>
+import { ref, computed, onMounted, onUnmounted } from "vue";
 import { useI18n } from "vue-i18n";
+
 const { t } = useI18n();
 
-// Tạo tên ngẫu nhiên từ họ / đệm / tên, tránh lộ list tên cố định
-const FIRST_NAMES = [
-  "Nguyễn",
-  "Trần",
-  "Lê",
-  "Phạm",
-  "Hoàng",
-  "Vũ",
-  "Bùi",
-  "Đặng",
-  "Đỗ",
-  "Võ",
-  "Phan",
-  "Dương",
-];
-
-const MIDDLE_NAMES = [
-  "Văn",
-  "Thị",
-  "Minh",
-  "Anh",
-  "Gia",
-  "Ngọc",
-  "Quang",
-  "Thanh",
-  "Hồng",
-  "Đức",
-];
-
-const LAST_NAMES = [
-  "An",
-  "Khoa",
-  "Phúc",
-  "Hưng",
-  "Linh",
-  "Tuấn",
-  "Hà",
-  "Duy",
-  "Mai",
-  "Huy",
-  "Trang",
-  "Quân",
-  "Hương",
-  "Nam",
-  "Long",
-];
-
-const productNames = [
-  "iPhone 15 Pro",
-  "Tai nghe Sony WH-1000XM5",
-  "MacBook Air M2",
-  "Samsung Galaxy S24",
-  "Gói nạp thẻ Liên Quân",
-  "Tài khoản Valorant",
-  "Nạp game Genshin Impact",
-  "Gói dịch vụ Netflix",
-  "Steam Wallet 200K",
-  "Robux 800",
-  "Gói PUBG UC",
-  "Tài khoản LOL",
-  "Nạp thẻ Free Fire",
-  "Spotify Premium",
-  "YouTube Premium",
-];
-
-const displayList = ref([]);
-const realOrders = ref([]);
-const MAX_ITEMS = 20;
-const MIN_INTERVAL_MS = 30000;
-const MAX_INTERVAL_MS = 60000;
+const items = ref([]);
 const timeTick = ref(0);
-
-function shuffleArray(arr) {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
-
-function randomItem(arr, exclude = null) {
-  const filtered = exclude ? arr.filter((x) => x !== exclude) : arr;
-  if (filtered.length === 0) return arr[0];
-  return filtered[Math.floor(Math.random() * filtered.length)];
-}
-
-function generateRandomName(excludeName = "") {
-  let name = "";
-  for (let i = 0; i < 5; i++) {
-    const first = randomItem(FIRST_NAMES);
-    const middle = randomItem(MIDDLE_NAMES);
-    const last = randomItem(LAST_NAMES);
-    name = `${first} ${middle} ${last}`;
-    if (!excludeName || name !== excludeName) break;
-  }
-  return name || excludeName || "Khách hàng";
-}
 
 function formatTimeFromMs(diffMs) {
   if (diffMs < 60000) {
@@ -135,129 +41,56 @@ function formatTimeFromMs(diffMs) {
   return t("socialProof.minutesAgo", { n: minutes });
 }
 
-function createFakeItem(excludeName = null) {
-  const lastShownName = excludeName ?? displayList.value[0]?.name ?? "";
-  const name = generateRandomName(lastShownName);
-  const product = randomItem(productNames);
-  return {
-    id: `gen-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-    name,
-    product,
-    textMid: t("socialProof.bought") + " ",
-    // tạo tại thời điểm hiện tại -> bắt đầu từ \"1 giây trước\"
-    createdAt: Date.now(),
-  };
-}
-
-function toBaseItem(real) {
-  return {
-    id: real.id,
-    name: real.name,
-    product: real.product,
-    textMid: t("socialProof.bought") + " ",
-    createdAt: Date.now() - (real.minutes ?? 1) * 60000,
-    isReal: true,
-  };
-}
-
-function mergeAndShuffle(real, fake) {
-  const combined = [
-    ...real.map(toBaseItem),
-    ...fake,
-  ];
-  return shuffleArray(combined).slice(0, MAX_ITEMS);
-}
-
-function addOneFake() {
-  const item = createFakeItem();
-  displayList.value = [item, ...displayList.value].slice(0, MAX_ITEMS);
-  persistItemToFeed(item, true);
-}
-
-async function fetchRealOrders() {
-  try {
-    const data = await $fetch("/api/recent-orders");
-    realOrders.value = Array.isArray(data) ? data : [];
-  } catch {
-    realOrders.value = [];
-  }
-}
-
-async function persistItemToFeed(item, isFake) {
-  try {
-    await $fetch("/api/recent-orders", {
-      method: "POST",
-      body: {
-        name: item.name,
-        product: item.product,
-        isFake,
-      },
-    });
-  } catch {
-    // feed phụ, lỗi thì bỏ qua
-  }
-}
-
-function buildInitialList() {
-  const real = realOrders.value;
-  const fakeCount = Math.max(0, MAX_ITEMS - real.length);
-  const fake = [];
-  let lastFakeName = "";
-  for (let i = 0; i < fakeCount; i++) {
-    const item = createFakeItem(lastFakeName);
-    lastFakeName = item.name;
-    fake.push(item);
-  }
-  displayList.value = mergeAndShuffle(real, fake);
-
-  if (!real.length && fake.length) {
-    fake.forEach((item) => {
-      persistItemToFeed(item, true);
-    });
-  }
-}
-
 const displayWithTime = computed(() => {
-  // tạo phụ thuộc vào timeTick để re-compute mỗi phút
+  // tạo phụ thuộc vào timeTick để update "X giây/phút trước"
   // eslint-disable-next-line no-unused-expressions
   timeTick.value;
   const now = Date.now();
-  return displayList.value.map((item) => {
-    const createdAt = item.createdAt ?? now;
-    const diffMs = Math.max(1000, now - createdAt);
+  return items.value.map((item) => {
+    let createdAtMs = now;
+    const raw = item.created_at || item.createdAt;
+    if (raw) {
+      if (typeof raw === "string" && raw.includes(" ")) {
+        createdAtMs = new Date(raw.replace(" ", "T")).getTime();
+      } else {
+        createdAtMs = new Date(raw).getTime();
+      }
+    }
+    const diffMs = Math.max(1000, now - createdAtMs);
     return {
       ...item,
+      textMid: t("socialProof.bought") + " ",
       time: formatTimeFromMs(diffMs),
     };
   });
 });
 
-let intervalId;
-let timeIntervalId;
-
-function scheduleNextFake() {
-  const delay =
-    MIN_INTERVAL_MS +
-    Math.floor(Math.random() * (MAX_INTERVAL_MS - MIN_INTERVAL_MS));
-  if (intervalId) clearTimeout(intervalId);
-  intervalId = setTimeout(() => {
-    addOneFake();
-    scheduleNextFake();
-  }, delay);
+async function loadFeed() {
+  try {
+    const data = await $fetch("/api/recent-orders");
+    items.value = Array.isArray(data) ? data : [];
+  } catch {
+    items.value = [];
+  }
 }
 
+let pollId;
+let tickId;
+
 onMounted(async () => {
-  await fetchRealOrders();
-  buildInitialList();
-  scheduleNextFake();
-  timeIntervalId = setInterval(() => {
+  await loadFeed();
+  tickId = setInterval(() => {
     timeTick.value++;
   }, 1000);
+  // poll nhẹ để cập nhật item mới server sinh ra
+  pollId = setInterval(() => {
+    loadFeed();
+  }, 30000);
 });
 
 onUnmounted(() => {
-  if (intervalId) clearTimeout(intervalId);
-  if (timeIntervalId) clearInterval(timeIntervalId);
+  if (tickId) clearInterval(tickId);
+  if (pollId) clearInterval(pollId);
 });
 </script>
 

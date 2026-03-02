@@ -222,7 +222,7 @@ async function submitChangePassword() {
       locale.value === "vi"
         ? "Đổi mật khẩu thành công!"
         : "Password changed successfully!",
-      "success"
+      "success",
     );
   } catch (e) {
     pwError.value = e?.data?.statusMessage || "Lỗi đổi mật khẩu";
