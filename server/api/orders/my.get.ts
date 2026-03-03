@@ -39,14 +39,19 @@ export default defineEventHandler(async (event) => {
   const [rows]: any = await pool.query(
     `
       SELECT
-        id,
-        admin_id,
-        amount,
-        status,
-        created_at
-      FROM orders
-      WHERE user_id = ?
-      ORDER BY created_at DESC
+        o.id,
+        o.admin_id,
+        o.product_id,
+        o.amount,
+        o.status,
+        o.note,
+        o.created_at,
+        p.name AS product_name,
+        p.type AS product_type
+      FROM orders o
+      LEFT JOIN products p ON o.product_id = p.id
+      WHERE o.user_id = ?
+      ORDER BY o.created_at DESC
       LIMIT ?
     `,
     [decoded.id, limit],

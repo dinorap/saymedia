@@ -1,26 +1,26 @@
 <template>
   <AuthModal :model-value="modelValue" :standalone="standalone" @update:model-value="$emit('update:modelValue', $event)">
     <div class="auth-form">
-      <h1 class="auth-form-title">Đăng nhập</h1>
+      <h1 class="auth-form-title">{{ $t("auth.loginTitle") }}</h1>
 
       <div v-if="step === 1" class="auth-form-group">
-        <label>Tên đăng nhập hoặc Email</label>
+        <label>{{ $t("auth.usernameOrEmail") }}</label>
         <input
           v-model="username"
           type="text"
           class="auth-input"
-          placeholder="Tên đăng nhập hoặc email"
+          :placeholder="$t('auth.usernameOrEmail')"
           autocomplete="username"
           @keyup.enter="loginWithPassword"
         />
-        <label>Mật khẩu</label>
+        <label>{{ $t("auth.password") }}</label>
         <AuthPasswordInput
           v-model="password"
-          placeholder="Mật khẩu"
+          :placeholder="$t('auth.password')"
           autocomplete="current-password"
         />
         <div class="auth-form-options">
-          <button type="button" class="auth-link-btn" @click="showForgot = true">Quên mật khẩu?</button>
+          <button type="button" class="auth-link-btn" @click="showForgot = true">{{ $t("auth.forgotPassword") }}</button>
         </div>
         <button
           type="button"
@@ -28,21 +28,21 @@
           :disabled="loading || !username?.trim() || !password"
           @click="loginWithPassword"
         >
-          {{ loading ? 'Đang xử lý...' : 'Đăng nhập' }}
+          {{ loading ? $t("auth.processing") : $t("auth.loginButton") }}
         </button>
         <div class="auth-form-link">
-          <span>Hoặc đăng nhập bằng OTP?</span>
-          <button type="button" class="auth-link-btn" @click="step = 2; email = ''; error = ''">Gửi mã OTP</button>
+          <span>{{ $t("auth.orLoginWithOtp") }}</span>
+          <button type="button" class="auth-link-btn" @click="step = 2; email = ''; error = ''">{{ $t("auth.sendOtp") }}</button>
         </div>
         <div class="auth-form-link">
-          <span>Chưa có tài khoản?</span>
-          <NuxtLink v-if="standalone" to="/register" class="auth-link">Đăng ký</NuxtLink>
-          <button v-else type="button" class="auth-link" @click="$emit('update:modelValue', false); $emit('switch-to-register')">Đăng ký</button>
+          <span>{{ $t("auth.noAccount") }}</span>
+          <NuxtLink v-if="standalone" to="/register" class="auth-link">{{ $t("auth.register") }}</NuxtLink>
+          <button v-else type="button" class="auth-link" @click="$emit('update:modelValue', false); $emit('switch-to-register')">{{ $t("auth.register") }}</button>
         </div>
       </div>
 
       <div v-else-if="step === 2" class="auth-form-group">
-        <p class="auth-form-info">Nhập email đã đăng ký để nhận mã OTP.</p>
+        <p class="auth-form-info">{{ $t("auth.emailForOtpDescription") }}</p>
         <label>Email</label>
         <input
           v-model="email"
@@ -57,15 +57,14 @@
           :disabled="loading || !email?.trim()"
           @click="sendOtp"
         >
-          {{ loading ? 'Đang gửi...' : 'Gửi mã OTP' }}
+          {{ loading ? $t("auth.sendingOtp") : $t("auth.sendOtp") }}
         </button>
-        <button type="button" class="auth-link-btn" @click="step = 1">← Quay lại đăng nhập</button>
+        <button type="button" class="auth-link-btn" @click="step = 1">← {{ $t("auth.backToLogin") }}</button>
       </div>
 
-      <!-- Bước 3: Nhập mã OTP từ email -->
       <div v-else class="auth-form-group auth-form-group-otp">
-        <p class="auth-form-info">Mã OTP đã gửi đến <b>{{ email }}</b>. Vui lòng kiểm tra hộp thư (kể cả thư mục Spam).</p>
-        <label for="login-otp">Nhập mã OTP 6 số</label>
+        <p class="auth-form-info">{{ $t("auth.otpSentTo") }} <b>{{ email }}</b>. {{ $t("auth.checkInbox") }}</p>
+        <label for="login-otp">{{ $t("auth.enterOtpCode") }}</label>
         <input
           id="login-otp"
           v-model="otp"
@@ -73,7 +72,7 @@
           inputmode="numeric"
           autocomplete="one-time-code"
           class="auth-input auth-otp-input"
-          placeholder="Nhập 6 số từ email"
+          :placeholder="$t('auth.enterOtpCode')"
           maxlength="6"
           @keyup.enter="verifyOtp"
         />
@@ -83,9 +82,9 @@
           :disabled="loading || !otp?.trim()"
           @click="verifyOtp"
         >
-          {{ loading ? 'Đang xử lý...' : 'Xác nhận OTP' }}
+          {{ loading ? $t("auth.processing") : $t("auth.confirmOtp") }}
         </button>
-        <button type="button" class="auth-link-btn" @click="step = 2">← Đổi email khác</button>
+        <button type="button" class="auth-link-btn" @click="step = 2">← {{ $t("auth.changeEmail") }}</button>
       </div>
 
       <p v-if="error" class="auth-msg auth-msg-error">{{ error }}</p>

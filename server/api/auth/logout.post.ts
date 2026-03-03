@@ -1,5 +1,6 @@
 export default defineEventHandler((event) => {
-  deleteCookie(event, 'auth_token', { path: '/' })
-  deleteCookie(event, 'user_role', { path: '/' })
+  const cookieOpts = { path: '/', sameSite: 'lax' as const }
+  deleteCookie(event, 'auth_token', cookieOpts)
+  deleteCookie(event, 'user_role', cookieOpts)
   return { success: true }
 })

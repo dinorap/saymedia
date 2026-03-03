@@ -73,3 +73,10 @@ bun run preview
 ```
 
 Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
+
+## Bảo mật / Security
+
+- **Production**: Đặt biến môi trường `JWT_SECRET` (chuỗi bí mật đủ mạnh) trong `.env` hoặc hosting. Nếu không đặt, server sẽ in cảnh báo khi chạy production.
+- **Cookie**: Token đăng nhập dùng `httpOnly`, `sameSite: lax`, `secure` khi `NODE_ENV=production`.
+- **Rate limit**: Đăng nhập giới hạn số lần thử sai theo IP; tạo đơn hàng giới hạn theo user để chống spam.
+- **Headers**: Response có `X-Content-Type-Options`, `X-Frame-Options`, `X-XSS-Protection`, `Referrer-Policy`.

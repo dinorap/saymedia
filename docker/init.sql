@@ -43,19 +43,40 @@ CREATE INDEX idx_payment_user_id ON payment_transactions(user_id);
 CREATE INDEX idx_payment_status ON payment_transactions(status);
 CREATE INDEX idx_payment_created_at ON payment_transactions(created_at);
 
+CREATE TABLE products (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    admin_id INT NULL,
+    name VARCHAR(120) NOT NULL,
+    description TEXT NULL,
+    price BIGINT NOT NULL DEFAULT 0,
+    type ENUM('tool', 'account', 'service', 'other') NOT NULL DEFAULT 'other',
+    is_active TINYINT(1) NOT NULL DEFAULT 1,
+    download_url TEXT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (admin_id) REFERENCES admins(id) ON DELETE SET NULL
+);
+CREATE INDEX idx_products_type ON products(type);
+CREATE INDEX idx_products_active ON products(is_active);
+CREATE INDEX idx_products_admin_id ON products(admin_id);
+
 CREATE TABLE orders (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
+    product_id INT NULL,
     admin_id INT NOT NULL,
     amount DECIMAL(10,2) NOT NULL,
     status ENUM('pending', 'completed', 'cancelled') DEFAULT 'pending',
+    note TEXT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NULL ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE SET NULL,
     FOREIGN KEY (admin_id) REFERENCES admins(id) ON DELETE RESTRICT
 );
 CREATE INDEX idx_orders_admin_id ON orders(admin_id);
 CREATE INDEX idx_orders_user_id ON orders(user_id);
+CREATE INDEX idx_orders_product_id ON orders(product_id);
 CREATE INDEX idx_orders_created_at ON orders(created_at);
 
 -- Feed hiển thị "Đơn hàng gần đây" (tối đa 20 bản ghi mới nhất)

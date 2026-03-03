@@ -49,16 +49,21 @@ export default defineEventHandler(async (event) => {
     SELECT
       o.id,
       o.user_id,
+      o.product_id,
       o.admin_id,
       o.amount,
       o.status,
+      o.note,
       o.created_at,
       u.username AS user_username,
       u.email AS user_email,
-      a.username AS admin_username
+      a.username AS admin_username,
+      p.name AS product_name,
+      p.type AS product_type
     FROM orders o
     JOIN users u ON o.user_id = u.id
     LEFT JOIN admins a ON o.admin_id = a.id
+    LEFT JOIN products p ON o.product_id = p.id
     ${whereClause}
     ORDER BY o.created_at DESC
     LIMIT ? OFFSET ?

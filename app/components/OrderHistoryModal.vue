@@ -26,20 +26,40 @@
               <thead>
                 <tr>
                   <th>#</th>
+                  <th>{{ $t("admin.productName") || "Sản phẩm" }}</th>
                   <th>{{ $t("payment.history.time") }}</th>
                   <th>{{ $t("payment.history.amount") }}</th>
                   <th>{{ $t("payment.history.status") }}</th>
+                  <th>{{ $t("admin.orderNote") || "Ghi chú" }}</th>
+                  <th>{{ $t("orderHistory.link") || "Link" }}</th>
                 </tr>
               </thead>
               <tbody>
                 <tr v-for="(o, idx) in items" :key="o.id">
                   <td>{{ idx + 1 }}</td>
+                  <td>{{ o.product_name || "-" }}</td>
                   <td>{{ formatDate(o.created_at) }}</td>
                   <td>{{ formatVnd(o.amount) }}</td>
                   <td>
                     <span class="status-badge" :class="'status-' + o.status">
                       {{ o.status }}
                     </span>
+                  </td>
+                  <td class="history-note">
+                    <span v-if="!isUrl(o.note)">{{ o.note || "-" }}</span>
+                    <span v-else class="history-note-hint">—</span>
+                  </td>
+                  <td class="history-link-cell">
+                    <a
+                      v-if="isUrl(o.note)"
+                      :href="o.note"
+                      target="_blank"
+                      rel="noopener"
+                      class="history-link-btn"
+                    >
+                      {{ $t("orderHistory.openLink") || "Mở link tải" }}
+                    </a>
+                    <span v-else>—</span>
                   </td>
                 </tr>
               </tbody>
@@ -128,6 +148,11 @@ function formatDate(val) {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+function isUrl(val) {
+  if (!val || typeof val !== "string") return false;
+  return /^https?:\/\//i.test(val.trim());
 }
 </script>
 
@@ -220,6 +245,39 @@ function formatDate(val) {
 
 .history-table td {
   color: var(--text-primary);
+}
+
+.history-note {
+  max-width: 200px;
+  white-space: pre-line;
+  color: var(--text-secondary);
+}
+
+.history-note-hint {
+  color: var(--text-muted);
+}
+
+.history-link-cell {
+  white-space: nowrap;
+}
+
+.history-link-btn {
+  display: inline-block;
+  padding: 0.4rem 0.9rem;
+  border-radius: 8px;
+  background: rgba(1, 123, 251, 0.2);
+  border: 1px solid rgba(1, 123, 251, 0.5);
+  color: var(--blue-electric);
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-decoration: none;
+  transition: var(--transition-fast);
+}
+
+.history-link-btn:hover {
+  background: rgba(1, 123, 251, 0.35);
+  color: var(--text-primary);
+  border-color: var(--blue-bright);
 }
 
 .status-badge {

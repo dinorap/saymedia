@@ -12,7 +12,24 @@
     "learnMore": "Xem dịch vụ",
     "profile": "Thông tin",
     "logout": "Đăng xuất",
-    "loading": "Đang tải..."
+    "loading": "Đang tải...",
+    "loginTitle": "Đăng nhập",
+    "usernameOrEmail": "Tên đăng nhập hoặc Email",
+    "password": "Mật khẩu",
+    "forgotPassword": "Quên mật khẩu?",
+    "loginButton": "Đăng nhập",
+    "orLoginWithOtp": "Hoặc đăng nhập bằng OTP?",
+    "sendOtp": "Gửi mã OTP",
+    "backToLogin": "Quay lại đăng nhập",
+    "emailForOtpDescription": "Nhập email đã đăng ký để nhận mã OTP.",
+    "otpSentTo": "Mã OTP đã gửi đến",
+    "enterOtpCode": "Nhập mã OTP 6 số",
+    "checkInbox": "Vui lòng kiểm tra hộp thư (kể cả thư mục Spam).",
+    "confirmOtp": "Xác nhận OTP",
+    "changeEmail": "Đổi email khác",
+    "noAccount": "Chưa có tài khoản?",
+    "processing": "Đang xử lý...",
+    "sendingOtp": "Đang gửi..."
   },
   "hero": {
     "title": "Mua dịch vụ",
@@ -107,7 +124,13 @@
     "products": "Quản lý sản phẩm",
     "productName": "Tên sản phẩm",
     "addProduct": "Thêm sản phẩm",
+    "price": "Giá",
+    "productType": "Loại sản phẩm",
+    "downloadUrl": "Link tải",
+    "open": "Mở",
     "description": "Mô tả",
+    "orderNote": "Ghi chú đơn",
+    "editNote": "Sửa ghi chú",
     "serviceName": "Tên dịch vụ",
     "addService": "Thêm dịch vụ",
     "credit": "Số dư",
@@ -159,5 +182,20 @@
       "empty": "Chưa có lịch sử nạp tiền",
       "loadError": "Không lấy được lịch sử nạp"
     }
+  },
+  "orderHistory": {
+    "link": "Link",
+    "openLink": "Mở link tải"
+  },
+  "product": {
+    "viewDetail": "Xem chi tiết",
+    "noDescription": "Chưa có mô tả",
+    "points": "điểm",
+    "buyNow": "Mua ngay",
+    "confirmTitle": "Xác nhận mua",
+    "confirmText": "Bạn có chắc mua",
+    "confirmWithPrice": "với giá",
+    "confirm": "Xác nhận",
+    "balance": "Số dư"
   }
 }

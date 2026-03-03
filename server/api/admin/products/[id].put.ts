@@ -1,0 +1,66 @@
+import pool from "../../../utils/db";
+
+const ALLOWED_TYPES = new Set(["tool", "account", "service", "other"]);
+const MAX_NAME = 200;
+const MAX_DESCRIPTION = 2000;
+const MAX_DOWNLOAD_URL = 2000;
+
+export default defineEventHandler(async (event) => {
+  const currentUser = event.context.user;
+  if (!currentUser) {
+    throw createError({ statusCode: 401, statusMessage: "Chưa đăng nhập" });
+  }
+
+  const id = Number(getRouterParam(event, "id"));
+  if (!Number.isFinite(id) || id <= 0) {
+    throw createError({ statusCode: 400, statusMessage: "ID không hợp lệ" });
+  }
+
+  const [[product]]: any = await pool.query(
+    "SELECT admin_id FROM products WHERE id = ? LIMIT 1",
+    [id],
+  );
+  if (!product) {
+    throw createError({ statusCode: 404, statusMessage: "Không tìm thấy sản phẩm" });
+  }
+  if (currentUser.role === "admin_1" && product.admin_id !== currentUser.id) {
+    throw createError({
+      statusCode: 403,
+      statusMessage: "Bạn chỉ được sửa sản phẩm do mình tạo",
+    });
+  }
+
+  const body = await readBody(event);
+  const name = String(body?.name || "").trim().slice(0, MAX_NAME);
+  const description = (String(body?.description || "").trim() || null)?.slice(0, MAX_DESCRIPTION) || null;
+  const downloadUrl = (String(body?.download_url || "").trim() || null)?.slice(0, MAX_DOWNLOAD_URL) || null;
+  const type = String(body?.type || "other").trim();
+  const price = Number(body?.price || 0);
+  const isActive = body?.is_active ? 1 : 0;
+
+  if (!name) {
+    throw createError({ statusCode: 400, statusMessage: "Tên sản phẩm là bắt buộc" });
+  }
+  if (!Number.isFinite(price) || price < 0) {
+    throw createError({ statusCode: 400, statusMessage: "Giá sản phẩm không hợp lệ" });
+  }
+  if (!ALLOWED_TYPES.has(type)) {
+    throw createError({ statusCode: 400, statusMessage: "Loại sản phẩm không hợp lệ" });
+  }
+
+  const [result]: any = await pool.query(
+    `
+      UPDATE products
+      SET name = ?, description = ?, download_url = ?, price = ?, type = ?, is_active = ?
+      WHERE id = ?
+    `,
+    [name, description || null, downloadUrl || null, Math.round(price), type, isActive, id],
+  );
+
+  if (!result?.affectedRows) {
+    throw createError({ statusCode: 404, statusMessage: "Không tìm thấy sản phẩm" });
+  }
+
+  return { success: true };
+});
+

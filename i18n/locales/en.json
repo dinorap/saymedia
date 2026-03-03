@@ -12,7 +12,24 @@
     "learnMore": "View Services",
     "profile": "Profile",
     "logout": "Logout",
-    "loading": "Loading..."
+    "loading": "Loading...",
+    "loginTitle": "Login",
+    "usernameOrEmail": "Username or Email",
+    "password": "Password",
+    "forgotPassword": "Forgot password?",
+    "loginButton": "Login",
+    "orLoginWithOtp": "Or login with OTP?",
+    "sendOtp": "Send OTP",
+    "backToLogin": "Back to login",
+    "emailForOtpDescription": "Enter your registered email to receive OTP.",
+    "otpSentTo": "OTP sent to",
+    "enterOtpCode": "Enter 6-digit OTP",
+    "checkInbox": "Please check your inbox (including Spam).",
+    "confirmOtp": "Confirm OTP",
+    "changeEmail": "Change email",
+    "noAccount": "Don't have an account?",
+    "processing": "Processing...",
+    "sendingOtp": "Sending..."
   },
   "hero": {
     "title": "Buy services",
@@ -107,7 +124,13 @@
     "products": "Products Management",
     "productName": "Product name",
     "addProduct": "Add Product",
+    "price": "Price",
+    "productType": "Product type",
+    "downloadUrl": "Download URL",
+    "open": "Open",
     "description": "Description",
+    "orderNote": "Order note",
+    "editNote": "Edit note",
     "serviceName": "Service name",
     "addService": "Add Service",
     "credit": "Balance",
@@ -159,5 +182,20 @@
       "empty": "No deposit history yet",
       "loadError": "Failed to load deposit history"
     }
+  },
+  "orderHistory": {
+    "link": "Link",
+    "openLink": "Open download link"
+  },
+  "product": {
+    "viewDetail": "View detail",
+    "noDescription": "No description",
+    "points": "points",
+    "buyNow": "Buy now",
+    "confirmTitle": "Confirm purchase",
+    "confirmText": "Are you sure you want to buy",
+    "confirmWithPrice": "for",
+    "confirm": "Confirm",
+    "balance": "Balance"
   }
 }

@@ -49,8 +49,14 @@ export default defineEventHandler(async (event) => {
         jwtSecret,
         { expiresIn: '30d' }
       )
-      setCookie(event, 'auth_token', token, { httpOnly: true, maxAge: 60 * 60 * 24 * 30, path: '/' })
-      setCookie(event, 'user_role', 'user', { path: '/' })
+      setCookie(event, 'auth_token', token, {
+        httpOnly: true,
+        maxAge: 60 * 60 * 24 * 30,
+        path: '/',
+        sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production',
+      })
+      setCookie(event, 'user_role', 'user', { path: '/', sameSite: 'lax', secure: process.env.NODE_ENV === 'production' })
       return { success: true, role: 'user', message: 'Đăng nhập bằng OTP thành công!' }
     }
 
@@ -86,7 +92,7 @@ export default defineEventHandler(async (event) => {
           sameSite: 'lax',
           secure: process.env.NODE_ENV === 'production',
         });
-        setCookie(event, 'user_role', admin.role, { path: '/' }); // Frontend đọc để chia UI / bẻ lái
+        setCookie(event, 'user_role', admin.role, { path: '/', sameSite: 'lax', secure: process.env.NODE_ENV === 'production' })
         return { success: true, role: admin.role, message: 'Admin login thành công!' };
       }
     }
@@ -117,7 +123,7 @@ export default defineEventHandler(async (event) => {
           sameSite: 'lax',
           secure: process.env.NODE_ENV === 'production',
         });
-        setCookie(event, 'user_role', 'user', { path: '/' });
+        setCookie(event, 'user_role', 'user', { path: '/', sameSite: 'lax', secure: process.env.NODE_ENV === 'production' })
         return { success: true, role: 'user', message: 'Khách login thành công!' };
       }
     }

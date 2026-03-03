@@ -43,9 +43,12 @@
             <th>{{ $t("admin.username") }}</th>
             <th v-if="isSuperAdmin">{{ $t("admin.email") }}</th>
             <th v-if="isSuperAdmin">{{ $t("admin.adminId") }}</th>
+            <th>{{ $t("admin.productName") || "Sản phẩm" }}</th>
             <th>{{ $t("payment.history.amount") }}</th>
             <th>{{ $t("admin.status") }}</th>
+            <th>{{ $t("admin.orderNote") || "Ghi chú" }}</th>
             <th>{{ $t("admin.createdAt") }}</th>
+            <th>{{ $t("admin.actions") }}</th>
           </tr>
         </thead>
         <tbody>
@@ -56,17 +59,61 @@
             <td>{{ o.user_username }}</td>
             <td v-if="isSuperAdmin">{{ o.user_email }}</td>
             <td v-if="isSuperAdmin">{{ o.admin_username || "-" }}</td>
+            <td>{{ o.product_name || "-" }}</td>
             <td>{{ formatVnd(o.amount) }}</td>
             <td>
               <span class="badge" :class="statusClass(o.status)">
                 {{ o.status }}
               </span>
             </td>
+            <td class="order-note">{{ o.note || "-" }}</td>
             <td>{{ formatDate(o.created_at) }}</td>
+            <td>
+              <button
+                type="button"
+                class="btn-edit-note"
+                :disabled="savingNoteId === o.id"
+                @click="openEditNote(o)"
+              >
+                {{ savingNoteId === o.id ? "..." : $t("admin.editNote") }}
+              </button>
+            </td>
           </tr>
         </tbody>
       </table>
     </div>
+
+    <!-- Modal sửa ghi chú -->
+    <Teleport to="body">
+      <div
+        v-if="editNoteOrder"
+        class="edit-note-overlay"
+        @click.self="editNoteOrder = null"
+      >
+        <div class="edit-note-modal">
+          <h3 class="edit-note-title">{{ $t("admin.editNote") }} #{{ editNoteOrder.id }}</h3>
+          <textarea
+            v-model="editNoteText"
+            class="edit-note-textarea"
+            rows="4"
+            :placeholder="$t('admin.orderNote')"
+          />
+          <div class="edit-note-actions">
+            <button type="button" class="btn-cancel" @click="editNoteOrder = null">
+              {{ $t("admin.cancel") }}
+            </button>
+            <button
+              type="button"
+              class="btn-save"
+              :disabled="savingNoteId === editNoteOrder?.id"
+              @click="saveNote"
+            >
+              {{ savingNoteId === editNoteOrder?.id ? "..." : $t("admin.save") }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
 
     <div v-if="pagination.totalPages > 1" class="pagination">
       <button
@@ -108,6 +155,9 @@ const loading = ref(true);
 const filterAdmin = ref("");
 const filterStatus = ref("");
 const pagination = ref({ page: 1, limit: 10, total: 0, totalPages: 1 });
+const editNoteOrder = ref(null);
+const editNoteText = ref("");
+const savingNoteId = ref(null);
 
 async function fetchAdmins() {
   if (!isSuperAdmin.value) return;
@@ -173,6 +223,33 @@ function statusClass(status) {
   if (status === "pending") return "badge--primary";
   if (status === "cancelled") return "badge--muted";
   return "badge--muted";
+}
+
+function openEditNote(order) {
+  editNoteOrder.value = order;
+  editNoteText.value = order.note || "";
+}
+
+async function saveNote() {
+  if (!editNoteOrder.value) return;
+  const id = editNoteOrder.value.id;
+  savingNoteId.value = id;
+  try {
+    await $fetch(`/api/admin/orders/${id}`, {
+      method: "PUT",
+      body: { note: editNoteText.value },
+    });
+    const o = orders.value.find((x) => x.id === id);
+    if (o) o.note = editNoteText.value;
+    editNoteOrder.value = null;
+    const { show } = useToast();
+    show(t("admin.updateSuccess"), "success");
+  } catch (e) {
+    const { show } = useToast();
+    show(e?.data?.statusMessage || "Cập nhật thất bại", "error");
+  } finally {
+    savingNoteId.value = null;
+  }
 }
 
 onMounted(async () => {
@@ -254,6 +331,12 @@ onMounted(async () => {
   color: var(--text-primary);
 }
 
+.order-note {
+  max-width: 320px;
+  white-space: pre-line;
+  color: var(--text-secondary);
+}
+
 .data-table tbody tr:hover {
   background: rgba(1, 123, 251, 0.05);
 }
@@ -312,6 +395,92 @@ onMounted(async () => {
 .page-info {
   font-size: 0.9rem;
   color: var(--text-secondary);
+}
+
+.btn-edit-note {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.8rem;
+  background: rgba(1, 123, 251, 0.2);
+  border: 1px solid rgba(1, 123, 251, 0.5);
+  border-radius: 6px;
+  color: var(--blue-bright);
+  cursor: pointer;
+}
+
+.btn-edit-note:hover:not(:disabled) {
+  background: rgba(1, 123, 251, 0.3);
+}
+
+.btn-edit-note:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.edit-note-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.edit-note-modal {
+  width: 100%;
+  max-width: 420px;
+  background: var(--bg-card);
+  border: 1px solid rgba(1, 123, 251, 0.3);
+  border-radius: 12px;
+  padding: 1.25rem;
+}
+
+.edit-note-title {
+  margin: 0 0 1rem;
+  font-size: 1.1rem;
+}
+
+.edit-note-textarea {
+  width: 100%;
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(1, 123, 251, 0.3);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  resize: vertical;
+}
+
+.edit-note-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+}
+
+.btn-cancel {
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.btn-save {
+  padding: 0.5rem 1.2rem;
+  border-radius: 8px;
+  border: none;
+  background: var(--blue-bright);
+  color: #fff;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.btn-save:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
 }
 </style>
 

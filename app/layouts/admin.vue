@@ -32,10 +32,6 @@
           <span class="sidebar-item-icon" aria-hidden="true">🛒</span>
           <span class="sidebar-item-label">{{ $t("admin.products") }}</span>
         </NuxtLink>
-        <NuxtLink to="/admin/services" class="sidebar-item">
-          <span class="sidebar-item-icon" aria-hidden="true">📦</span>
-          <span class="sidebar-item-label">{{ $t("admin.services") }}</span>
-        </NuxtLink>
         <NuxtLink to="/admin/revenue" class="sidebar-item">
           <span class="sidebar-item-icon" aria-hidden="true">📈</span>
           <span class="sidebar-item-label">{{ $t("admin.revenue") }}</span>
@@ -245,7 +241,7 @@ async function submitChangePassword() {
       locale.value === "vi"
         ? "Đổi mật khẩu thành công!"
         : "Password changed successfully!",
-      "success"
+      "success",
     );
   } catch (e) {
     pwError.value = e?.data?.statusMessage || "Lỗi đổi mật khẩu";

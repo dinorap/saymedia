@@ -12,13 +12,19 @@
         />
         <button type="button" class="btn-search" @click="fetchList">🔍</button>
       </div>
-      <button type="button" class="btn-add btn-add--right" @click="openModal()">
+      <button
+        type="button"
+        class="btn-add btn-add--right"
+        @click="openModal()"
+      >
         + {{ $t("admin.add") }}
       </button>
     </div>
     <div class="table-wrap card">
-      <div v-if="loading" class="table-loading">{{ $t("admin.loading") }}</div>
-      <div v-else-if="!items.length" class="table-empty">
+      <div v-if="loading" class="table-loading">
+        {{ $t("admin.loading") }}
+      </div>
+      <div v-else-if="!hasItems" class="table-empty">
         {{ $t("admin.noData") }}
       </div>
       <table v-else class="data-table">
@@ -26,17 +32,35 @@
           <tr>
             <th>{{ $t("admin.id") }}</th>
             <th>{{ $t("admin.productName") || "Tên sản phẩm" }}</th>
+            <th>{{ $t("admin.adminId") }}</th>
             <th>{{ $t("admin.description") || "Mô tả" }}</th>
+            <th>{{ $t("admin.price") || "Giá" }}</th>
+            <th>{{ $t("admin.productType") || "Loại" }}</th>
+            <th>{{ $t("admin.downloadUrl") || "Link tải" }}</th>
             <th>{{ $t("admin.status") }}</th>
             <th>{{ $t("admin.createdAt") }}</th>
-            <th class="th-actions">{{ $t("admin.actions") }}</th>
+            <th v-if="isSuperAdmin" class="th-actions">{{ $t("admin.actions") }}</th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="(item, idx) in items" :key="item.id">
             <td>{{ idx + 1 }}</td>
             <td>{{ item.name }}</td>
+            <td>{{ item.admin_username || "-" }}</td>
             <td>{{ item.description || "-" }}</td>
+            <td>{{ formatVnd(item.price) }}</td>
+            <td>{{ item.type || "other" }}</td>
+            <td class="col-url">
+              <a
+                v-if="item.download_url"
+                :href="item.download_url"
+                target="_blank"
+                rel="noopener"
+              >
+                {{ $t("admin.open") || "Mở" }}
+              </a>
+              <span v-else>-</span>
+            </td>
             <td>
               <span
                 class="badge"
@@ -53,7 +77,8 @@
                 type="button"
                 class="btn-icon"
                 :title="$t('admin.edit')"
-                @click="openModal(item)"
+                :disabled="!canEdit(item)"
+                @click="canEdit(item) && openModal(item)"
               >
                 ✏️
               </button>
@@ -61,7 +86,8 @@
                 type="button"
                 class="btn-icon btn-icon--danger"
                 :title="$t('admin.delete')"
-                @click="deleteItem(item)"
+                :disabled="!canDelete(item)"
+                @click="canDelete(item) && deleteItem(item)"
               >
                 🗑️
               </button>
@@ -72,11 +98,7 @@
     </div>
 
     <Teleport to="body">
-      <div
-        v-if="modalOpen"
-        class="modal-overlay"
-        @click.self="modalOpen = false"
-      >
+      <div v-if="modalOpen" class="modal-overlay" @click.self="modalOpen = false">
         <div class="modal">
           <h3 class="modal-title">
             {{ editing ? $t("admin.edit") : ($t("admin.addProduct") || "Thêm sản phẩm") }}
@@ -98,6 +120,33 @@
                 type="text"
                 class="input"
               />
+            </div>
+            <div class="form-row">
+              <label>{{ $t("admin.downloadUrl") || "Link tải (nếu có)" }}</label>
+              <input
+                v-model="form.download_url"
+                type="text"
+                class="input"
+                placeholder="https://..."
+              />
+            </div>
+            <div class="form-row">
+              <label>{{ $t("admin.price") || "Giá" }}</label>
+              <input
+                v-model.number="form.price"
+                type="number"
+                class="input"
+                min="0"
+              />
+            </div>
+            <div class="form-row">
+              <label>{{ $t("admin.productType") || "Loại" }}</label>
+              <select v-model="form.type" class="input">
+                <option value="tool">tool</option>
+                <option value="account">account</option>
+                <option value="service">service</option>
+                <option value="other">other</option>
+              </select>
             </div>
             <div v-if="editing" class="form-row">
               <label>{{ $t("admin.status") }}</label>
@@ -126,14 +175,30 @@
 definePageMeta({ layout: "admin", middleware: ["admin"] });
 
 const { t } = useI18n();
+const roleCookie = useCookie("user_role", { path: "/" });
+const isSuperAdmin = computed(() => roleCookie.value === "admin_0");
 const items = ref([]);
 const loading = ref(false);
 const search = ref("");
 const modalOpen = ref(false);
 const editing = ref(null);
-const form = reactive({ name: "", description: "", is_active: true });
+const currentAdminId = ref(null);
+const form = reactive({
+  name: "",
+  description: "",
+  download_url: "",
+  price: 0,
+  type: "other",
+  is_active: true,
+});
 const error = ref("");
 const saving = ref(false);
+
+const hasItems = computed(() => Array.isArray(items.value) && items.value.length > 0);
+
+function formatVnd(v) {
+  return (Number(v) || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+}
 
 function formatDate(val) {
   if (!val) return "-";
@@ -156,8 +221,11 @@ function formatDate(val) {
 async function fetchList() {
   loading.value = true;
   try {
-    // TODO: gọi API khi có backend
-    items.value = [];
+    const query = new URLSearchParams();
+    if (search.value) query.set("search", search.value.trim());
+    const suffix = query.toString() ? `?${query.toString()}` : "";
+    const res = await $fetch(`/api/admin/products${suffix}`);
+    items.value = res?.success && Array.isArray(res.data) ? res.data : [];
   } catch (e) {
     items.value = [];
   } finally {
@@ -165,10 +233,28 @@ async function fetchList() {
   }
 }
 
+async function initAdmin() {
+  try {
+    const res = await $fetch("/api/auth/me");
+    if (res?.success && res.user) {
+      currentAdminId.value = res.user.id;
+    } else {
+      currentAdminId.value = null;
+    }
+  } catch {
+    currentAdminId.value = null;
+  }
+}
+
 function openModal(item = null) {
+  // admin_0: thêm/sửa mọi sản phẩm; admin_1: chỉ thao tác trên sản phẩm của mình
+  if (item && !canEdit(item)) return;
   editing.value = item;
   form.name = item?.name ?? "";
   form.description = item?.description ?? "";
+  form.download_url = item?.download_url ?? "";
+  form.price = Number(item?.price ?? 0);
+  form.type = item?.type || "other";
   form.is_active = item ? !!item.is_active : true;
   error.value = "";
   modalOpen.value = true;
@@ -178,7 +264,28 @@ async function save() {
   error.value = "";
   saving.value = true;
   try {
-    // TODO: POST/PUT API khi có backend
+    const payload = {
+      name: form.name?.trim(),
+      description: form.description?.trim(),
+      download_url: form.download_url?.trim(),
+      price: Number(form.price || 0),
+      type: form.type || "other",
+      is_active:
+        form.is_active === true ||
+        form.is_active === "true" ||
+        form.is_active === 1,
+    };
+    if (editing.value?.id) {
+      await $fetch(`/api/admin/products/${editing.value.id}`, {
+        method: "PUT",
+        body: payload,
+      });
+    } else {
+      await $fetch("/api/admin/products", {
+        method: "POST",
+        body: payload,
+      });
+    }
     modalOpen.value = false;
     await fetchList();
   } catch (e) {
@@ -189,16 +296,30 @@ async function save() {
 }
 
 async function deleteItem(item) {
+  if (!canDelete(item)) return;
   if (!confirm(`${t("admin.confirmDelete")}\n${item.name}`)) return;
   try {
-    // TODO: DELETE API khi có backend
+    await $fetch(`/api/admin/products/${item.id}`, { method: "DELETE" });
     await fetchList();
   } catch (e) {
     alert(e?.data?.statusMessage || "Lỗi");
   }
 }
 
-onMounted(() => fetchList());
+function canEdit(item) {
+  if (isSuperAdmin.value) return true;
+  if (!currentAdminId.value) return false;
+  return item.admin_id === currentAdminId.value;
+}
+
+function canDelete(item) {
+  return canEdit(item);
+}
+
+onMounted(async () => {
+  await initAdmin();
+  await fetchList();
+});
 </script>
 
 <style scoped>
@@ -330,6 +451,12 @@ onMounted(() => fetchList());
 .badge--muted {
   background: rgba(255, 255, 255, 0.06);
   color: var(--text-muted);
+}
+
+.col-url a {
+  color: var(--blue-bright);
+  text-decoration: underline;
+  font-size: 0.85rem;
 }
 .modal-overlay {
   position: fixed;
