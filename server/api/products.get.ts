@@ -8,7 +8,8 @@ export default defineEventHandler(async () => {
         name,
         description,
         price,
-        type
+        type,
+        thumbnail_url
       FROM products
       WHERE is_active = 1
       ORDER BY created_at DESC

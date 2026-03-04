@@ -134,7 +134,11 @@
     "serviceName": "Service name",
     "addService": "Add Service",
     "credit": "Balance",
-    "deposits": "Deposit Management"
+    "deposits": "Deposit Management",
+    "thumbnail": "Thumbnail",
+    "images": "Images list",
+    "longDescription": "Long description",
+    "upload": "Upload"
   },
   "socialProof": {
     "title": "Recent orders",
@@ -196,6 +200,29 @@
     "confirmText": "Are you sure you want to buy",
     "confirmWithPrice": "for",
     "confirm": "Confirm",
-    "balance": "Balance"
+    "balance": "Balance",
+    "addToCart": "Add to cart",
+    "inCart": "In cart",
+    "gallery": "Gallery",
+    "longDescriptionTitle": "Details",
+    "loadError": "Failed to load product"
+  },
+  "cart": {
+    "title": "Cart",
+    "empty": "Your cart is empty",
+    "remove": "Remove",
+    "clear": "Clear",
+    "checkoutAll": "Buy all",
+    "confirmTitle": "Confirm buying all",
+    "confirmText": "Buy {count} items for total {total} points?",
+    "successAll": "Purchased {count} items successfully.",
+    "partialSuccess": "Purchased {ok} items, {fail} failed.",
+    "notePerItem": "You can purchase items one by one.",
+    "cleared": "Cart cleared",
+    "purchaseFailed": "Purchase failed",
+    "purchaseSuccessHistory": "Purchased. Check download link in order history.",
+    "addedToCart": "Added to cart",
+    "total": "Total",
+    "continueShopping": "Continue shopping"
   }
 }

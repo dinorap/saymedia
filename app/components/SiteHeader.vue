@@ -29,6 +29,30 @@
           VI
         </button>
       </div>
+      <NuxtLink to="/cart" class="site-cart-btn">
+        <span class="site-cart-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none">
+            <path
+              d="M7 7h14l-2 8H8L7 7Z"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linejoin="round"
+            />
+            <path
+              d="M7 7 6.4 4.8A2 2 0 0 0 4.47 3.3H3"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+            />
+            <path
+              d="M9 20a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Zm9 0a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z"
+              fill="currentColor"
+            />
+          </svg>
+        </span>
+        <span class="site-cart-text">{{ $t("cart.title") }}</span>
+        <span v-if="cartCount" class="site-cart-badge">{{ cartCount }}</span>
+      </NuxtLink>
       <template v-if="currentUser">
         <div
           class="site-user-dropdown"
@@ -65,6 +89,8 @@
 import { useI18n } from "vue-i18n";
 
 const { locale, setLocale } = useI18n();
+const { count } = useCart();
+const cartCount = computed(() => Number(count.value || 0));
 const showDropdown = ref(false);
 const currentUser = ref(null);
 let closeTimeout = null;
@@ -172,6 +198,53 @@ function goProfile() {
   display: flex;
   align-items: center;
   gap: 16px;
+}
+
+.site-cart-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  text-decoration: none;
+  border: 1px solid rgba(1, 123, 251, 0.35);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-primary);
+  transition: var(--transition-fast);
+}
+
+.site-cart-btn:hover {
+  border-color: rgba(1, 123, 251, 0.55);
+  box-shadow: 0 0 18px rgba(1, 123, 251, 0.18);
+}
+
+.site-cart-icon {
+  font-size: 16px;
+}
+
+.site-cart-text {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.site-cart-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--blue-bright);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  box-shadow: 0 0 14px rgba(1, 123, 251, 0.35);
 }
 
 .site-lang-switcher {

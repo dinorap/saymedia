@@ -129,12 +129,19 @@
     "downloadUrl": "Link tải",
     "open": "Mở",
     "description": "Mô tả",
+    "thumbnail": "Ảnh thumbnail",
+    "images": "Danh sách ảnh",
+    "longDescription": "Mô tả chi tiết",
     "orderNote": "Ghi chú đơn",
     "editNote": "Sửa ghi chú",
     "serviceName": "Tên dịch vụ",
     "addService": "Thêm dịch vụ",
     "credit": "Số dư",
-    "deposits": "Quản lý nạp tiền"
+    "deposits": "Quản lý nạp tiền",
+    "thumbnail": "Ảnh thumbnail",
+    "images": "Danh sách ảnh",
+    "longDescription": "Mô tả chi tiết",
+    "upload": "Tải ảnh lên"
   },
   "socialProof": {
     "title": "Đơn hàng gần đây",
@@ -196,6 +203,29 @@
     "confirmText": "Bạn có chắc mua",
     "confirmWithPrice": "với giá",
     "confirm": "Xác nhận",
-    "balance": "Số dư"
+    "balance": "Số dư",
+    "addToCart": "Thêm vào giỏ hàng",
+    "inCart": "Đã trong giỏ",
+    "gallery": "Ảnh sản phẩm",
+    "longDescriptionTitle": "Mô tả chi tiết",
+    "loadError": "Không tải được thông tin sản phẩm"
+  },
+  "cart": {
+    "title": "Giỏ hàng",
+    "empty": "Giỏ hàng đang trống",
+    "remove": "Xóa",
+    "clear": "Xóa hết",
+    "checkoutAll": "Mua tất cả",
+    "confirmTitle": "Xác nhận mua tất cả",
+    "confirmText": "Bạn có chắc muốn mua {count} sản phẩm với tổng {total} điểm?",
+    "successAll": "Đã mua thành công {count} sản phẩm.",
+    "partialSuccess": "Đã mua {ok} sản phẩm, {fail} sản phẩm thất bại.",
+    "notePerItem": "Bạn có thể mua từng sản phẩm trong giỏ.",
+    "cleared": "Đã xóa giỏ hàng",
+    "purchaseFailed": "Mua thất bại",
+    "purchaseSuccessHistory": "Mua thành công. Xem link tải trong lịch sử đơn hàng.",
+    "addedToCart": "Đã thêm vào giỏ hàng",
+    "total": "Tổng",
+    "continueShopping": "Tiếp tục mua sắm"
   }
 }

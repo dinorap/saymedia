@@ -27,10 +27,13 @@ export default defineEventHandler(async (event) => {
         p.admin_id,
         p.name,
         p.description,
+        p.long_description,
         p.price,
         p.type,
         p.is_active,
         p.download_url,
+        p.thumbnail_url,
+        p.images_json,
         p.created_at,
         p.updated_at,
         a.username AS admin_username

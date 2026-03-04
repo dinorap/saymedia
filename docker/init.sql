@@ -52,6 +52,9 @@ CREATE TABLE products (
     type ENUM('tool', 'account', 'service', 'other') NOT NULL DEFAULT 'other',
     is_active TINYINT(1) NOT NULL DEFAULT 1,
     download_url TEXT NULL,
+    thumbnail_url VARCHAR(512) NULL,
+    images_json TEXT NULL,
+    long_description TEXT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (admin_id) REFERENCES admins(id) ON DELETE SET NULL

@@ -3,11 +3,6 @@
     <SiteHeader />
 
     <main class="products-main">
-      <section class="products-hero">
-        <h1>{{ $t("hero.title") }}</h1>
-        <p>{{ $t("hero.subtitle") }}</p>
-      </section>
-
       <section class="products-grid-wrap">
         <div v-if="loading" class="state-text">
           {{ $t("admin.loading") }}
@@ -18,46 +13,72 @@
         <div v-else-if="!products.length" class="state-text">
           {{ $t("admin.noData") }}
         </div>
-        <div v-else class="products-grid">
-          <article v-for="p in products" :key="p.id" class="product-card">
-            <div class="product-header">
-              <h2 class="product-name">{{ p.name }}</h2>
-              <span class="product-type">{{ p.type || "other" }}</span>
-            </div>
-            <p class="product-desc">
-              {{ (p.description || "-").slice(0, 80) }}{{ (p.description || "").length > 80 ? "…" : "" }}
-            </p>
-            <p class="product-price">
-              {{ formatVnd(p.price) }}
-              <span class="product-price-unit">{{ $t("product.points") }}</span>
-            </p>
-            <div class="product-actions">
-              <button
-                type="button"
-                class="btn-secondary"
-                @click="openDetail(p)"
-              >
-                {{ $t("product.viewDetail") }}
-              </button>
-              <button
-                type="button"
-                class="btn-primary"
-                :disabled="buyingId === p.id"
-                @click="openConfirm(p)"
-              >
-                {{ buyingId === p.id ? "..." : $t("auth.getStarted") }}
-              </button>
-            </div>
-          </article>
+        <div v-else>
+          <div class="products-list">
+            <article v-for="p in products" :key="p.id" class="product-card">
+              <div class="product-left">
+                <div class="product-thumb-wrap">
+                  <img
+                    v-if="p.thumbnail_url"
+                    :src="p.thumbnail_url"
+                    :alt="p.name"
+                    class="product-thumb"
+                  />
+                  <div v-else class="product-thumb placeholder">
+                    <span>{{ p.name.charAt(0).toUpperCase() }}</span>
+                  </div>
+                </div>
+                <p class="product-price">
+                  {{ formatVnd(p.price) }}
+                  <span class="product-price-unit">
+                    {{ $t("product.points") }}
+                  </span>
+                </p>
+              </div>
+
+              <div class="product-main">
+                <div class="product-header-row">
+                  <span class="badge-main">
+                    {{ locale === "vi" ? "Sản phẩm" : "Product" }}
+                  </span>
+                  <span class="badge-type">
+                    {{ p.type || "tool" }}
+                  </span>
+                  <h2 class="product-name">
+                    <NuxtLink :to="`/products/${p.id}`">
+                      {{ p.name }}
+                    </NuxtLink>
+                  </h2>
+                </div>
+                <div class="product-row">
+                  <p class="product-desc">
+                    {{ (p.description || "-").slice(0, 140)
+                    }}{{ (p.description || "").length > 140 ? "…" : "" }}
+                  </p>
+                  <div class="product-actions">
+                    <NuxtLink
+                      :to="`/products/${p.id}`"
+                      class="btn-secondary as-link"
+                    >
+                      {{ $t("product.viewDetail") }}
+                    </NuxtLink>
+                    <button
+                      type="button"
+                      class="btn-primary"
+                      :disabled="buyingId === p.id"
+                      @click="openConfirm(p)"
+                    >
+                      {{ buyingId === p.id ? "..." : $t("auth.getStarted") }}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </article>
+          </div>
         </div>
       </section>
     </main>
 
-    <ProductDetailModal
-      v-model="showDetailModal"
-      :product="detailProduct"
-      @buy="onBuyFromDetail"
-    />
     <ConfirmPurchaseModal
       v-model="showConfirmModal"
       :product="confirmProduct"
@@ -70,7 +91,6 @@
 <script setup>
 import { useI18n } from "vue-i18n";
 import SiteHeader from "~/components/SiteHeader.vue";
-import ProductDetailModal from "~/components/product/ProductDetailModal.vue";
 import ConfirmPurchaseModal from "~/components/product/ConfirmPurchaseModal.vue";
 
 const { locale, t } = useI18n();
@@ -81,8 +101,6 @@ const loading = ref(false);
 const error = ref("");
 const buyingId = ref(null);
 const currentUser = ref(null);
-const showDetailModal = ref(false);
-const detailProduct = ref(null);
 const showConfirmModal = ref(false);
 const confirmProduct = ref(null);
 
@@ -122,11 +140,6 @@ async function initUser() {
 
 function goProfile() {
   navigateTo("/profile");
-}
-
-function openDetail(p) {
-  detailProduct.value = p;
-  showDetailModal.value = true;
 }
 
 function openConfirm(p) {
@@ -184,7 +197,6 @@ async function doPurchase(product) {
   }
 }
 
-
 onMounted(async () => {
   await Promise.all([fetchProducts(), initUser()]);
 });
@@ -206,21 +218,6 @@ onMounted(async () => {
   padding: 40px 150px 60px;
 }
 
-.products-hero {
-  max-width: 640px;
-  margin-bottom: 32px;
-}
-
-.products-hero h1 {
-  margin: 0 0 8px;
-  font-size: 2.2rem;
-}
-
-.products-hero p {
-  margin: 0;
-  color: var(--text-secondary);
-}
-
 .products-grid-wrap {
   margin-top: 16px;
 }
@@ -235,43 +232,110 @@ onMounted(async () => {
   color: #fca5a5;
 }
 
-.products-grid {
+.products-list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 16px;
 }
 
 .product-card {
   background: rgba(5, 15, 35, 0.9);
-  border-radius: 14px;
-  padding: 18px 18px 16px;
+  border-radius: 16px;
+  padding: 14px 16px;
   border: 1px solid rgba(1, 123, 251, 0.35);
-  box-shadow: 0 0 20px rgba(1, 123, 251, 0.18);
+  box-shadow: 0 0 18px rgba(1, 123, 251, 0.16);
+  display: grid;
+  grid-template-columns: 130px minmax(0, 1fr); /* ảnh+giá | mô tả+nút */
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.product-left {
   display: flex;
   flex-direction: column;
+  align-items: stretch;
   gap: 8px;
 }
 
-.product-header {
+.product-thumb-wrap {
+  width: 130px;
+  height: 130px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  flex-shrink: 0;
+  /* sát mép trái card */
+  margin-left: 0;
+}
+.product-thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.product-thumb.placeholder {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
+  background: radial-gradient(circle at top, rgba(15, 23, 42, 0.9), #020617);
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--blue-bright);
 }
 
-.product-name {
-  font-size: 1.05rem;
-  margin: 0;
+.product-main {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
-.product-type {
+.product-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.product-header-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  justify-content: flex-start;
+  min-width: 0;
+}
+
+.badge-main {
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(34, 197, 94, 0.15);
+  color: #bbf7d0;
   font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  font-weight: 600;
+}
+
+.badge-type {
   padding: 3px 8px;
   border-radius: 999px;
   border: 1px solid rgba(148, 163, 184, 0.5);
   color: var(--text-secondary);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.product-name {
+  font-size: 1rem;
+  margin: 0;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+.product-name a {
+  color: inherit;
+  text-decoration: none;
+}
+.product-name a:hover {
+  color: var(--blue-bright);
 }
 
 .product-desc {
@@ -279,12 +343,15 @@ onMounted(async () => {
   font-size: 0.9rem;
   color: var(--text-secondary);
   min-height: 40px;
+  flex: 1;
 }
 
 .product-price {
-  margin: 8px 0 0;
+  margin: 6px 0 0;
   font-size: 1.1rem;
   font-weight: 600;
+  text-align: center;
+  width: 100%;
 }
 
 .product-price-unit {
@@ -294,12 +361,10 @@ onMounted(async () => {
 }
 
 .product-actions {
-  margin-top: auto;
-  padding-top: 12px;
   display: flex;
-  gap: 10px;
-  justify-content: flex-end;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-end;
 }
 
 .btn-primary {
@@ -332,7 +397,12 @@ onMounted(async () => {
   font-size: 0.85rem;
   cursor: pointer;
 }
-
+.btn-secondary.as-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
 .btn-secondary:hover {
   border-color: rgba(1, 123, 251, 0.5);
   color: var(--text-primary);
@@ -345,6 +415,8 @@ onMounted(async () => {
   .products-main {
     padding: 28px 24px 40px;
   }
+  .products-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 </style>
-

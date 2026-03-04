@@ -32,6 +32,7 @@
           <tr>
             <th>{{ $t("admin.id") }}</th>
             <th>{{ $t("admin.productName") || "Tên sản phẩm" }}</th>
+            <th>{{ $t("admin.thumbnail") || "Ảnh" }}</th>
             <th>{{ $t("admin.adminId") }}</th>
             <th>{{ $t("admin.description") || "Mô tả" }}</th>
             <th>{{ $t("admin.price") || "Giá" }}</th>
@@ -46,6 +47,15 @@
           <tr v-for="(item, idx) in items" :key="item.id">
             <td>{{ idx + 1 }}</td>
             <td>{{ item.name }}</td>
+            <td class="col-thumb">
+              <img
+                v-if="item.thumbnail_url"
+                :src="item.thumbnail_url"
+                alt="thumb"
+                class="thumb-img"
+              />
+              <span v-else>-</span>
+            </td>
             <td>{{ item.admin_username || "-" }}</td>
             <td>{{ item.description || "-" }}</td>
             <td>{{ formatVnd(item.price) }}</td>
@@ -104,56 +114,129 @@
             {{ editing ? $t("admin.edit") : ($t("admin.addProduct") || "Thêm sản phẩm") }}
           </h3>
           <form class="modal-form" @submit.prevent="save">
-            <div class="form-row">
-              <label>{{ $t("admin.productName") || "Tên sản phẩm" }}</label>
-              <input
-                v-model="form.name"
-                type="text"
-                class="input"
-                required
-              />
-            </div>
-            <div class="form-row">
-              <label>{{ $t("admin.description") || "Mô tả" }}</label>
-              <input
-                v-model="form.description"
-                type="text"
-                class="input"
-              />
-            </div>
-            <div class="form-row">
-              <label>{{ $t("admin.downloadUrl") || "Link tải (nếu có)" }}</label>
-              <input
-                v-model="form.download_url"
-                type="text"
-                class="input"
-                placeholder="https://..."
-              />
-            </div>
-            <div class="form-row">
-              <label>{{ $t("admin.price") || "Giá" }}</label>
-              <input
-                v-model.number="form.price"
-                type="number"
-                class="input"
-                min="0"
-              />
-            </div>
-            <div class="form-row">
-              <label>{{ $t("admin.productType") || "Loại" }}</label>
-              <select v-model="form.type" class="input">
-                <option value="tool">tool</option>
-                <option value="account">account</option>
-                <option value="service">service</option>
-                <option value="other">other</option>
-              </select>
-            </div>
-            <div v-if="editing" class="form-row">
-              <label>{{ $t("admin.status") }}</label>
-              <select v-model="form.is_active" class="input">
-                <option :value="true">{{ $t("admin.active") }}</option>
-                <option :value="false">{{ $t("admin.blocked") }}</option>
-              </select>
+            <div class="modal-grid">
+              <section class="modal-section">
+                <h4 class="modal-section-title">
+                  {{ $t("admin.productName") || "Tên sản phẩm" }}
+                </h4>
+                <div class="form-row">
+                  <input
+                    v-model="form.name"
+                    type="text"
+                    class="input"
+                    required
+                    :placeholder="$t('admin.productName')"
+                  />
+                </div>
+                <div class="form-row">
+                  <label>{{ $t("admin.description") || "Mô tả ngắn" }}</label>
+                  <input
+                    v-model="form.description"
+                    type="text"
+                    class="input"
+                    :placeholder="$t('admin.description')"
+                  />
+                </div>
+                <div class="form-row">
+                  <label>{{ $t("admin.downloadUrl") || 'Link tải (nếu có)' }}</label>
+                  <input
+                    v-model="form.download_url"
+                    type="text"
+                    class="input"
+                    placeholder="https://..."
+                  />
+                </div>
+                <div class="form-row inline">
+                  <div class="inline-half">
+                    <label>{{ $t("admin.price") || "Giá" }}</label>
+                    <input
+                      v-model.number="form.price"
+                      type="number"
+                      class="input"
+                      min="0"
+                    />
+                  </div>
+                  <div class="inline-half">
+                    <label>{{ $t("admin.productType") || "Loại" }}</label>
+                    <select v-model="form.type" class="input">
+                      <option value="tool">tool</option>
+                      <option value="account">account</option>
+                      <option value="service">service</option>
+                      <option value="other">other</option>
+                    </select>
+                  </div>
+                </div>
+                <div v-if="editing" class="form-row">
+                  <label>{{ $t("admin.status") }}</label>
+                  <select v-model="form.is_active" class="input">
+                    <option :value="true">{{ $t("admin.active") }}</option>
+                    <option :value="false">{{ $t("admin.blocked") }}</option>
+                  </select>
+                </div>
+              </section>
+
+              <section class="modal-section">
+                <h4 class="modal-section-title">
+                  {{ $t("admin.thumbnail") || "Ảnh & gallery" }}
+                </h4>
+                <div class="form-row">
+                  <label>{{ $t("admin.thumbnail") || "Ảnh thumbnail" }}</label>
+                  <div class="input-upload-row">
+                    <input
+                      v-model="form.thumbnail_url"
+                      type="text"
+                      class="input"
+                      placeholder="https://... (ảnh đại diện)"
+                    />
+                    <input
+                      ref="thumbFileInput"
+                      type="file"
+                      accept="image/*"
+                      class="input-file-hidden"
+                      @change="onUploadThumbnail"
+                    />
+                    <button type="button" class="btn-upload" @click="openThumbPicker">
+                      {{ $t("admin.upload") || "Upload" }}
+                    </button>
+                  </div>
+                  <div v-if="form.thumbnail_url" class="thumb-preview-wrap">
+                    <img :src="form.thumbnail_url" alt="thumbnail preview" class="thumb-preview" />
+                  </div>
+                </div>
+                <div class="form-row">
+                  <label>{{ $t("admin.images") || "Danh sách ảnh (mỗi dòng 1 URL)" }}</label>
+                  <div class="input-upload-row">
+                    <textarea
+                      v-model="form.images_text"
+                      class="input input--textarea"
+                      rows="3"
+                      placeholder="https://.../screenshot-1.png&#10;https://.../screenshot-2.png"
+                    />
+                    <input
+                      ref="imagesFileInput"
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      class="input-file-hidden"
+                      @change="onUploadImages"
+                    />
+                    <button type="button" class="btn-upload" @click="openImagesPicker">
+                      {{ $t("admin.upload") || "Upload" }}
+                    </button>
+                  </div>
+                  <p v-if="imagesCount" class="images-count">
+                    {{ imagesCount }} {{ $t("admin.images") || "ảnh" }}
+                  </p>
+                </div>
+                <div class="form-row">
+                  <label>{{ $t("admin.longDescription") || "Mô tả chi tiết" }}</label>
+                  <textarea
+                    v-model="form.long_description"
+                    class="input input--textarea"
+                    rows="4"
+                  />
+                </div>
+              </section>
             </div>
             <p v-if="error" class="error-msg">{{ error }}</p>
             <div class="modal-actions">
@@ -183,10 +266,15 @@ const search = ref("");
 const modalOpen = ref(false);
 const editing = ref(null);
 const currentAdminId = ref(null);
+const thumbFileInput = ref(null);
+const imagesFileInput = ref(null);
 const form = reactive({
   name: "",
   description: "",
+  long_description: "",
   download_url: "",
+  thumbnail_url: "",
+  images_text: "",
   price: 0,
   type: "other",
   is_active: true,
@@ -195,6 +283,13 @@ const error = ref("");
 const saving = ref(false);
 
 const hasItems = computed(() => Array.isArray(items.value) && items.value.length > 0);
+const imagesCount = computed(() => {
+  if (!form.images_text) return 0;
+  return form.images_text
+    .split("\n")
+    .map((s) => s.trim())
+    .filter((s) => !!s).length;
+});
 
 function formatVnd(v) {
   return (Number(v) || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
@@ -246,13 +341,83 @@ async function initAdmin() {
   }
 }
 
+function openThumbPicker() {
+  if (thumbFileInput.value) {
+    thumbFileInput.value.click();
+  }
+}
+
+function openImagesPicker() {
+  if (imagesFileInput.value) {
+    imagesFileInput.value.click();
+  }
+}
+
+async function uploadImagesFiles(fileList) {
+  if (!fileList || !fileList.length) return [];
+  const formData = new FormData();
+  Array.from(fileList).forEach((file) => {
+    formData.append("file", file);
+  });
+  const res = await $fetch("/api/admin/upload/product-image", {
+    method: "POST",
+    body: formData,
+  });
+  return res && res.success && Array.isArray(res.urls) ? res.urls : [];
+}
+
+async function onUploadThumbnail(event) {
+  const input = event.target;
+  try {
+    const urls = await uploadImagesFiles(input.files);
+    if (urls[0]) {
+      form.thumbnail_url = urls[0];
+    }
+  } catch (e) {
+    error.value =
+      e?.data?.statusMessage || e?.message || "Upload ảnh thumbnail thất bại";
+  } finally {
+    if (input) input.value = "";
+  }
+}
+
+async function onUploadImages(event) {
+  const input = event.target;
+  try {
+    const urls = await uploadImagesFiles(input.files);
+    if (urls.length) {
+      const existing = form.images_text ? form.images_text.split("\n") : [];
+      const merged = [...existing, ...urls].filter((x) => !!x);
+      form.images_text = merged.join("\n");
+    }
+  } catch (e) {
+    error.value =
+      e?.data?.statusMessage || e?.message || "Upload danh sách ảnh thất bại";
+  } finally {
+    if (input) input.value = "";
+  }
+}
+
 function openModal(item = null) {
   // admin_0: thêm/sửa mọi sản phẩm; admin_1: chỉ thao tác trên sản phẩm của mình
   if (item && !canEdit(item)) return;
   editing.value = item;
   form.name = item?.name ?? "";
   form.description = item?.description ?? "";
+  form.long_description = item?.long_description ?? "";
   form.download_url = item?.download_url ?? "";
+  form.thumbnail_url = item?.thumbnail_url ?? "";
+  form.images_text = "";
+  if (item?.images_json) {
+    try {
+      const parsed = JSON.parse(item.images_json);
+      if (Array.isArray(parsed)) {
+        form.images_text = parsed.join("\n");
+      }
+    } catch {
+      form.images_text = "";
+    }
+  }
   form.price = Number(item?.price ?? 0);
   form.type = item?.type || "other";
   form.is_active = item ? !!item.is_active : true;
@@ -264,10 +429,20 @@ async function save() {
   error.value = "";
   saving.value = true;
   try {
+    const images =
+      form.images_text
+        ?.split("\n")
+        .map((s) => s.trim())
+        .filter((s) => !!s)
+        .slice(0, 10) || [];
+
     const payload = {
       name: form.name?.trim(),
       description: form.description?.trim(),
+      long_description: form.long_description?.trim(),
       download_url: form.download_url?.trim(),
+      thumbnail_url: form.thumbnail_url?.trim(),
+      images,
       price: Number(form.price || 0),
       type: form.type || "other",
       is_active:
@@ -402,6 +577,16 @@ onMounted(async () => {
   text-align: left;
   border-bottom: 1px solid rgba(1, 123, 251, 0.15);
 }
+.col-thumb {
+  width: 80px;
+}
+.thumb-img {
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+}
 .data-table th {
   color: var(--text-secondary);
   font-weight: 600;
@@ -473,8 +658,8 @@ onMounted(async () => {
   background: var(--bg-card);
   border: 1px solid var(--blue-border);
   border-radius: 12px;
-  padding: 1.5rem;
-  max-width: 420px;
+  padding: 1.5rem 1.75rem;
+  max-width: 760px;
   width: 100%;
   box-shadow: 0 0 40px rgba(1, 123, 251, 0.2);
 }
@@ -488,6 +673,27 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+}
+.modal-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.2fr);
+  gap: 1.2rem 1.5rem;
+}
+.modal-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+.modal-section-title {
+  margin: 0 0 0.25rem;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-secondary);
+}
+.input--textarea {
+  min-height: 80px;
+  resize: vertical;
 }
 .form-row label {
   font-size: 0.9rem;
@@ -507,6 +713,49 @@ onMounted(async () => {
 .form-row .input:focus {
   outline: none;
   border-color: var(--blue-bright);
+}
+.form-row.inline {
+  display: flex;
+  gap: 0.75rem;
+}
+.form-row.inline .inline-half {
+  flex: 1;
+}
+.input-upload-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: stretch;
+}
+.input-upload-row .input {
+  flex: 1;
+}
+.input-file-hidden {
+  display: none;
+}
+.btn-upload {
+  padding: 0.55rem 0.9rem;
+  border-radius: 8px;
+  border: 1px solid rgba(1, 123, 251, 0.5);
+  background: rgba(15, 23, 42, 0.9);
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.thumb-preview-wrap {
+  margin-top: 0.6rem;
+}
+.thumb-preview {
+  width: 96px;
+  height: 96px;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  object-fit: cover;
+}
+.images-count {
+  margin: 0.35rem 0 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
 }
 .error-msg {
   color: #ff6b6b;
