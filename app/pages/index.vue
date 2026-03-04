@@ -11,12 +11,15 @@
         </h1>
         <p>{{ $t("hero.subtitle") }}</p>
         <div class="cta-buttons">
-          <NuxtLink to="/register" class="btn-primary">{{
-            $t("auth.getStarted")
-          }}</NuxtLink>
-          <a href="#services" class="btn-secondary">{{
-            $t("auth.learnMore")
-          }}</a>
+          <NuxtLink
+            :to="isLoggedIn ? '/products' : '/register'"
+            class="btn-primary"
+          >
+            {{ $t("auth.getStarted") }}
+          </NuxtLink>
+          <NuxtLink to="/products" class="btn-secondary">
+            {{ $t("auth.learnMore") }}
+          </NuxtLink>
         </div>
       </div>
       <div class="hero-image">
@@ -64,4 +67,14 @@
 <script setup>
 import SocialProof from "~/components/SocialProof.vue";
 import SiteHeader from "~/components/SiteHeader.vue";
+
+const roleCookie = useCookie("user_role", { path: "/" });
+const isLoggedIn = computed(() => roleCookie.value === "user");
 </script>
+
+<style scoped>
+.cta-buttons a {
+  border-radius: 999px;
+  text-decoration: none;
+}
+</style>

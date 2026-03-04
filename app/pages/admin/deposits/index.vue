@@ -28,6 +28,15 @@
           <option value="cancelled">Cancelled</option>
         </select>
       </div>
+      <div class="filter-group">
+        <label>{{ $t("admin.search") }}</label>
+        <input
+          v-model="search"
+          type="text"
+          class="input input--sm"
+          :placeholder="$t('admin.search')"
+        />
+      </div>
     </div>
 
     <div class="table-wrap card">
@@ -68,27 +77,41 @@
     </div>
 
     <div v-if="pagination.totalPages > 1" class="pagination">
-      <button
-        type="button"
-        class="btn-page"
-        :disabled="pagination.page <= 1"
-        @click="goToPage(pagination.page - 1)"
-      >
-        {{ $t("admin.prev") }}
-      </button>
+      <div class="page-left">
+        <label>{{ $t("admin.records") }} / page</label>
+        <select
+          v-model.number="pageSize"
+          class="input input--sm"
+          @change="changePageSize"
+        >
+          <option :value="10">10</option>
+          <option :value="25">25</option>
+          <option :value="50">50</option>
+        </select>
+      </div>
       <span class="page-info">
         {{ $t("admin.page") }} {{ pagination.page }} {{ $t("admin.of") }}
         {{ pagination.totalPages }} ({{ pagination.total }}
         {{ $t("admin.records") }})
       </span>
-      <button
-        type="button"
-        class="btn-page"
-        :disabled="pagination.page >= pagination.totalPages"
-        @click="goToPage(pagination.page + 1)"
-      >
-        {{ $t("admin.next") }}
-      </button>
+      <div class="page-right">
+        <button
+          type="button"
+          class="btn-page"
+          :disabled="pagination.page <= 1"
+          @click="goToPage(pagination.page - 1)"
+        >
+          {{ $t("admin.prev") }}
+        </button>
+        <button
+          type="button"
+          class="btn-page"
+          :disabled="pagination.page >= pagination.totalPages"
+          @click="goToPage(pagination.page + 1)"
+        >
+          {{ $t("admin.next") }}
+        </button>
+      </div>
     </div>
   </div>
 </template>
@@ -106,7 +129,10 @@ const loading = ref(true);
 
 const filterAdmin = ref("");
 const filterStatus = ref("");
+const search = ref("");
+let searchTimer = null;
 const pagination = ref({ page: 1, limit: 10, total: 0, totalPages: 1 });
+const pageSize = ref(10);
 
 async function fetchAdmins() {
   if (!isSuperAdmin.value) return;
@@ -123,10 +149,13 @@ async function fetchDeposits(page = 1) {
   try {
     const params = new URLSearchParams();
     params.set("page", String(page));
-    params.set("limit", "10");
+    params.set("limit", String(pageSize.value));
     if (filterStatus.value) params.set("status", filterStatus.value);
     if (isSuperAdmin.value && filterAdmin.value) {
       params.set("admin_id", String(filterAdmin.value));
+    }
+    if (search.value.trim()) {
+      params.set("search", search.value.trim());
     }
     const res = await $fetch(`/api/admin/deposits?${params.toString()}`);
     if (res?.success && res.data) deposits.value = res.data;
@@ -139,10 +168,25 @@ async function fetchDeposits(page = 1) {
   }
 }
 
+watch(
+  () => search.value,
+  () => {
+    if (searchTimer) clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => {
+      fetchDeposits(1);
+    }, 300);
+  },
+);
+
 function goToPage(page) {
   if (page >= 1 && page <= pagination.value.totalPages) {
     fetchDeposits(page);
   }
+}
+
+function changePageSize() {
+  pagination.value.page = 1;
+  fetchDeposits(1);
 }
 
 function formatVnd(v) {
@@ -229,6 +273,15 @@ onMounted(async () => {
   min-width: 140px;
 }
 
+.btn-search {
+  padding: 0.45rem 0.75rem;
+  background: rgba(1, 123, 251, 0.2);
+  border: 1px solid rgba(1, 123, 251, 0.4);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
 .table-wrap {
   overflow-x: auto;
   padding: 1rem;
@@ -297,10 +350,17 @@ onMounted(async () => {
 .pagination {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
   gap: 1rem;
   padding: 1rem;
   margin-top: 0.5rem;
+}
+
+.page-left,
+.page-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .btn-page {
@@ -319,7 +379,7 @@ onMounted(async () => {
 
 .btn-page:disabled {
   opacity: 0.5;
-  cursor: not-allowed;
+  cursor: default;
 }
 
 .page-info {

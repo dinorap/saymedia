@@ -47,7 +47,8 @@ export default defineEventHandler(async (event) => {
         o.note,
         o.created_at,
         p.name AS product_name,
-        p.type AS product_type
+        p.type AS product_type,
+        p.download_url AS product_download_url
       FROM orders o
       LEFT JOIN products p ON o.product_id = p.id
       WHERE o.user_id = ?

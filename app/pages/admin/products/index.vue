@@ -8,9 +8,25 @@
           type="text"
           class="input input--sm"
           :placeholder="$t('admin.search')"
-          @keyup.enter="fetchList"
         />
-        <button type="button" class="btn-search" @click="fetchList">🔍</button>
+      </div>
+      <div class="filter-group">
+        <label>{{ $t("admin.productType") }}</label>
+        <select v-model="filterType" class="input input--sm">
+          <option value="">{{ $t("admin.all") }}</option>
+          <option value="tool">tool</option>
+          <option value="account">account</option>
+          <option value="service">service</option>
+          <option value="other">other</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>{{ $t("admin.status") }}</label>
+        <select v-model="filterStatus" class="input input--sm">
+          <option value="">{{ $t("admin.all") }}</option>
+          <option value="active">{{ $t("admin.active") }}</option>
+          <option value="inactive">{{ $t("admin.blocked") }}</option>
+        </select>
       </div>
       <button
         type="button"
@@ -105,6 +121,40 @@
           </tr>
         </tbody>
       </table>
+    </div>
+
+    <div v-if="pagination.totalPages > 1" class="pagination">
+      <div class="page-left">
+        <label>{{ $t("admin.records") }} / page</label>
+        <select v-model.number="pageSize" class="input input--sm" @change="changePageSize">
+          <option :value="10">10</option>
+          <option :value="25">25</option>
+          <option :value="50">50</option>
+        </select>
+      </div>
+      <span class="page-info">
+        {{ $t("admin.page") }} {{ pagination.page }} {{ $t("admin.of") }}
+        {{ pagination.totalPages }} ({{ pagination.total }}
+        {{ $t("admin.records") }})
+      </span>
+      <div class="page-right">
+        <button
+          type="button"
+          class="btn-page"
+          :disabled="pagination.page <= 1"
+          @click="goToPage(pagination.page - 1)"
+        >
+          {{ $t("admin.prev") }}
+        </button>
+        <button
+          type="button"
+          class="btn-page"
+          :disabled="pagination.page >= pagination.totalPages"
+          @click="goToPage(pagination.page + 1)"
+        >
+          {{ $t("admin.next") }}
+        </button>
+      </div>
     </div>
 
     <Teleport to="body">
@@ -237,6 +287,19 @@
                   />
                 </div>
               </section>
+              <section class="modal-section preview-section">
+                <h4 class="modal-section-title">
+                  {{ $t("admin.longDescription") || "Mô tả chi tiết" }} - Preview
+                </h4>
+                <div class="preview-box">
+                  <p v-if="!form.long_description" class="preview-empty">
+                    {{ $t("admin.noData") }}
+                  </p>
+                  <div v-else class="preview-content">
+                    {{ form.long_description }}
+                  </div>
+                </div>
+              </section>
             </div>
             <p v-if="error" class="error-msg">{{ error }}</p>
             <div class="modal-actions">
@@ -257,12 +320,14 @@
 <script setup>
 definePageMeta({ layout: "admin", middleware: ["admin"] });
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const roleCookie = useCookie("user_role", { path: "/" });
 const isSuperAdmin = computed(() => roleCookie.value === "admin_0");
 const items = ref([]);
 const loading = ref(false);
 const search = ref("");
+const filterType = ref("");
+const filterStatus = ref("");
 const modalOpen = ref(false);
 const editing = ref(null);
 const currentAdminId = ref(null);
@@ -283,6 +348,9 @@ const error = ref("");
 const saving = ref(false);
 
 const hasItems = computed(() => Array.isArray(items.value) && items.value.length > 0);
+let searchTimer = null;
+const pagination = ref({ page: 1, limit: 10, total: 0, totalPages: 1 });
+const pageSize = ref(10);
 const imagesCount = computed(() => {
   if (!form.images_text) return 0;
   return form.images_text
@@ -290,6 +358,33 @@ const imagesCount = computed(() => {
     .map((s) => s.trim())
     .filter((s) => !!s).length;
 });
+
+function validateForm() {
+  const name = form.name?.trim();
+  const price = Number(form.price || 0);
+  const download = form.download_url?.trim();
+
+  if (!name) {
+    error.value = t("admin.productName") + " " + (locale.value === "vi" ? "không được để trống" : "is required");
+    return false;
+  }
+  if (price <= 0) {
+    error.value =
+      locale.value === "vi"
+        ? "Giá sản phẩm phải lớn hơn 0"
+        : "Product price must be greater than 0";
+    return false;
+  }
+  if (download && !/^https?:\/\//i.test(download)) {
+    error.value =
+      locale.value === "vi"
+        ? "Link tải phải bắt đầu bằng http:// hoặc https://"
+        : "Download URL must start with http:// or https://";
+    return false;
+  }
+  error.value = "";
+  return true;
+}
 
 function formatVnd(v) {
   return (Number(v) || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
@@ -317,16 +412,42 @@ async function fetchList() {
   loading.value = true;
   try {
     const query = new URLSearchParams();
-    if (search.value) query.set("search", search.value.trim());
-    const suffix = query.toString() ? `?${query.toString()}` : "";
+    if (search.value.trim()) query.set("search", search.value.trim());
+    if (filterType.value) query.set("type", filterType.value);
+    if (filterStatus.value) query.set("status", filterStatus.value);
+    query.set("page", String(pagination.value.page));
+    query.set("limit", String(pageSize.value));
+    const suffix = `?${query.toString()}`;
     const res = await $fetch(`/api/admin/products${suffix}`);
     items.value = res?.success && Array.isArray(res.data) ? res.data : [];
+    if (res?.pagination) pagination.value = res.pagination;
   } catch (e) {
     items.value = [];
   } finally {
     loading.value = false;
   }
 }
+
+function goToPage(page) {
+  if (page < 1 || page > pagination.value.totalPages) return;
+  pagination.value.page = page;
+  fetchList();
+}
+
+function changePageSize() {
+  pagination.value.page = 1;
+  fetchList();
+}
+
+watch(
+  () => search.value,
+  () => {
+    if (searchTimer) clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => {
+      fetchList();
+    }, 300);
+  },
+);
 
 async function initAdmin() {
   try {
@@ -427,6 +548,7 @@ function openModal(item = null) {
 
 async function save() {
   error.value = "";
+  if (!validateForm()) return;
   saving.value = true;
   try {
     const images =
@@ -523,6 +645,11 @@ onMounted(async () => {
   align-items: center;
   gap: 0.5rem;
 }
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
 .list-toolbar label {
   font-size: 0.85rem;
   color: var(--text-secondary);
@@ -554,6 +681,60 @@ onMounted(async () => {
   font-weight: 600;
   font-size: 0.9rem;
   cursor: pointer;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem;
+  margin-top: 0.5rem;
+}
+.page-left,
+.page-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.btn-page {
+  padding: 0.4rem 1rem;
+  background: rgba(1, 123, 251, 0.2);
+  border: 1px solid rgba(1, 123, 251, 0.4);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-weight: 500;
+  cursor: pointer;
+}
+.btn-page:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.preview-section {
+  grid-column: span 2;
+}
+
+.preview-box {
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: rgba(15, 23, 42, 0.8);
+  min-height: 80px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.preview-empty {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.preview-content {
+  white-space: pre-line;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
 }
 .table-wrap {
   overflow-x: auto;

@@ -87,7 +87,7 @@ export default defineEventHandler(async (event) => {
     );
 
     const initialStatus = "completed";
-    const note = product.download_url || null;
+    const note = null;
 
     const [result]: any = await conn.query(
       `

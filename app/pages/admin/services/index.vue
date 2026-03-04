@@ -8,9 +8,7 @@
           type="text"
           class="input input--sm"
           :placeholder="$t('admin.search')"
-          @keyup.enter="fetchList"
         />
-        <button type="button" class="btn-search" @click="fetchList">🔍</button>
       </div>
       <button type="button" class="btn-add btn-add--right" @click="openModal()">
         + {{ $t("admin.add") }}
@@ -135,6 +133,8 @@ const form = reactive({ name: "", description: "", is_active: true });
 const error = ref("");
 const saving = ref(false);
 
+let searchTimer = null;
+
 function formatDate(val) {
   if (!val) return "-";
   let d;
@@ -164,6 +164,16 @@ async function fetchList() {
     loading.value = false;
   }
 }
+
+watch(
+  () => search.value,
+  () => {
+    if (searchTimer) clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => {
+      fetchList();
+    }, 300);
+  },
+);
 
 function openModal(item = null) {
   editing.value = item;

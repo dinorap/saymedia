@@ -9,6 +9,7 @@ export default defineEventHandler(async (event) => {
   const queryParams = getQuery(event)
   const adminId = queryParams.admin_id ? parseInt(String(queryParams.admin_id), 10) : null
   const search = queryParams.search ? String(queryParams.search).trim() : ''
+  const status = queryParams.status ? String(queryParams.status).trim() : ''
   let page = parseInt(String(queryParams.page || 1), 10)
   if (!Number.isFinite(page) || page < 1) page = 1
   let limit = parseInt(String(queryParams.limit || 10), 10)
@@ -31,6 +32,11 @@ export default defineEventHandler(async (event) => {
     conditions.push('(u.username LIKE ? OR u.email LIKE ? OR a.username LIKE ?)')
     const term = `%${search}%`
     params.push(term, term, term)
+  }
+
+  if (status) {
+    conditions.push('u.status = ?')
+    params.push(status)
   }
 
   const whereClause = conditions.length ? ` WHERE ${conditions.join(' AND ')}` : ''

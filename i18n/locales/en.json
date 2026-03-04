@@ -1,7 +1,7 @@
 {
   "nav": {
     "home": "Home",
-    "services": "Services",
+    "services": "Products",
     "pricing": "Pricing",
     "contact": "Contact"
   },
@@ -32,19 +32,19 @@
     "sendingOtp": "Sending..."
   },
   "hero": {
-    "title": "Buy services",
+    "title": "Buy products",
     "titleHighlight": "quality, best price",
-    "subtitle": "Trusted platform for game services, accounts, top-up. Fast & secure transactions."
+    "subtitle": "Trusted platform for digital products, accounts, top-ups. Fast & secure transactions."
   },
   "stats": {
-    "services": "Services",
+    "services": "Products",
     "customers": "Customers",
     "orders": "Orders",
     "rating": "Rating"
   },
   "admin": {
     "logout": "Logout",
-    "services": "Services Management",
+    "services": "Products Management",
     "dashboard": "Dashboard",
     "centers": "Centers Management",
     "users": "User Management",
@@ -58,14 +58,14 @@
     "earningsOverview": "Earnings Overview",
     "thisMonth": "This Month",
     "topPerforming": "Top Performing Centers",
-    "topServices": "Top Services",
+    "topServices": "Top Products",
     "gameTopup": "Game Top-up",
     "accounts": "Accounts",
-    "otherServices": "Other Services",
+    "otherServices": "Other Products",
     "recentTransactions": "Recent Transactions",
     "paymentReceived": "Payment Received",
     "subscriptionRenewal": "Subscription Renewal",
-    "servicePackage": "Service Package",
+    "servicePackage": "Product Package",
     "today": "Today",
     "yesterday": "Yesterday",
     "daysAgo": "{n} days ago",
@@ -74,7 +74,7 @@
     "usersDesc": "Manage users.",
     "revenueDesc": "Revenue reports.",
     "logsDesc": "System logs.",
-    "servicesDesc": "Manage services listed on the platform.",
+    "servicesDesc": "Manage products listed on the platform.",
     "adminsList": "Admins List",
     "usersList": "Users List",
     "id": "ID",
@@ -92,6 +92,7 @@
     "blocked": "Blocked",
     "admin0": "Super Admin",
     "admin1": "Admin",
+    "all": "All",
     "add": "Add",
     "edit": "Edit",
     "actions": "Actions",

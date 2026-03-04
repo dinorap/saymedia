@@ -89,7 +89,7 @@
 import { useI18n } from "vue-i18n";
 
 const { locale, setLocale } = useI18n();
-const { count } = useCart();
+const { count, clear: clearCart } = useCart();
 const cartCount = computed(() => Number(count.value || 0));
 const showDropdown = ref(false);
 const currentUser = ref(null);
@@ -135,6 +135,7 @@ async function doLogout() {
   try {
     await $fetch("/api/auth/logout", { method: "POST" });
   } catch {}
+  clearCart();
   currentUser.value = null;
   showDropdown.value = false;
   return navigateTo("/");
@@ -148,6 +149,11 @@ function goProfile() {
 
 <style scoped>
 .site-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
   display: flex;
   justify-content: space-between;
   align-items: center;

@@ -22,16 +22,39 @@
 
     <!-- Tab: Admins -->
     <div v-show="activeTab === 'admins'" class="tab-panel">
-      <div class="panel-header">
-        <button type="button" class="btn-add" @click="openAdminModal()">
+    <div class="panel-header">
+      <div class="users-toolbar">
+        <div class="filter-group">
+          <label>{{ $t("admin.role") }}</label>
+          <select v-model="adminRoleFilter" class="input input--sm">
+            <option value="">{{ $t("admin.all") }}</option>
+            <option value="admin_0">admin_0</option>
+            <option value="admin_1">admin_1</option>
+          </select>
+        </div>
+        <div class="search-group">
+          <label>{{ $t("admin.search") }}</label>
+          <input
+            v-model="adminSearch"
+            type="text"
+            class="input input--sm"
+            :placeholder="$t('admin.search')"
+          />
+        </div>
+        <button
+          type="button"
+          class="btn-add btn-add--right"
+          @click="openAdminModal()"
+        >
           + {{ $t("admin.add") }}
         </button>
       </div>
+    </div>
       <div class="table-wrap card">
         <div v-if="loadingAdmins" class="table-loading">
           {{ $t("admin.loading") }}
         </div>
-        <div v-else-if="!admins.length" class="table-empty">
+        <div v-else-if="!filteredAdmins.length" class="table-empty">
           {{ $t("admin.noData") }}
         </div>
         <table v-else class="data-table">
@@ -47,7 +70,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="(a, idx) in admins" :key="a.id">
+            <tr v-for="(a, idx) in filteredAdmins" :key="a.id">
               <td>{{ idx + 1 }}</td>
               <td>{{ a.username }}</td>
               <td>
@@ -125,6 +148,18 @@
             </option>
           </select>
         </div>
+        <div class="filter-group">
+          <label>{{ $t("admin.status") }}</label>
+          <select
+            v-model="userStatusFilter"
+            class="input input--sm"
+            @change="() => fetchUsers(1)"
+          >
+            <option value="">{{ $t("admin.all") }}</option>
+            <option value="active">{{ $t("admin.active") }}</option>
+            <option value="blocked">{{ $t("admin.blocked") }}</option>
+          </select>
+        </div>
         <div class="search-group">
           <label>{{ $t("admin.search") }}</label>
           <input
@@ -132,11 +167,7 @@
             type="text"
             class="input input--sm"
             :placeholder="$t('admin.search')"
-            @keyup.enter="() => fetchUsers(1)"
           />
-          <button type="button" class="btn-search" @click="() => fetchUsers(1)">
-            🔍
-          </button>
         </div>
         <button
           v-if="isSuperAdmin"
@@ -415,10 +446,29 @@ const users = ref([]);
 const loadingAdmins = ref(true);
 const loadingUsers = ref(true);
 
+const adminSearch = ref("");
+const adminRoleFilter = ref("");
+
 const userFilterAdmin = ref("");
+const userStatusFilter = ref("");
 const userSearch = ref("");
 const userPage = ref(1);
 const userPagination = ref({ page: 1, limit: 10, total: 0, totalPages: 1 });
+
+let userSearchTimer = null;
+
+const filteredAdmins = computed(() => {
+  const term = adminSearch.value.trim().toLowerCase();
+  return admins.value.filter((a) => {
+    const matchRole =
+      !adminRoleFilter.value || a.role === adminRoleFilter.value;
+    const matchSearch =
+      !term ||
+      a.username.toLowerCase().includes(term) ||
+      String(a.ref_code || "").toLowerCase().includes(term);
+    return matchRole && matchSearch;
+  });
+});
 
 async function fetchAdmins() {
   loadingAdmins.value = true;
@@ -439,6 +489,7 @@ async function fetchUsers(page = 1) {
   try {
     const params = new URLSearchParams();
     if (userFilterAdmin.value) params.set("admin_id", userFilterAdmin.value);
+    if (userStatusFilter.value) params.set("status", userStatusFilter.value);
     if (userSearch.value.trim()) params.set("search", userSearch.value.trim());
     params.set("page", String(page));
     params.set("limit", "10");
@@ -452,6 +503,16 @@ async function fetchUsers(page = 1) {
     loadingUsers.value = false;
   }
 }
+
+watch(
+  () => userSearch.value,
+  () => {
+    if (userSearchTimer) clearTimeout(userSearchTimer);
+    userSearchTimer = setTimeout(() => {
+      fetchUsers(1);
+    }, 300);
+  },
+);
 
 function goToUserPage(page) {
   if (page >= 1 && page <= userPagination.value.totalPages) fetchUsers(page);
@@ -698,6 +759,10 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
+}
+
+.panel-header .users-toolbar {
+  flex: 1;
 }
 
 .section-title {

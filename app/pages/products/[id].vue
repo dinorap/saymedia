@@ -5,18 +5,32 @@
     <main class="detail-main">
       <section class="detail-layout">
         <div class="detail-media">
-          <div class="detail-thumb-wrap">
-            <img
-              v-if="product.thumbnail_url"
-              :src="product.thumbnail_url"
-              :alt="product.name"
-              class="detail-thumb"
-            />
-            <div v-else class="detail-thumb placeholder">
-              <span>{{ product.name.charAt(0).toUpperCase() }}</span>
-            </div>
+          <div class="detail-thumb-wrap" v-if="activeImage">
+            <button
+              v-if="images.length > 1"
+              type="button"
+              class="image-nav image-nav--left"
+              @click.stop="prevImage"
+            >
+              ‹
+            </button>
+            <img :src="activeImage" :alt="product.name" class="detail-thumb" />
+            <button
+              v-if="images.length > 1"
+              type="button"
+              class="image-nav image-nav--right"
+              @click.stop="nextImage"
+            >
+              ›
+            </button>
           </div>
-          <div v-if="product.images && product.images.length" class="detail-gallery">
+          <div v-else class="detail-thumb placeholder">
+            <span>{{ product.name.charAt(0).toUpperCase() }}</span>
+          </div>
+          <div
+            v-if="product.images && product.images.length"
+            class="detail-gallery"
+          >
             <h3 class="section-title">{{ $t("product.gallery") }}</h3>
             <div class="gallery-grid">
               <img
@@ -25,14 +39,22 @@
                 :src="img"
                 :alt="product.name + ' screenshot ' + (idx + 1)"
                 class="gallery-item"
+                @click="setActiveImage(img)"
               />
             </div>
           </div>
         </div>
 
         <section class="detail-info">
-          <p class="detail-type">{{ product.type || "tool" }}</p>
-          <h1 class="detail-title">{{ product.name }}</h1>
+          <div class="detail-header-row">
+            <span class="detail-badge-main">
+              {{ locale === "vi" ? "Sản phẩm" : "Product" }}
+            </span>
+            <span class="detail-badge-type">
+              {{ (product.type || "tool").toUpperCase() }}
+            </span>
+            <h1 class="detail-title">{{ product.name }}</h1>
+          </div>
           <p class="detail-short" v-if="product.description">
             {{ product.description }}
           </p>
@@ -47,7 +69,9 @@
 
           <div class="detail-actions">
             <button type="button" class="btn-ghost" @click="addToCart(product)">
-              {{ inCart(product) ? $t("product.inCart") : $t("product.addToCart") }}
+              {{
+                inCart(product) ? $t("product.inCart") : $t("product.addToCart")
+              }}
             </button>
             <button
               type="button"
@@ -60,7 +84,9 @@
           </div>
 
           <section v-if="product.long_description" class="detail-long">
-            <h3 class="section-title">{{ $t("product.longDescriptionTitle") }}</h3>
+            <h3 class="section-title">
+              {{ $t("product.longDescriptionTitle") }}
+            </h3>
             <p class="detail-long-text">
               {{ product.long_description }}
             </p>
@@ -100,6 +126,7 @@ const { show: showToast } = useToast();
 const { cart, add } = useCart();
 
 const product = ref(null);
+const currentImageIndex = ref(0);
 const loading = ref(true);
 const error = ref("");
 const currentUser = ref(null);
@@ -162,6 +189,21 @@ async function doPurchase(p) {
   }
 }
 
+const images = computed(() => {
+  const list = [];
+  if (product.value?.thumbnail_url) {
+    list.push(product.value.thumbnail_url);
+  }
+  if (Array.isArray(product.value?.images)) {
+    list.push(...product.value.images);
+  }
+  return list;
+});
+
+const activeImage = computed(() => {
+  return images.value[currentImageIndex.value] || "";
+});
+
 async function fetchProduct() {
   loading.value = true;
   error.value = "";
@@ -171,12 +213,33 @@ async function fetchProduct() {
     product.value = res?.success ? res.data : null;
     if (!product.value) {
       error.value = t("admin.noData");
+    } else {
+      currentImageIndex.value = 0;
     }
   } catch (e) {
     error.value = e?.data?.statusMessage || t("product.loadError");
   } finally {
     loading.value = false;
   }
+}
+
+function setActiveImage(src) {
+  if (!src) return;
+  const idx = images.value.indexOf(src);
+  if (idx !== -1) {
+    currentImageIndex.value = idx;
+  }
+}
+
+function prevImage() {
+  if (!images.value.length) return;
+  currentImageIndex.value =
+    (currentImageIndex.value - 1 + images.value.length) % images.value.length;
+}
+
+function nextImage() {
+  if (!images.value.length) return;
+  currentImageIndex.value = (currentImageIndex.value + 1) % images.value.length;
 }
 
 async function initUser() {
@@ -210,36 +273,43 @@ onMounted(async () => {
 }
 .detail-main {
   flex: 1;
-  padding: 32px 150px 64px;
+  padding: 96px 150px 64px; /* chừa không gian dưới header fixed */
 }
 .detail-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.2fr);
-  gap: 40px;
+  display: flex;
+  justify-content: space-between;
+  gap: 25px;
+  max-width: 1350px;
+  margin: 0 auto 10px;
   align-items: flex-start;
 }
 .detail-media {
+  width: 60%;
   display: flex;
   flex-direction: column;
   gap: 20px;
+  position: sticky;
+  top: 96px;
 }
 .detail-thumb-wrap {
   border-radius: 16px;
   overflow: hidden;
   border: 1px solid rgba(1, 123, 251, 0.4);
   background: radial-gradient(circle at top, rgba(15, 23, 42, 0.9), #020617);
+  position: relative;
 }
 .detail-thumb {
   width: 100%;
   display: block;
-  object-fit: cover;
-  max-height: 260px;
+  object-fit: fill;
+  height: 400px;
+  background: #020617;
 }
 .detail-thumb.placeholder {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 220px;
+  height: 260px;
   font-size: 3rem;
   font-weight: 700;
   color: var(--blue-bright);
@@ -261,28 +331,78 @@ onMounted(async () => {
 }
 .gallery-item {
   width: 100%;
-  height: 70px;
+  height: 90px;
   object-fit: cover;
   border-radius: 10px;
   border: 1px solid rgba(148, 163, 184, 0.5);
+  cursor: pointer;
+  opacity: 0.8;
+}
+.gallery-item:hover {
+  opacity: 1;
+}
+.image-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.8);
+  background: rgba(15, 23, 42, 0.85);
+  color: #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 0 12px rgba(15, 23, 42, 0.9);
+}
+.image-nav--left {
+  left: 12px;
+}
+.image-nav--right {
+  right: 12px;
 }
 .detail-info {
+  width: 40%;
   padding: 12px 16px;
   border-radius: 16px;
   border: 1px solid rgba(1, 123, 251, 0.35);
   background: rgba(15, 23, 42, 0.9);
   box-shadow: 0 0 30px rgba(1, 123, 251, 0.15);
 }
-.detail-type {
-  margin: 0 0 6px;
-  font-size: 0.8rem;
+.detail-header-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  min-width: 0;
+}
+.detail-badge-main {
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(34, 197, 94, 0.15);
+  color: #bbf7d0;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.detail-badge-type {
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  color: var(--text-secondary);
+  font-size: 0.75rem;
   text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: var(--text-muted);
+  letter-spacing: 0.08em;
 }
 .detail-title {
-  margin: 0 0 8px;
-  font-size: 1.6rem;
+  margin: 0;
+  font-size: 1.7rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
 }
 .detail-short {
   margin: 0 0 16px;
@@ -349,9 +469,13 @@ onMounted(async () => {
     padding: 24px 20px 40px;
   }
   .detail-layout {
-    grid-template-columns: minmax(0, 1fr);
+    flex-direction: column;
     gap: 24px;
+  }
+  .detail-media,
+  .detail-info {
+    width: 100%;
+    position: static;
   }
 }
 </style>
-

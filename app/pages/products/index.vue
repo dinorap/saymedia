@@ -4,6 +4,32 @@
 
     <main class="products-main">
       <section class="products-grid-wrap">
+        <div
+          v-if="!loading && !error && products.length"
+          class="products-toolbar"
+        >
+          <div class="toolbar-left">
+            <div class="toolbar-group">
+              <label>{{ $t("admin.search") }}</label>
+              <input
+                v-model="search"
+                type="text"
+                class="input input--sm"
+                :placeholder="$t('admin.search')"
+              />
+            </div>
+            <div class="toolbar-group">
+              <label>{{ $t("admin.productType") }}</label>
+              <select v-model="filterType" class="input input--sm">
+                <option value="">{{ $t("admin.all") }}</option>
+                <option value="tool">tool</option>
+                <option value="account">account</option>
+                <option value="service">service</option>
+                <option value="other">other</option>
+              </select>
+            </div>
+          </div>
+        </div>
         <div v-if="loading" class="state-text">
           {{ $t("admin.loading") }}
         </div>
@@ -14,8 +40,16 @@
           {{ $t("admin.noData") }}
         </div>
         <div v-else>
+          <div v-if="!filteredProducts.length" class="state-text">
+            {{ $t("admin.noData") }}
+          </div>
           <div class="products-list">
-            <article v-for="p in products" :key="p.id" class="product-card">
+            <article
+              v-for="p in filteredProducts"
+              :key="p.id"
+              class="product-card"
+              @click="goDetail(p.id)"
+            >
               <div class="product-left">
                 <div class="product-thumb-wrap">
                   <img
@@ -45,9 +79,7 @@
                     {{ p.type || "tool" }}
                   </span>
                   <h2 class="product-name">
-                    <NuxtLink :to="`/products/${p.id}`">
-                      {{ p.name }}
-                    </NuxtLink>
+                  {{ p.name }}
                   </h2>
                 </div>
                 <div class="product-row">
@@ -56,17 +88,18 @@
                     }}{{ (p.description || "").length > 140 ? "…" : "" }}
                   </p>
                   <div class="product-actions">
-                    <NuxtLink
-                      :to="`/products/${p.id}`"
-                      class="btn-secondary as-link"
+                    <button
+                      type="button"
+                      class="btn-secondary"
+                      @click.stop="addToCart(p)"
                     >
-                      {{ $t("product.viewDetail") }}
-                    </NuxtLink>
+                      {{ $t("product.addToCart") }}
+                    </button>
                     <button
                       type="button"
                       class="btn-primary"
                       :disabled="buyingId === p.id"
-                      @click="openConfirm(p)"
+                      @click.stop="openConfirm(p)"
                     >
                       {{ buyingId === p.id ? "..." : $t("auth.getStarted") }}
                     </button>
@@ -103,6 +136,28 @@ const buyingId = ref(null);
 const currentUser = ref(null);
 const showConfirmModal = ref(false);
 const confirmProduct = ref(null);
+const { add } = useCart();
+const search = ref("");
+const filterType = ref("");
+
+const filteredProducts = computed(() => {
+  let list = products.value || [];
+  const term = search.value.trim().toLowerCase();
+
+  if (filterType.value) {
+    list = list.filter((p) => p.type === filterType.value);
+  }
+
+  if (term) {
+    list = list.filter((p) => {
+      const name = (p.name || "").toLowerCase();
+      const desc = (p.description || "").toLowerCase();
+      return name.includes(term) || desc.includes(term);
+    });
+  }
+
+  return list;
+});
 
 function formatVnd(v) {
   return (Number(v) || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
@@ -124,6 +179,10 @@ async function fetchProducts() {
   }
 }
 
+function goDetail(id) {
+  navigateTo(`/products/${id}`);
+}
+
 async function initUser() {
   const role = useCookie("user_role", { path: "/" }).value;
   if (role === "user") {
@@ -136,10 +195,6 @@ async function initUser() {
   } else {
     currentUser.value = null;
   }
-}
-
-function goProfile() {
-  navigateTo("/profile");
 }
 
 function openConfirm(p) {
@@ -156,10 +211,10 @@ function openConfirm(p) {
   showConfirmModal.value = true;
 }
 
-function onBuyFromDetail(p) {
-  showDetailModal.value = false;
-  confirmProduct.value = p;
-  showConfirmModal.value = true;
+function addToCart(p) {
+  if (!p) return;
+  add(p);
+  showToast(t("cart.addedToCart"), "success");
 }
 
 async function doPurchase(product) {
@@ -215,11 +270,52 @@ onMounted(async () => {
 
 .products-main {
   flex: 1;
-  padding: 40px 150px 60px;
+  padding: 96px 150px 60px; /* chừa khoảng dưới header fixed */
 }
 
 .products-grid-wrap {
   margin-top: 16px;
+}
+
+.products-toolbar {
+  display: flex;
+  justify-content: flex-start;
+  align-items: flex-end;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  margin-bottom: 8px;
+  background: rgba(5, 15, 35, 0.6);
+  border: 1px solid rgba(1, 123, 251, 0.25);
+  border-radius: 10px;
+}
+
+.toolbar-left {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: flex-end;
+}
+
+.toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.toolbar-group label {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.input--sm {
+  padding: 0.45rem 0.75rem;
+  min-width: 170px;
+  background: rgba(5, 15, 35, 0.9);
+  border: 1px solid rgba(1, 123, 251, 0.3);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 0.95rem;
 }
 
 .state-text {
@@ -248,6 +344,7 @@ onMounted(async () => {
   grid-template-columns: 130px minmax(0, 1fr); /* ảnh+giá | mô tả+nút */
   align-items: flex-start;
   gap: 16px;
+  cursor: pointer;
 }
 
 .product-left {
@@ -396,12 +493,6 @@ onMounted(async () => {
   color: var(--text-secondary);
   font-size: 0.85rem;
   cursor: pointer;
-}
-.btn-secondary.as-link {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  text-decoration: none;
 }
 .btn-secondary:hover {
   border-color: rgba(1, 123, 251, 0.5);

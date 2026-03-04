@@ -1,7 +1,7 @@
 {
   "nav": {
     "home": "Trang chủ",
-    "services": "Dịch vụ",
+    "services": "Sản phẩm",
     "pricing": "Bảng giá",
     "contact": "Liên hệ"
   },
@@ -9,7 +9,7 @@
     "login": "Đăng nhập",
     "register": "Đăng ký",
     "getStarted": "Mua ngay",
-    "learnMore": "Xem dịch vụ",
+    "learnMore": "Xem sản phẩm",
     "profile": "Thông tin",
     "logout": "Đăng xuất",
     "loading": "Đang tải...",
@@ -32,19 +32,19 @@
     "sendingOtp": "Đang gửi..."
   },
   "hero": {
-    "title": "Mua dịch vụ",
+    "title": "Mua sản phẩm",
     "titleHighlight": "chất lượng, giá tốt",
-    "subtitle": "Nền tảng mua bán dịch vụ game, tài khoản, nạp thẻ uy tín. Giao dịch nhanh, bảo mật."
+    "subtitle": "Nền tảng mua bán sản phẩm số, tài khoản, nạp thẻ uy tín. Giao dịch nhanh, bảo mật."
   },
   "stats": {
-    "services": "Dịch vụ",
+    "services": "Sản phẩm",
     "customers": "Khách hàng",
     "orders": "Đơn hàng",
     "rating": "Đánh giá"
   },
   "admin": {
     "logout": "Đăng xuất",
-    "services": "Quản lý dịch vụ",
+    "services": "Quản lý sản phẩm",
     "dashboard": "Tổng quan",
     "centers": "Quản lý trung tâm",
     "users": "Quản lý người dùng",
@@ -58,14 +58,14 @@
     "earningsOverview": "Tổng quan thu nhập",
     "thisMonth": "Tháng này",
     "topPerforming": "Trung tâm hoạt động tốt",
-    "topServices": "Dịch vụ bán chạy",
+    "topServices": "Sản phẩm bán chạy",
     "gameTopup": "Nạp thẻ game",
     "accounts": "Tài khoản",
-    "otherServices": "Dịch vụ khác",
+    "otherServices": "Sản phẩm khác",
     "recentTransactions": "Giao dịch gần đây",
     "paymentReceived": "Đã nhận thanh toán",
     "subscriptionRenewal": "Gia hạn đăng ký",
-    "servicePackage": "Gói dịch vụ",
+    "servicePackage": "Gói sản phẩm",
     "today": "Hôm nay",
     "yesterday": "Hôm qua",
     "daysAgo": "{n} ngày trước",
@@ -74,7 +74,7 @@
     "usersDesc": "Quản lý người dùng.",
     "revenueDesc": "Báo cáo doanh thu.",
     "logsDesc": "Nhật ký hệ thống.",
-    "servicesDesc": "Quản lý danh sách dịch vụ bán trên nền tảng.",
+    "servicesDesc": "Quản lý danh sách sản phẩm bán trên nền tảng.",
     "adminsList": "Danh sách Admin",
     "usersList": "Danh sách người dùng",
     "id": "ID",
@@ -92,6 +92,7 @@
     "blocked": "Khóa",
     "admin0": "Super Admin",
     "admin1": "Admin",
+    "all": "Tất cả",
     "add": "Thêm",
     "edit": "Sửa",
     "actions": "Hành động",
@@ -134,13 +135,11 @@
     "longDescription": "Mô tả chi tiết",
     "orderNote": "Ghi chú đơn",
     "editNote": "Sửa ghi chú",
-    "serviceName": "Tên dịch vụ",
-    "addService": "Thêm dịch vụ",
+    "serviceName": "Tên sản phẩm",
+    "addService": "Thêm sản phẩm",
     "credit": "Số dư",
     "deposits": "Quản lý nạp tiền",
-    "thumbnail": "Ảnh thumbnail",
-    "images": "Danh sách ảnh",
-    "longDescription": "Mô tả chi tiết",
+
     "upload": "Tải ảnh lên"
   },
   "socialProof": {

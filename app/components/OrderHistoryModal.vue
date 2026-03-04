@@ -46,13 +46,12 @@
                     </span>
                   </td>
                   <td class="history-note">
-                    <span v-if="!isUrl(o.note)">{{ o.note || "-" }}</span>
-                    <span v-else class="history-note-hint">—</span>
+                    {{ o.note || "-" }}
                   </td>
                   <td class="history-link-cell">
                     <a
-                      v-if="isUrl(o.note)"
-                      :href="o.note"
+                      v-if="isUrl(o.product_download_url)"
+                      :href="o.product_download_url"
                       target="_blank"
                       rel="noopener"
                       class="history-link-btn"
@@ -170,7 +169,7 @@ function isUrl(val) {
 
 .history-modal {
   width: 100%;
-  max-width: 720px;
+  max-width: 960px;
   max-height: 80vh;
   background: var(--bg-card);
   border-radius: 1rem;
@@ -248,7 +247,7 @@ function isUrl(val) {
 }
 
 .history-note {
-  max-width: 200px;
+  max-width: 320px;
   white-space: pre-line;
   color: var(--text-secondary);
 }
