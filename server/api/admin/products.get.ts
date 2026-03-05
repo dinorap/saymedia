@@ -21,6 +21,11 @@ export default defineEventHandler(async (event) => {
   const where: string[] = [];
   const params: any[] = [];
 
+  if (currentUser.role === "admin_1") {
+    where.push("p.admin_id = ?");
+    params.push(currentUser.id);
+  }
+
   if (search) {
     where.push("(p.name LIKE ? OR p.description LIKE ?)");
     const keyword = `%${search}%`;

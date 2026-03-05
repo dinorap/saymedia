@@ -123,7 +123,7 @@
       </table>
     </div>
 
-    <div v-if="pagination.totalPages > 1" class="pagination">
+    <div v-if="pagination.total > 0" class="pagination">
       <div class="page-left">
         <label>{{ $t("admin.records") }} / page</label>
         <select v-model.number="pageSize" class="input input--sm" @change="changePageSize">
@@ -321,6 +321,8 @@
 definePageMeta({ layout: "admin", middleware: ["admin"] });
 
 const { t, locale } = useI18n();
+const { show: showToast } = useToast();
+const { confirm: askConfirm } = useConfirm();
 const roleCookie = useCookie("user_role", { path: "/" });
 const isSuperAdmin = computed(() => roleCookie.value === "admin_0");
 const items = ref([]);
@@ -585,8 +587,10 @@ async function save() {
     }
     modalOpen.value = false;
     await fetchList();
+    showToast(t("admin.updateSuccess"), "success");
   } catch (e) {
     error.value = e?.data?.statusMessage || e?.message || "Lỗi";
+    showToast(error.value, "error");
   } finally {
     saving.value = false;
   }
@@ -594,12 +598,19 @@ async function save() {
 
 async function deleteItem(item) {
   if (!canDelete(item)) return;
-  if (!confirm(`${t("admin.confirmDelete")}\n${item.name}`)) return;
+  const ok = await askConfirm({
+    title: t("admin.delete"),
+    message: `${t("admin.confirmDelete")}\n${item.name}`,
+    confirmText: t("admin.delete"),
+    cancelText: t("admin.cancel"),
+  });
+  if (!ok) return;
   try {
     await $fetch(`/api/admin/products/${item.id}`, { method: "DELETE" });
     await fetchList();
+    showToast(t("admin.deleteSuccess"), "success");
   } catch (e) {
-    alert(e?.data?.statusMessage || "Lỗi");
+    showToast(e?.data?.statusMessage || "Lỗi", "error");
   }
 }
 
@@ -688,7 +699,7 @@ onMounted(async () => {
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: 1rem;
+  padding: 0 1rem;
   margin-top: 0.5rem;
 }
 .page-left,
@@ -696,6 +707,10 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+.page-left label {
+  min-width: 110px;
 }
 .btn-page {
   padding: 0.4rem 1rem;
@@ -738,7 +753,9 @@ onMounted(async () => {
 }
 .table-wrap {
   overflow-x: auto;
+  overflow-y: auto;
   padding: 1rem;
+  max-height: 71vh;
 }
 .table-loading,
 .table-empty {

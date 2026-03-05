@@ -5,5 +5,6 @@
       <NuxtPage />
     </NuxtLayout>
     <AppToast />
+    <AppConfirm />
   </div>
 </template>

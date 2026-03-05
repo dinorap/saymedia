@@ -76,7 +76,7 @@
       </table>
     </div>
 
-    <div v-if="pagination.totalPages > 1" class="pagination">
+    <div v-if="pagination.total > 0" class="pagination">
       <div class="page-left">
         <label>{{ $t("admin.records") }} / page</label>
         <select
@@ -284,7 +284,9 @@ onMounted(async () => {
 
 .table-wrap {
   overflow-x: auto;
+  overflow-y: auto;
   padding: 1rem;
+  max-height: 71vh;
 }
 
 .table-loading,
@@ -352,7 +354,7 @@ onMounted(async () => {
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: 1rem;
+  padding: 0 1rem;
   margin-top: 0.5rem;
 }
 
@@ -361,6 +363,10 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+.page-left label {
+  min-width: 110px;
 }
 
 .btn-page {

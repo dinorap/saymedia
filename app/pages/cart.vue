@@ -243,7 +243,7 @@ onMounted(initUser);
 
 <style scoped>
 .cart-page {
-  min-height: 100vh;
+  min-height: 100%;
   display: flex;
   flex-direction: column;
   background:

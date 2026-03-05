@@ -32,7 +32,7 @@
         </thead>
         <tbody>
           <tr v-for="(item, idx) in items" :key="item.id">
-            <td>{{ idx + 1 }}</td>
+            <td>{{ (pagination.page - 1) * pagination.limit + idx + 1 }}</td>
             <td>{{ item.name }}</td>
             <td>{{ item.description || "-" }}</td>
             <td>
@@ -67,6 +67,30 @@
           </tr>
         </tbody>
       </table>
+    </div>
+    <div v-if="pagination.total > 0" class="pagination">
+      <span class="page-info">
+        {{ $t("admin.page") }} {{ pagination.page }} {{ $t("admin.of") }}
+        {{ pagination.totalPages }} ({{ pagination.total }} {{ $t("admin.records") }})
+      </span>
+      <div class="page-right">
+        <button
+          type="button"
+          class="btn-page"
+          :disabled="pagination.page <= 1"
+          @click="goToPage(pagination.page - 1)"
+        >
+          {{ $t("admin.prev") }}
+        </button>
+        <button
+          type="button"
+          class="btn-page"
+          :disabled="pagination.page >= pagination.totalPages"
+          @click="goToPage(pagination.page + 1)"
+        >
+          {{ $t("admin.next") }}
+        </button>
+      </div>
     </div>
 
     <Teleport to="body">
@@ -124,6 +148,8 @@
 definePageMeta({ layout: "admin", middleware: ["admin"] });
 
 const { t } = useI18n();
+const { show: showToast } = useToast();
+const { confirm: askConfirm } = useConfirm();
 const items = ref([]);
 const loading = ref(false);
 const search = ref("");
@@ -132,6 +158,7 @@ const editing = ref(null);
 const form = reactive({ name: "", description: "", is_active: true });
 const error = ref("");
 const saving = ref(false);
+const pagination = ref({ page: 1, limit: 10, total: 0, totalPages: 1 });
 
 let searchTimer = null;
 
@@ -153,13 +180,23 @@ function formatDate(val) {
   });
 }
 
-async function fetchList() {
+async function fetchList(page = 1) {
   loading.value = true;
   try {
-    // TODO: gọi API khi có backend
-    items.value = [];
+    const params = new URLSearchParams();
+    params.set("page", String(page));
+    params.set("limit", "10");
+    if (search.value.trim()) {
+      params.set("search", search.value.trim());
+    }
+    const res = await $fetch(`/api/admin/services?${params.toString()}`);
+    items.value = Array.isArray(res?.data) ? res.data : [];
+    if (res?.pagination) {
+      pagination.value = res.pagination;
+    }
   } catch (e) {
     items.value = [];
+    pagination.value = { page: 1, limit: 10, total: 0, totalPages: 1 };
   } finally {
     loading.value = false;
   }
@@ -170,7 +207,7 @@ watch(
   () => {
     if (searchTimer) clearTimeout(searchTimer);
     searchTimer = setTimeout(() => {
-      fetchList();
+      fetchList(1);
     }, 300);
   },
 );
@@ -188,27 +225,58 @@ async function save() {
   error.value = "";
   saving.value = true;
   try {
-    // TODO: POST/PUT API khi có backend
+    const body = {
+      name: form.name,
+      description: form.description,
+      is_active: !!form.is_active,
+    };
+    if (editing.value?.id) {
+      await $fetch(`/api/admin/services/${editing.value.id}`, {
+        method: "PUT",
+        body,
+      });
+    } else {
+      await $fetch("/api/admin/services", {
+        method: "POST",
+        body,
+      });
+    }
     modalOpen.value = false;
-    await fetchList();
+    await fetchList(pagination.value.page || 1);
+    showToast(t("admin.updateSuccess"), "success");
   } catch (e) {
     error.value = e?.data?.statusMessage || e?.message || "Lỗi";
+    showToast(error.value, "error");
   } finally {
     saving.value = false;
   }
 }
 
 async function deleteItem(item) {
-  if (!confirm(`${t("admin.confirmDelete")}\n${item.name}`)) return;
+  const ok = await askConfirm({
+    title: t("admin.delete"),
+    message: `${t("admin.confirmDelete")}\n${item.name}`,
+    confirmText: t("admin.delete"),
+    cancelText: t("admin.cancel"),
+  });
+  if (!ok) return;
   try {
-    // TODO: DELETE API khi có backend
-    await fetchList();
+    await $fetch(`/api/admin/services/${item.id}`, {
+      method: "DELETE",
+    });
+    await fetchList(pagination.value.page || 1);
+    showToast(t("admin.deleteSuccess"), "success");
   } catch (e) {
-    alert(e?.data?.statusMessage || "Lỗi");
+    showToast(e?.data?.statusMessage || "Lỗi", "error");
   }
 }
 
-onMounted(() => fetchList());
+function goToPage(page) {
+  if (page < 1 || page > pagination.value.totalPages) return;
+  fetchList(page);
+}
+
+onMounted(() => fetchList(1));
 </script>
 
 <style scoped>
@@ -271,7 +339,9 @@ onMounted(() => fetchList());
 }
 .table-wrap {
   overflow-x: auto;
+  overflow-y: auto;
   padding: 1rem;
+  max-height: 71vh;
 }
 .table-loading,
 .table-empty {
@@ -419,5 +489,34 @@ onMounted(() => fetchList());
   border-radius: 8px;
   font-weight: 500;
   cursor: pointer;
+}
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0 1rem;
+}
+.page-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.page-info {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+.btn-page {
+  padding: 0.4rem 1rem;
+  background: rgba(1, 123, 251, 0.2);
+  border: 1px solid rgba(1, 123, 251, 0.4);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-weight: 500;
+  cursor: pointer;
+}
+.btn-page:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 </style>

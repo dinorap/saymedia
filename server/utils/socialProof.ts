@@ -135,9 +135,21 @@ function generateFakeName(): string {
 }
 
 function generateFakeItemText() {
-  const name = generateFakeName()
+  const rawName = generateFakeName()
+
+  // Ẩn danh tên fake cho giống real orders (chỉ lộ 1–2 ký tự)
+  let displayName = 'Khách hàng'
+  const trimmed = String(rawName || '').trim()
+  if (trimmed) {
+    if (trimmed.length <= 3) {
+      displayName = `${trimmed[0]}***`
+    } else {
+      displayName = `${trimmed[0]}***${trimmed[trimmed.length - 1]}`
+    }
+  }
+
   const itemName = randomItem(PRODUCT_NAMES)
-  return { name, itemName }
+  return { name: displayName, itemName }
 }
 
 let fakeLoopStarted = false
@@ -156,7 +168,28 @@ export function startSocialProofFakeLoop() {
 
     setTimeout(async () => {
       try {
-        const { name, itemName } = generateFakeItemText()
+        const { name } = generateFakeItemText()
+
+        let itemName = ''
+        try {
+          const [rows]: any = await pool.query(
+            `
+              SELECT name
+              FROM products
+              WHERE is_active = 1
+              ORDER BY RAND()
+              LIMIT 1
+            `,
+          )
+          itemName = rows?.[0]?.name || ''
+        } catch {
+          itemName = ''
+        }
+
+        if (!itemName) {
+          itemName = randomItem(PRODUCT_NAMES)
+        }
+
         await addSocialProofItem(name, itemName, true)
       } catch (e) {
         console.error('[social-proof] failed to add fake item', e)

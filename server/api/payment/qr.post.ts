@@ -5,7 +5,8 @@ import {
   ensurePaymentSchema,
   generateTransId,
   buildTransferMemo,
-  buildQrUrl
+  buildQrUrl,
+  convertVndToCredit,
 } from '../../utils/payment'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'chuoi_bi_mat_jwt_ngau_nhien_cua_sep_123456'
@@ -30,6 +31,13 @@ export default defineEventHandler(async (event) => {
   if (!amount || amount < 10000) {
     throw createError({ statusCode: 400, statusMessage: 'Số tiền tối thiểu là 10.000 VND' })
   }
+  const converted = convertVndToCredit(amount)
+  if (converted.credit <= 0) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: `Số tiền nạp chưa đủ để quy đổi tín chỉ (1 tín chỉ = ${converted.vndPerCredit.toLocaleString('vi-VN')}đ)`,
+    })
+  }
 
   await ensurePaymentSchema()
 
@@ -48,7 +56,9 @@ export default defineEventHandler(async (event) => {
     trans_id: transId,
     memo,
     qr_url: qrUrl,
-    expires_in_seconds: PAYMENT_EXPIRE_MINUTES * 60
+    expires_in_seconds: PAYMENT_EXPIRE_MINUTES * 60,
+    expected_credit: converted.credit,
+    vnd_per_credit: converted.vndPerCredit,
   }
 })
 

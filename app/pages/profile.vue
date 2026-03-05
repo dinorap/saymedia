@@ -76,6 +76,13 @@
           </button>
           <button
             type="button"
+            class="btn-secondary"
+            @click="showCreditLedgerModal = true"
+          >
+            {{ $t("admin.creditLedger") || "Sổ sao kê tín chỉ" }}
+          </button>
+          <button
+            type="button"
             class="btn-primary"
             @click="showChangePassword = true"
           >
@@ -174,6 +181,11 @@
       :model-value="showOrderHistoryModal"
       @update:model-value="showOrderHistoryModal = $event"
     />
+
+    <CreditLedgerModal
+      :model-value="showCreditLedgerModal"
+      @update:model-value="showCreditLedgerModal = $event"
+    />
   </div>
 </template>
 
@@ -183,6 +195,7 @@ import SiteHeader from "~/components/SiteHeader.vue";
 import PaymentModal from "~/components/payment/PaymentModal.vue";
 import PaymentHistoryModal from "~/components/payment/PaymentHistoryModal.vue";
 import OrderHistoryModal from "~/components/OrderHistoryModal.vue";
+import CreditLedgerModal from "~/components/CreditLedgerModal.vue";
 const { t, locale, setLocale } = useI18n();
 const { show: showToast } = useToast();
 
@@ -192,6 +205,7 @@ const errorMessage = ref("");
 const showDepositModal = ref(false);
 const showHistoryModal = ref(false);
 const showOrderHistoryModal = ref(false);
+const showCreditLedgerModal = ref(false);
 const quickStats = reactive({
   depositCount: 0,
   orderCount: 0,
@@ -303,7 +317,7 @@ async function submitChangePassword() {
 
 <style scoped>
 .profile-page {
-  min-height: 100vh;
+  min-height: 100%;
   display: flex;
   flex-direction: column;
   background:

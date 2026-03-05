@@ -4,6 +4,7 @@ import pool from './db'
 let schemaReady = false
 
 export const PAYMENT_EXPIRE_MINUTES = 5
+export const DEFAULT_VND_PER_CREDIT = 1000
 
 export async function ensurePaymentSchema() {
   if (schemaReady) return
@@ -27,7 +28,47 @@ export async function ensurePaymentSchema() {
     // Column may already exist.
   }
 
+  try {
+    await pool.query("ALTER TABLE payment_transactions ADD COLUMN actual_amount BIGINT NULL")
+  } catch {
+    // Column may already exist.
+  }
+
+  try {
+    await pool.query("ALTER TABLE payment_transactions ADD COLUMN provider VARCHAR(20) NOT NULL DEFAULT 'sepay'")
+  } catch {
+    // Column may already exist.
+  }
+
+  try {
+    await pool.query('ALTER TABLE payment_transactions ADD COLUMN credit_amount BIGINT NULL')
+  } catch {
+    // Column may already exist.
+  }
+
   schemaReady = true
+}
+
+export function getVndPerCredit() {
+  const raw = Number(process.env.DEPOSIT_VND_PER_CREDIT || DEFAULT_VND_PER_CREDIT)
+  if (!Number.isFinite(raw) || raw <= 0) return DEFAULT_VND_PER_CREDIT
+  return Math.round(raw)
+}
+
+export function convertVndToCredit(vndAmount: number) {
+  const vndPerCredit = getVndPerCredit()
+  const amount = Number(vndAmount || 0)
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return {
+      vndPerCredit,
+      credit: 0,
+    }
+  }
+
+  return {
+    vndPerCredit,
+    credit: Math.floor(amount / vndPerCredit),
+  }
 }
 
 export function generateTransId(userId: number) {

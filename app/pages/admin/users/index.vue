@@ -22,34 +22,34 @@
 
     <!-- Tab: Admins -->
     <div v-show="activeTab === 'admins'" class="tab-panel">
-    <div class="panel-header">
-      <div class="users-toolbar">
-        <div class="filter-group">
-          <label>{{ $t("admin.role") }}</label>
-          <select v-model="adminRoleFilter" class="input input--sm">
-            <option value="">{{ $t("admin.all") }}</option>
-            <option value="admin_0">admin_0</option>
-            <option value="admin_1">admin_1</option>
-          </select>
+      <div class="panel-header">
+        <div class="users-toolbar">
+          <div class="filter-group">
+            <label>{{ $t("admin.role") }}</label>
+            <select v-model="adminRoleFilter" class="input input--sm">
+              <option value="">{{ $t("admin.all") }}</option>
+              <option value="admin_0">admin_0</option>
+              <option value="admin_1">admin_1</option>
+            </select>
+          </div>
+          <div class="search-group">
+            <label>{{ $t("admin.search") }}</label>
+            <input
+              v-model="adminSearch"
+              type="text"
+              class="input input--sm"
+              :placeholder="$t('admin.search')"
+            />
+          </div>
+          <button
+            type="button"
+            class="btn-add btn-add--right"
+            @click="openAdminModal()"
+          >
+            + {{ $t("admin.add") }}
+          </button>
         </div>
-        <div class="search-group">
-          <label>{{ $t("admin.search") }}</label>
-          <input
-            v-model="adminSearch"
-            type="text"
-            class="input input--sm"
-            :placeholder="$t('admin.search')"
-          />
-        </div>
-        <button
-          type="button"
-          class="btn-add btn-add--right"
-          @click="openAdminModal()"
-        >
-          + {{ $t("admin.add") }}
-        </button>
       </div>
-    </div>
       <div class="table-wrap card">
         <div v-if="loadingAdmins" class="table-loading">
           {{ $t("admin.loading") }}
@@ -244,6 +244,15 @@
                   ✏️
                 </button>
                 <button
+                  v-if="isSuperAdmin"
+                  type="button"
+                  class="btn-icon"
+                  :title="$t('admin.adjustCredit') || 'Điều chỉnh tín chỉ'"
+                  @click="openAdjustCreditModal(u)"
+                >
+                  💳
+                </button>
+                <button
                   type="button"
                   class="btn-icon btn-icon--danger"
                   :title="$t('admin.delete')"
@@ -256,28 +265,42 @@
           </tbody>
         </table>
       </div>
-      <div v-if="userPagination.totalPages > 1" class="pagination">
-        <button
-          type="button"
-          class="btn-page"
-          :disabled="userPagination.page <= 1"
-          @click="goToUserPage(userPagination.page - 1)"
-        >
-          {{ $t("admin.prev") }}
-        </button>
+      <div v-if="userPagination.total > 0" class="pagination">
+        <div class="page-left">
+          <label>{{ $t("admin.records") }} / page</label>
+          <select
+            v-model.number="userPageSize"
+            class="input input--sm"
+            @change="changeUserPageSize"
+          >
+            <option :value="10">10</option>
+            <option :value="25">25</option>
+            <option :value="50">50</option>
+          </select>
+        </div>
         <span class="page-info">
           {{ $t("admin.page") }} {{ userPagination.page }} {{ $t("admin.of") }}
           {{ userPagination.totalPages }} ({{ userPagination.total }}
           {{ $t("admin.records") }})
         </span>
-        <button
-          type="button"
-          class="btn-page"
-          :disabled="userPagination.page >= userPagination.totalPages"
-          @click="goToUserPage(userPagination.page + 1)"
-        >
-          {{ $t("admin.next") }}
-        </button>
+        <div class="page-right">
+          <button
+            type="button"
+            class="btn-page"
+            :disabled="userPagination.page <= 1"
+            @click="goToUserPage(userPagination.page - 1)"
+          >
+            {{ $t("admin.prev") }}
+          </button>
+          <button
+            type="button"
+            class="btn-page"
+            :disabled="userPagination.page >= userPagination.totalPages"
+            @click="goToUserPage(userPagination.page + 1)"
+          >
+            {{ $t("admin.next") }}
+          </button>
+        </div>
       </div>
     </div>
 
@@ -421,6 +444,73 @@
         </div>
       </div>
     </Teleport>
+
+    <!-- Modal: Adjust credit -->
+    <Teleport to="body">
+      <div
+        v-if="adjustCreditModalOpen"
+        class="modal-overlay"
+        @click.self="adjustCreditModalOpen = false"
+      >
+        <div class="modal">
+          <h3 class="modal-title">
+            {{ $t("admin.adjustCredit") || "Điều chỉnh tín chỉ" }}
+          </h3>
+          <form class="modal-form" @submit.prevent="submitAdjustCredit">
+            <div class="form-row">
+              <label>{{ $t("admin.username") }}</label>
+              <input
+                :value="adjustTargetUser?.username || '-'"
+                type="text"
+                class="input"
+                disabled
+              />
+            </div>
+            <div class="form-row">
+              <label>{{
+                $t("admin.deltaCredit") || "Số tín chỉ thay đổi"
+              }}</label>
+              <input
+                v-model.number="adjustDelta"
+                type="number"
+                class="input"
+                required
+                placeholder="Ví dụ: +100 hoặc -50"
+              />
+            </div>
+            <div class="form-row">
+              <label>{{ $t("admin.reason") || "Lý do" }}</label>
+              <textarea
+                v-model="adjustReason"
+                class="input"
+                rows="3"
+                required
+                placeholder="Nhập lý do điều chỉnh"
+              />
+            </div>
+            <p v-if="adjustCreditError" class="error-msg">
+              {{ adjustCreditError }}
+            </p>
+            <div class="modal-actions">
+              <button
+                type="button"
+                class="btn-secondary"
+                @click="adjustCreditModalOpen = false"
+              >
+                {{ $t("admin.cancel") }}
+              </button>
+              <button
+                type="submit"
+                class="btn-primary"
+                :disabled="adjustCreditSaving"
+              >
+                {{ adjustCreditSaving ? "..." : $t("admin.save") }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -428,6 +518,8 @@
 definePageMeta({ layout: "admin", middleware: ["admin"] });
 
 const { t } = useI18n();
+const { show: showToast } = useToast();
+const { confirm: askConfirm } = useConfirm();
 const roleCookie = useCookie("user_role", { path: "/" });
 const isSuperAdmin = computed(() => roleCookie.value === "admin_0");
 
@@ -454,6 +546,7 @@ const userStatusFilter = ref("");
 const userSearch = ref("");
 const userPage = ref(1);
 const userPagination = ref({ page: 1, limit: 10, total: 0, totalPages: 1 });
+const userPageSize = ref(10);
 
 let userSearchTimer = null;
 
@@ -465,7 +558,9 @@ const filteredAdmins = computed(() => {
     const matchSearch =
       !term ||
       a.username.toLowerCase().includes(term) ||
-      String(a.ref_code || "").toLowerCase().includes(term);
+      String(a.ref_code || "")
+        .toLowerCase()
+        .includes(term);
     return matchRole && matchSearch;
   });
 });
@@ -492,7 +587,7 @@ async function fetchUsers(page = 1) {
     if (userStatusFilter.value) params.set("status", userStatusFilter.value);
     if (userSearch.value.trim()) params.set("search", userSearch.value.trim());
     params.set("page", String(page));
-    params.set("limit", "10");
+    params.set("limit", String(userPageSize.value));
     const res = await $fetch(`/api/admin/users?${params}`);
     if (res?.success && res.data) users.value = res.data;
     if (res?.pagination) userPagination.value = res.pagination;
@@ -516,6 +611,11 @@ watch(
 
 function goToUserPage(page) {
   if (page >= 1 && page <= userPagination.value.totalPages) fetchUsers(page);
+}
+
+function changeUserPageSize() {
+  userPagination.value.page = 1;
+  fetchUsers(1);
 }
 
 function formatDate(val) {
@@ -574,6 +674,7 @@ async function saveAdmin() {
       });
       adminModalOpen.value = false;
       await fetchAdmins();
+      showToast(t("admin.updateSuccess"), "success");
     } else {
       await $fetch("/api/admin/admins", {
         method: "POST",
@@ -585,9 +686,11 @@ async function saveAdmin() {
       });
       adminModalOpen.value = false;
       await fetchAdmins();
+      showToast(t("admin.createSuccess"), "success");
     }
   } catch (e) {
     adminError.value = e?.data?.statusMessage || e?.message || "Lỗi";
+    showToast(adminError.value, "error");
   } finally {
     adminSaving.value = false;
   }
@@ -600,18 +703,26 @@ async function toggleAdminLock(a) {
       body: { is_active: !a.is_active },
     });
     await fetchAdmins();
+    showToast(t("admin.updateSuccess"), "success");
   } catch (e) {
-    alert(e?.data?.statusMessage || "Lỗi");
+    showToast(e?.data?.statusMessage || "Lỗi", "error");
   }
 }
 
 async function deleteAdmin(a) {
-  if (!confirm(`${t("admin.confirmDelete")}\n${a.username}`)) return;
+  const ok = await askConfirm({
+    title: t("admin.delete"),
+    message: `${t("admin.confirmDelete")}\n${a.username}`,
+    confirmText: t("admin.delete"),
+    cancelText: t("admin.cancel"),
+  });
+  if (!ok) return;
   try {
     await $fetch(`/api/admin/admins/${a.id}`, { method: "DELETE" });
     await fetchAdmins();
+    showToast(t("admin.deleteSuccess"), "success");
   } catch (e) {
-    alert(e?.data?.statusMessage || "Lỗi");
+    showToast(e?.data?.statusMessage || "Lỗi", "error");
   }
 }
 
@@ -627,6 +738,12 @@ const userForm = reactive({
 });
 const userError = ref("");
 const userSaving = ref(false);
+const adjustCreditModalOpen = ref(false);
+const adjustTargetUser = ref(null);
+const adjustDelta = ref(0);
+const adjustReason = ref("");
+const adjustCreditSaving = ref(false);
+const adjustCreditError = ref("");
 
 function openUserModal(user = null) {
   editingUser.value = user;
@@ -656,6 +773,7 @@ async function saveUser() {
       });
       userModalOpen.value = false;
       await fetchUsers(userPage.value);
+      showToast(t("admin.updateSuccess"), "success");
     } else {
       await $fetch("/api/admin/users", {
         method: "POST",
@@ -670,9 +788,11 @@ async function saveUser() {
       });
       userModalOpen.value = false;
       await fetchUsers(userPage.value);
+      showToast(t("admin.createSuccess"), "success");
     }
   } catch (e) {
     userError.value = e?.data?.statusMessage || e?.message || "Lỗi";
+    showToast(userError.value, "error");
   } finally {
     userSaving.value = false;
   }
@@ -685,18 +805,61 @@ async function toggleUserLock(u) {
       body: { status: u.status === "active" ? "blocked" : "active" },
     });
     await fetchUsers(userPage.value);
+    showToast(t("admin.updateSuccess"), "success");
   } catch (e) {
-    alert(e?.data?.statusMessage || "Lỗi");
+    showToast(e?.data?.statusMessage || "Lỗi", "error");
   }
 }
 
 async function deleteUser(u) {
-  if (!confirm(`${t("admin.confirmDelete")}\n${u.username}`)) return;
+  const ok = await askConfirm({
+    title: t("admin.delete"),
+    message: `${t("admin.confirmDelete")}\n${u.username}`,
+    confirmText: t("admin.delete"),
+    cancelText: t("admin.cancel"),
+  });
+  if (!ok) return;
   try {
     await $fetch(`/api/admin/users/${u.id}`, { method: "DELETE" });
     await fetchUsers(userPage.value);
+    showToast(t("admin.deleteSuccess"), "success");
   } catch (e) {
-    alert(e?.data?.statusMessage || "Lỗi");
+    showToast(e?.data?.statusMessage || "Lỗi", "error");
+  }
+}
+
+function openAdjustCreditModal(user) {
+  adjustTargetUser.value = user;
+  adjustDelta.value = 0;
+  adjustReason.value = "";
+  adjustCreditError.value = "";
+  adjustCreditModalOpen.value = true;
+}
+
+async function submitAdjustCredit() {
+  if (!adjustTargetUser.value) return;
+  adjustCreditError.value = "";
+  adjustCreditSaving.value = true;
+  try {
+    await $fetch(
+      `/api/admin/users/${adjustTargetUser.value.id}/credit-adjust`,
+      {
+        method: "POST",
+        body: {
+          delta: Number(adjustDelta.value),
+          reason: adjustReason.value,
+        },
+      },
+    );
+    adjustCreditModalOpen.value = false;
+    await fetchUsers(userPage.value);
+    showToast(t("admin.updateSuccess"), "success");
+  } catch (e) {
+    adjustCreditError.value =
+      e?.data?.statusMessage || "Điều chỉnh tín chỉ thất bại";
+    showToast(adjustCreditError.value, "error");
+  } finally {
+    adjustCreditSaving.value = false;
   }
 }
 
@@ -790,7 +953,9 @@ onMounted(() => {
 
 .table-wrap {
   overflow-x: auto;
+  overflow-y: auto;
   padding: 1rem;
+  max-height: 71vh;
 }
 
 .table-loading,
@@ -1065,10 +1230,21 @@ onMounted(() => {
 .pagination {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
   gap: 1rem;
   padding: 1rem;
   margin-top: 0.5rem;
+}
+
+.page-left,
+.page-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.page-left label {
+  min-width: 110px;
 }
 
 .btn-page {

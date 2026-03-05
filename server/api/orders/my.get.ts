@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken'
 import pool from '../../utils/db'
+import { ensureOrderRefundSchema } from '../../utils/orderRefund'
 
 const JWT_SECRET =
   process.env.JWT_SECRET || 'chuoi_bi_mat_jwt_ngau_nhien_cua_sep_123456'
@@ -27,6 +28,8 @@ export default defineEventHandler(async (event) => {
     })
   }
 
+  await ensureOrderRefundSchema()
+
   let limit = 50
   const query = getQuery(event)
   if (query.limit) {
@@ -45,6 +48,11 @@ export default defineEventHandler(async (event) => {
         o.amount,
         o.status,
         o.note,
+        o.refund_reason,
+        o.refunded_at,
+        o.refund_request_reason,
+        o.refund_requested_at,
+        o.refund_request_status,
         o.created_at,
         p.name AS product_name,
         p.type AS product_type,

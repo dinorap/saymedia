@@ -36,6 +36,12 @@
           <span class="sidebar-item-icon" aria-hidden="true">📈</span>
           <span class="sidebar-item-label">{{ $t("admin.revenue") }}</span>
         </NuxtLink>
+        <NuxtLink to="/admin/ledger" class="sidebar-item">
+          <span class="sidebar-item-icon" aria-hidden="true">📚</span>
+          <span class="sidebar-item-label">{{
+            $t("admin.creditLedger") || "Sổ sao kê tín chỉ"
+          }}</span>
+        </NuxtLink>
         <NuxtLink to="/admin/logs" class="sidebar-item">
           <span class="sidebar-item-icon" aria-hidden="true">📄</span>
           <span class="sidebar-item-label">{{ $t("admin.logs") }}</span>
@@ -69,6 +75,9 @@
         >
           🔗 Copy link đăng ký
         </button>
+        <button type="button" class="sidebar-ref-btn sidebar-logout-btn" @click="logout">
+          {{ $t("admin.logout") }}
+        </button>
       </div>
     </aside>
 
@@ -96,21 +105,6 @@
               VI
             </button>
           </div>
-          <button type="button" class="admin-icon-btn" aria-label="Thông báo">
-            🔔
-          </button>
-          <button type="button" class="admin-icon-btn" aria-label="Hồ sơ">
-            👤
-          </button>
-          <button type="button" class="admin-icon-btn" aria-label="Trợ giúp">
-            ?
-          </button>
-          <button type="button" class="admin-icon-btn" aria-label="Cài đặt">
-            ⚙
-          </button>
-          <button type="button" class="admin-btn-logout" @click="logout">
-            {{ $t("admin.logout") }}
-          </button>
         </div>
       </header>
       <main class="admin-content">
@@ -259,6 +253,7 @@ const pageTitle = computed(() => {
   if (name.includes("products")) return t("admin.products");
   if (name.includes("services")) return t("admin.services");
   if (name.includes("revenue")) return t("admin.revenue");
+  if (name.includes("ledger")) return t("admin.creditLedger") || "Sổ sao kê tín chỉ";
   if (name.includes("logs")) return t("admin.logs");
   return t("admin.profileName");
 });

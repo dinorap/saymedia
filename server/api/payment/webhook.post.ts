@@ -1,6 +1,7 @@
 import pool from '../../utils/db'
-import { ensurePaymentSchema, PAYMENT_EXPIRE_MINUTES } from '../../utils/payment'
+import { ensurePaymentSchema, PAYMENT_EXPIRE_MINUTES, convertVndToCredit } from '../../utils/payment'
 import { addAuditLog } from '../../utils/audit'
+import { applyCreditChange, ensureCreditLedgerSchema } from '../../utils/creditLedger'
 
 function extractTransId(content: string) {
   const match = content.match(/AUTO([A-Z0-9]+)-/i)
@@ -25,6 +26,7 @@ export default defineEventHandler(async (event) => {
   }
 
   await ensurePaymentSchema()
+  await ensureCreditLedgerSchema()
 
   const extracted = extractTransId(content)
   let tx: any
@@ -66,18 +68,74 @@ export default defineEventHandler(async (event) => {
     return { success: true, matched: true, status: 'expired' }
   }
 
-  await pool.query(
-    `UPDATE payment_transactions SET status = 'success', amount = ? WHERE trans_id = ?`,
-    [transferAmount, tx.trans_id]
-  )
-  await pool.query(`UPDATE users SET credit = credit + ? WHERE id = ?`, [transferAmount, tx.user_id])
+  const conn = await pool.getConnection()
+  let credited = 0
+  try {
+    await conn.beginTransaction()
+
+    const [[lockedTx]]: any = await conn.query(
+      `
+        SELECT trans_id, user_id, status
+        FROM payment_transactions
+        WHERE trans_id = ?
+        LIMIT 1
+        FOR UPDATE
+      `,
+      [tx.trans_id],
+    )
+    if (!lockedTx) {
+      await conn.rollback()
+      return { success: true, matched: false }
+    }
+    if (lockedTx.status !== 'pending') {
+      await conn.rollback()
+      return { success: true, matched: true, status: lockedTx.status }
+    }
+
+    const converted = convertVndToCredit(transferAmount)
+    credited = converted.credit
+    if (credited <= 0) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: `Số tiền nạp chưa đủ để quy đổi tín chỉ (1 tín chỉ = ${converted.vndPerCredit.toLocaleString('vi-VN')}đ)`,
+      })
+    }
+
+    await conn.query(
+      `
+        UPDATE payment_transactions
+        SET status = 'success', amount = ?, actual_amount = ?, credit_amount = ?
+        WHERE trans_id = ?
+      `,
+      [transferAmount, transferAmount, credited, tx.trans_id],
+    )
+
+    await applyCreditChange(conn, {
+      userId: tx.user_id,
+      delta: credited,
+      transactionType: 'deposit',
+      referenceType: 'payment_transaction',
+      referenceId: tx.trans_id,
+      note: `Nạp ${transferAmount.toLocaleString('vi-VN')}đ qua webhook`,
+      actorType: 'system',
+    })
+
+    await conn.commit()
+  } catch (e) {
+    try {
+      await conn.rollback()
+    } catch {}
+    throw e
+  } finally {
+    conn.release()
+  }
 
   await addAuditLog({
     actorType: 'system',
     action: 'payment_success',
     targetType: 'payment_transaction',
     targetId: tx.trans_id,
-    metadata: { amount: transferAmount, user_id: tx.user_id, source: 'webhook' },
+    metadata: { amount: transferAmount, credited, user_id: tx.user_id, source: 'webhook' },
   })
 
   return { success: true, matched: true, status: 'success', trans_id: tx.trans_id }

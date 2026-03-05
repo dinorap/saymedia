@@ -1,6 +1,11 @@
 import jwt from "jsonwebtoken";
 import pool from "../../utils/db";
 import { checkOrderCreateRateLimit } from "../../utils/orderRateLimit";
+import {
+  applyCreditChange,
+  ensureCreditLedgerSchema,
+} from "../../utils/creditLedger";
+import { addSocialProofItem } from "../../utils/socialProof";
 
 const JWT_SECRET =
   process.env.JWT_SECRET || "chuoi_bi_mat_jwt_ngau_nhien_cua_sep_123456";
@@ -29,6 +34,7 @@ export default defineEventHandler(async (event) => {
   }
 
   checkOrderCreateRateLimit(decoded.id);
+  await ensureCreditLedgerSchema();
 
   const body = await readBody(event);
   const productId = Number(body?.product_id || 0);
@@ -55,7 +61,7 @@ export default defineEventHandler(async (event) => {
 
     const [[user]]: any = await conn.query(
       `
-        SELECT id, credit, admin_id
+        SELECT id, username, credit, admin_id
         FROM users
         WHERE id = ?
         LIMIT 1
@@ -74,19 +80,7 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    if (user.credit < price) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: "Số dư không đủ, vui lòng nạp thêm",
-      });
-    }
-
-    await conn.query(
-      "UPDATE users SET credit = credit - ? WHERE id = ?",
-      [price, user.id],
-    );
-
-    const initialStatus = "completed";
+    const initialStatus = "pending";
     const note = null;
 
     const [result]: any = await conn.query(
@@ -96,18 +90,39 @@ export default defineEventHandler(async (event) => {
       `,
       [user.id, product.id, user.admin_id, price, initialStatus, note],
     );
-
-    const [[updatedUser]]: any = await conn.query(
-      "SELECT credit FROM users WHERE id = ? LIMIT 1",
-      [user.id],
-    );
+    const creditResult = await applyCreditChange(conn, {
+      userId: user.id,
+      delta: -Math.round(price),
+      transactionType: "purchase",
+      referenceType: "order",
+      referenceId: result.insertId,
+      note: `Mua sản phẩm #${product.id}: ${product.name}`,
+      actorType: "user",
+      actorId: user.id,
+    });
 
     await conn.commit();
+
+    // Thêm vào feed "Đơn hàng gần đây" với tên sản phẩm thật từ bảng products
+    try {
+      const rawName = String(user.username || "").trim();
+      let displayName = "Khách hàng";
+      if (rawName) {
+        if (rawName.length <= 3) {
+          displayName = `${rawName[0]}***`;
+        } else {
+          displayName = `${rawName[0]}***${rawName[rawName.length - 1]}`;
+        }
+      }
+      await addSocialProofItem(displayName, product.name, false);
+    } catch {
+      // Không làm hỏng luồng mua hàng nếu social-proof lỗi
+    }
 
     return {
       success: true,
       orderId: result.insertId,
-      newCredit: Number(updatedUser?.credit ?? user.credit - price),
+      newCredit: creditResult.afterBalance,
     };
   } catch (e) {
     try {

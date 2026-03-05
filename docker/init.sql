@@ -30,6 +30,7 @@ CREATE TABLE payment_transactions (
     provider VARCHAR(20) NOT NULL DEFAULT 'sepay',
     amount BIGINT NOT NULL,
     actual_amount BIGINT NULL,
+    credit_amount BIGINT NULL,
     status ENUM('pending', 'success', 'cancelled', 'expired') NOT NULL DEFAULT 'pending',
     memo VARCHAR(128) NOT NULL,
     bank_code VARCHAR(32) NULL,
@@ -42,6 +43,19 @@ CREATE TABLE payment_transactions (
 CREATE INDEX idx_payment_user_id ON payment_transactions(user_id);
 CREATE INDEX idx_payment_status ON payment_transactions(status);
 CREATE INDEX idx_payment_created_at ON payment_transactions(created_at);
+
+CREATE TABLE services (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    admin_id INT NULL,
+    name VARCHAR(120) NOT NULL,
+    description TEXT NULL,
+    is_active TINYINT(1) NOT NULL DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (admin_id) REFERENCES admins(id) ON DELETE SET NULL
+);
+CREATE INDEX idx_services_admin_id ON services(admin_id);
+CREATE INDEX idx_services_active ON services(is_active);
 
 CREATE TABLE products (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -71,6 +85,12 @@ CREATE TABLE orders (
     amount DECIMAL(10,2) NOT NULL,
     status ENUM('pending', 'completed', 'cancelled') DEFAULT 'pending',
     note TEXT NULL,
+    refund_reason TEXT NULL,
+    refunded_at TIMESTAMP NULL,
+    refunded_by_admin_id INT NULL,
+    refund_request_reason TEXT NULL,
+    refund_requested_at TIMESTAMP NULL,
+    refund_request_status VARCHAR(20) NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NULL ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
@@ -105,6 +125,25 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 );
 CREATE INDEX idx_audit_created_at ON audit_logs(created_at);
 CREATE INDEX idx_audit_action ON audit_logs(action);
+
+CREATE TABLE IF NOT EXISTS credit_ledger (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    delta BIGINT NOT NULL,
+    balance_before BIGINT NOT NULL,
+    balance_after BIGINT NOT NULL,
+    transaction_type VARCHAR(30) NOT NULL,
+    reference_type VARCHAR(50) NULL,
+    reference_id VARCHAR(100) NULL,
+    note TEXT NULL,
+    actor_type ENUM('user', 'admin', 'system') NOT NULL DEFAULT 'system',
+    actor_id INT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+CREATE INDEX idx_credit_ledger_user_id ON credit_ledger(user_id);
+CREATE INDEX idx_credit_ledger_created_at ON credit_ledger(created_at);
+CREATE INDEX idx_credit_ledger_reference ON credit_ledger(reference_type, reference_id);
 
 -- Dev only: superadmin / 123456. Production: tạo admin qua tool, không hardcode mật khẩu trong SQL.
 INSERT INTO admins (username, password_hash, role, ref_code)

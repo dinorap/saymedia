@@ -1,6 +1,8 @@
 <template>
   <div class="default-layout">
-    <NuxtPage />
+    <main class="page-main">
+      <NuxtPage />
+    </main>
     <SiteFooter />
   </div>
 </template>
@@ -16,8 +18,13 @@ import SiteFooter from "~/components/SiteFooter.vue";
   flex-direction: column;
 }
 
-.default-layout :deep(main) {
+.page-main {
+  flex: 1 0 auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.page-main :deep(> *) {
   flex: 1 0 auto;
 }
 </style>
-

@@ -259,7 +259,7 @@ onMounted(async () => {
 
 <style scoped>
 .products-page {
-  min-height: 100vh;
+  min-height: 100%;
   display: flex;
   flex-direction: column;
   background:

@@ -31,7 +31,9 @@
                   <th>{{ $t("payment.history.amount") }}</th>
                   <th>{{ $t("payment.history.status") }}</th>
                   <th>{{ $t("admin.orderNote") || "Ghi chú" }}</th>
+                  <th>{{ $t("admin.reason") || "Lý do" }}</th>
                   <th>{{ $t("orderHistory.link") || "Link" }}</th>
+                  <th>{{ $t("admin.actions") }}</th>
                 </tr>
               </thead>
               <tbody>
@@ -48,6 +50,13 @@
                   <td class="history-note">
                     {{ o.note || "-" }}
                   </td>
+                  <td class="history-note">
+                    {{
+                      o.refund_reason ||
+                      o.refund_request_reason ||
+                      "-"
+                    }}
+                  </td>
                   <td class="history-link-cell">
                     <a
                       v-if="isUrl(o.product_download_url)"
@@ -60,6 +69,21 @@
                     </a>
                     <span v-else>—</span>
                   </td>
+                  <td class="history-link-cell">
+                    <button
+                      class="history-link-btn refund-btn"
+                      :disabled="requestingId === o.id || !canRequestRefund(o)"
+                      @click="openRefundModal(o)"
+                    >
+                      {{
+                        o.refund_request_status === "pending"
+                          ? "Đã gửi yêu cầu"
+                          : o.refunded_at
+                            ? "Đã hoàn tiền"
+                            : "Yêu cầu hoàn"
+                      }}
+                    </button>
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -67,9 +91,28 @@
         </section>
 
         <footer class="history-footer">
-          <button type="button" class="btn-secondary" @click="handleClose">
-            {{ $t("admin.cancel") }}
-          </button>
+          <div v-if="refundTarget" class="refund-box">
+            <p class="refund-title">Yêu cầu hoàn tiền đơn #{{ refundTarget.id }}</p>
+            <textarea
+              v-model="refundReason"
+              class="refund-textarea"
+              rows="3"
+              placeholder="Nhập lý do hoàn tiền"
+            />
+            <div class="refund-actions">
+              <button type="button" class="btn-secondary" @click="closeRefundModal">
+                {{ $t("admin.cancel") }}
+              </button>
+              <button
+                type="button"
+                class="btn-secondary refund-confirm"
+                :disabled="requestingId === refundTarget.id || !refundReason.trim()"
+                @click="submitRefundRequest"
+              >
+                {{ requestingId === refundTarget.id ? "..." : "Gửi yêu cầu" }}
+              </button>
+            </div>
+          </div>
         </footer>
       </div>
     </div>
@@ -89,10 +132,15 @@ const props = defineProps({
 const emit = defineEmits(["update:modelValue"]);
 
 const { t } = useI18n();
+const { show: showToast } = useToast();
+const { confirm: askConfirm } = useConfirm();
 
 const items = ref([]);
 const loading = ref(false);
 const error = ref("");
+const refundTarget = ref(null);
+const refundReason = ref("");
+const requestingId = ref(null);
 
 async function loadHistory() {
   loading.value = true;
@@ -125,6 +173,7 @@ watch(
 
 function handleClose() {
   emit("update:modelValue", false);
+  closeRefundModal();
 }
 
 function formatVnd(v) {
@@ -153,6 +202,56 @@ function isUrl(val) {
   if (!val || typeof val !== "string") return false;
   return /^https?:\/\//i.test(val.trim());
 }
+
+function canRequestRefund(order) {
+  if (!order) return false;
+  if (order.refunded_at) return false;
+  if (order.refund_request_status === "pending") return false;
+  return order.status === "pending" || order.status === "completed";
+}
+
+function openRefundModal(order) {
+  if (!canRequestRefund(order)) return;
+  refundTarget.value = order;
+  refundReason.value = "";
+}
+
+function closeRefundModal() {
+  refundTarget.value = null;
+  refundReason.value = "";
+}
+
+async function submitRefundRequest() {
+  if (!refundTarget.value) return;
+  const id = refundTarget.value.id;
+  const ok = await askConfirm({
+    title: "Xác nhận",
+    message: `Gửi yêu cầu hoàn tiền cho đơn #${id}?`,
+    confirmText: "Gửi yêu cầu",
+    cancelText: t("admin.cancel"),
+  });
+  if (!ok) return;
+  requestingId.value = id;
+  try {
+    await $fetch(`/api/orders/${id}/refund-request`, {
+      method: "POST",
+      body: { reason: refundReason.value.trim() },
+    });
+    const order = items.value.find((x) => x.id === id);
+    if (order) {
+      order.refund_request_reason = refundReason.value.trim();
+      order.refund_request_status = "pending";
+      order.refund_requested_at = new Date().toISOString();
+    }
+    closeRefundModal();
+    showToast("Đã gửi yêu cầu hoàn tiền", "success");
+  } catch (e) {
+    error.value = e?.data?.statusMessage || "Không gửi được yêu cầu hoàn tiền";
+    showToast(error.value, "error");
+  } finally {
+    requestingId.value = null;
+  }
+}
 </script>
 
 <style scoped>
@@ -169,8 +268,8 @@ function isUrl(val) {
 
 .history-modal {
   width: 100%;
-  max-width: 960px;
-  max-height: 80vh;
+  max-width: 1240px;
+  max-height: 90vh;
   background: var(--bg-card);
   border-radius: 1rem;
   border: 1px solid var(--blue-border);
@@ -218,7 +317,7 @@ function isUrl(val) {
 }
 
 .history-table-wrap {
-  max-height: 48vh;
+  max-height: 62vh;
   overflow: auto;
 }
 
@@ -278,6 +377,37 @@ function isUrl(val) {
   color: var(--text-primary);
   border-color: var(--blue-bright);
 }
+.refund-btn {
+  border-color: rgba(255, 159, 67, 0.5);
+  color: #ffb266;
+}
+.refund-box {
+  width: 100%;
+  margin-right: auto;
+  margin-bottom: 0.75rem;
+}
+.refund-title {
+  margin: 0 0 0.4rem;
+  font-size: 0.9rem;
+}
+.refund-textarea {
+  width: 100%;
+  border-radius: 8px;
+  border: 1px solid rgba(1, 123, 251, 0.3);
+  background: rgba(5, 15, 35, 0.8);
+  color: var(--text-primary);
+  padding: 0.55rem 0.7rem;
+}
+.refund-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+.refund-confirm {
+  border-color: rgba(255, 159, 67, 0.5);
+  color: #ffb266;
+}
 
 .status-badge {
   display: inline-block;
@@ -306,7 +436,13 @@ function isUrl(val) {
   padding: 0.75rem 1.5rem 1.25rem;
   border-top: 1px solid rgba(148, 163, 184, 0.25);
   display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
   justify-content: flex-end;
+}
+
+.history-footer > .btn-secondary {
+  margin-left: auto;
 }
 
 .btn-secondary {
@@ -320,6 +456,9 @@ function isUrl(val) {
   color: var(--text-secondary);
   cursor: pointer;
   font-size: 0.9rem;
+  white-space: nowrap;
+  min-width: 96px;
+  flex-shrink: 0;
 }
 </style>
 

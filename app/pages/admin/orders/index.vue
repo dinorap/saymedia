@@ -21,7 +21,7 @@
           class="input input--sm"
           @change="() => fetchOrders(1)"
         >
-          <option value="">{{ $t("admin.noData") }}</option>
+          <option value="">{{ $t("admin.all") }}</option>
           <option value="pending">pending</option>
           <option value="completed">completed</option>
           <option value="cancelled">cancelled</option>
@@ -74,8 +74,27 @@
               <span class="badge" :class="statusClass(o.status)">
                 {{ o.status }}
               </span>
+              <div
+                class="refund-status"
+                v-if="o.refunded_at || o.refund_request_status"
+              >
+                <span v-if="o.refunded_at" class="badge badge--refund-done">
+                  Đã hoàn tiền
+                </span>
+                <span
+                  v-else-if="o.refund_request_status === 'pending'"
+                  class="badge badge--refund-pending"
+                >
+                  Đang chờ hoàn tiền
+                </span>
+              </div>
             </td>
-            <td class="order-note">{{ o.note || "-" }}</td>
+            <td class="order-note">
+              <div>{{ o.note || "-" }}</div>
+              <div v-if="o.refund_request_reason" class="refund-request-hint">
+                Y/C hoàn: {{ o.refund_request_reason }}
+              </div>
+            </td>
             <td>{{ formatDate(o.created_at) }}</td>
             <td>
               <button
@@ -85,6 +104,14 @@
                 @click="openEditNote(o)"
               >
                 {{ savingNoteId === o.id ? "..." : $t("admin.editNote") }}
+              </button>
+              <button
+                type="button"
+                class="btn-edit-note btn-refund"
+                :disabled="savingNoteId === o.id || !!o.refunded_at"
+                @click="openRefundModal(o)"
+              >
+                {{ o.refunded_at ? "Đã hoàn" : "Hoàn tiền" }}
               </button>
             </td>
           </tr>
@@ -100,15 +127,26 @@
         @click.self="editNoteOrder = null"
       >
         <div class="edit-note-modal">
-          <h3 class="edit-note-title">{{ $t("admin.editNote") }} #{{ editNoteOrder.id }}</h3>
+          <h3 class="edit-note-title">
+            {{ $t("admin.editNote") }} #{{ editNoteOrder.id }}
+          </h3>
           <textarea
             v-model="editNoteText"
             class="edit-note-textarea"
             rows="4"
             :placeholder="$t('admin.orderNote')"
           />
+          <select v-model="editStatus" class="edit-status-select">
+            <option value="pending">pending</option>
+            <option value="completed">completed</option>
+            <option value="cancelled">cancelled</option>
+          </select>
           <div class="edit-note-actions">
-            <button type="button" class="btn-cancel" @click="editNoteOrder = null">
+            <button
+              type="button"
+              class="btn-cancel"
+              @click="editNoteOrder = null"
+            >
               {{ $t("admin.cancel") }}
             </button>
             <button
@@ -117,14 +155,67 @@
               :disabled="savingNoteId === editNoteOrder?.id"
               @click="saveNote"
             >
-              {{ savingNoteId === editNoteOrder?.id ? "..." : $t("admin.save") }}
+              {{
+                savingNoteId === editNoteOrder?.id ? "..." : $t("admin.save")
+              }}
             </button>
           </div>
         </div>
       </div>
     </Teleport>
 
-    <div v-if="pagination.totalPages > 1" class="pagination">
+    <!-- Modal hoàn tiền -->
+    <Teleport to="body">
+      <div
+        v-if="refundModalOrder"
+        class="edit-note-overlay"
+        @click.self="refundModalOrder = null"
+      >
+        <div class="edit-note-modal">
+          <h3 class="edit-note-title">
+            Hoàn tiền đơn #{{ refundModalOrder.id }}
+          </h3>
+          <p class="refund-info">
+            {{ refundModalOrder.user_username }} -
+            {{ refundModalOrder.product_name || "Sản phẩm" }}
+          </p>
+          <p class="refund-info">
+            Số điểm: {{ formatVnd(refundModalOrder.amount) }}
+          </p>
+          <textarea
+            v-model="refundReason"
+            class="edit-note-textarea"
+            rows="3"
+            placeholder="Lý do hoàn tiền (bắt buộc)"
+          />
+          <div class="edit-note-actions">
+            <button
+              type="button"
+              class="btn-cancel"
+              @click="refundModalOrder = null"
+            >
+              {{ $t("admin.cancel") }}
+            </button>
+            <button
+              type="button"
+              class="btn-save btn-refund-action"
+              :disabled="
+                savingNoteId === refundModalOrder?.id || !refundReason.trim()
+              "
+              @click="refundOrder"
+            >
+              {{
+                savingNoteId === refundModalOrder?.id
+                  ? "..."
+                  : "Xác nhận hoàn tiền"
+              }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <div v-if="pagination.total > 0" class="pagination">
       <div class="page-left">
         <label>{{ $t("admin.records") }} / page</label>
         <select
@@ -183,7 +274,10 @@ const pagination = ref({ page: 1, limit: 10, total: 0, totalPages: 1 });
 const pageSize = ref(10);
 const editNoteOrder = ref(null);
 const editNoteText = ref("");
+const editStatus = ref("pending");
+const refundReason = ref("");
 const savingNoteId = ref(null);
+const refundModalOrder = ref(null);
 
 async function fetchAdmins() {
   if (!isSuperAdmin.value) return;
@@ -272,6 +366,13 @@ function statusClass(status) {
 function openEditNote(order) {
   editNoteOrder.value = order;
   editNoteText.value = order.note || "";
+  editStatus.value = order.status || "pending";
+}
+
+function openRefundModal(order) {
+  if (order.refunded_at) return;
+  refundModalOrder.value = order;
+  refundReason.value = order.refund_reason || order.refund_request_reason || "";
 }
 
 async function saveNote() {
@@ -281,16 +382,50 @@ async function saveNote() {
   try {
     await $fetch(`/api/admin/orders/${id}`, {
       method: "PUT",
-      body: { note: editNoteText.value },
+      body: { note: editNoteText.value, status: editStatus.value },
     });
     const o = orders.value.find((x) => x.id === id);
-    if (o) o.note = editNoteText.value;
+    if (o) {
+      o.note = editNoteText.value;
+      o.status = editStatus.value;
+    }
     editNoteOrder.value = null;
     const { show } = useToast();
     show(t("admin.updateSuccess"), "success");
   } catch (e) {
     const { show } = useToast();
     show(e?.data?.statusMessage || "Cập nhật thất bại", "error");
+  } finally {
+    savingNoteId.value = null;
+  }
+}
+
+async function refundOrder() {
+  if (!refundModalOrder.value) return;
+  const id = refundModalOrder.value.id;
+  if (!refundReason.value.trim()) {
+    const { show } = useToast();
+    show("Vui lòng nhập lý do hoàn tiền", "error");
+    return;
+  }
+  savingNoteId.value = id;
+  try {
+    await $fetch(`/api/admin/orders/${id}/refund`, {
+      method: "POST",
+      body: { reason: refundReason.value.trim() },
+    });
+    const o = orders.value.find((x) => x.id === id);
+    if (o) {
+      o.status = "cancelled";
+      o.refund_reason = refundReason.value.trim();
+      o.refunded_at = new Date().toISOString();
+    }
+    refundModalOrder.value = null;
+    const { show } = useToast();
+    show("Đã hoàn tiền thành công", "success");
+  } catch (e) {
+    const { show } = useToast();
+    show(e?.data?.statusMessage || "Hoàn tiền thất bại", "error");
   } finally {
     savingNoteId.value = null;
   }
@@ -348,7 +483,9 @@ onMounted(async () => {
 
 .table-wrap {
   overflow-x: auto;
+  overflow-y: auto;
   padding: 1rem;
+  max-height: 71vh;
 }
 
 .table-loading,
@@ -389,6 +526,11 @@ onMounted(async () => {
   white-space: pre-line;
   color: var(--text-secondary);
 }
+.refund-request-hint {
+  margin-top: 0.35rem;
+  color: #ffb266;
+  font-size: 0.8rem;
+}
 
 .data-table tbody tr:hover {
   background: rgba(1, 123, 251, 0.05);
@@ -416,13 +558,26 @@ onMounted(async () => {
   background: rgba(255, 255, 255, 0.06);
   color: var(--text-muted);
 }
+.badge--refund-done {
+  margin-top: 4px;
+  background: rgba(39, 174, 96, 0.18);
+  color: #2ecc71;
+}
+.badge--refund-pending {
+  margin-top: 4px;
+  background: rgba(250, 204, 21, 0.18);
+  color: #facc15;
+}
+.refund-status {
+  margin-top: 2px;
+}
 
 .pagination {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: 1rem;
+  padding: 0 1rem;
   margin-top: 0.5rem;
 }
 
@@ -431,6 +586,10 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+.page-left label {
+  min-width: 110px;
 }
 
 .btn-page {
@@ -470,6 +629,14 @@ onMounted(async () => {
 .btn-edit-note:hover:not(:disabled) {
   background: rgba(1, 123, 251, 0.3);
 }
+.btn-refund {
+  margin-left: 0.4rem;
+  border-color: rgba(255, 159, 67, 0.5);
+  color: #ff9f43;
+}
+.btn-refund-action {
+  background: #ff9f43;
+}
 
 .btn-edit-note:disabled {
   opacity: 0.7;
@@ -501,6 +668,12 @@ onMounted(async () => {
   font-size: 1.1rem;
 }
 
+.refund-info {
+  margin: 0 0 0.35rem;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
 .edit-note-textarea {
   width: 100%;
   padding: 0.75rem;
@@ -511,6 +684,17 @@ onMounted(async () => {
   color: var(--text-primary);
   font-size: 0.9rem;
   resize: vertical;
+}
+
+.edit-status-select {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  margin-bottom: 1rem;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(1, 123, 251, 0.3);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 0.9rem;
 }
 
 .edit-note-actions {
@@ -543,4 +727,3 @@ onMounted(async () => {
   cursor: not-allowed;
 }
 </style>
-

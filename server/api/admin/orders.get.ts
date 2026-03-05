@@ -1,4 +1,5 @@
 import pool from '../../utils/db'
+import { ensureOrderRefundSchema } from '../../utils/orderRefund'
 
 export default defineEventHandler(async (event) => {
   const currentUser = event.context.user
@@ -7,6 +8,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const query = getQuery(event)
+  await ensureOrderRefundSchema()
   const adminId = query.admin_id ? parseInt(String(query.admin_id), 10) : null
   const status = query.status ? String(query.status) : ''
   const search = query.search ? String(query.search).trim() : ''
@@ -63,6 +65,12 @@ export default defineEventHandler(async (event) => {
       o.amount,
       o.status,
       o.note,
+      o.refund_reason,
+      o.refunded_at,
+      o.refunded_by_admin_id,
+      o.refund_request_reason,
+      o.refund_requested_at,
+      o.refund_request_status,
       o.created_at,
       u.username AS user_username,
       u.email AS user_email,
