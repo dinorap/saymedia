@@ -6,8 +6,8 @@
     <nav class="site-nav-links">
       <NuxtLink to="/">{{ $t("nav.home") }}</NuxtLink>
       <NuxtLink to="/products">{{ $t("nav.services") }}</NuxtLink>
-      <a href="#pricing">{{ $t("nav.pricing") }}</a>
-      <a href="#contact">{{ $t("nav.contact") }}</a>
+      <NuxtLink to="/pricing">{{ $t("nav.pricing") }}</NuxtLink>
+      <NuxtLink to="/contact">{{ $t("nav.contact") }}</NuxtLink>
     </nav>
     <div class="site-auth-buttons">
       <div class="site-lang-switcher">

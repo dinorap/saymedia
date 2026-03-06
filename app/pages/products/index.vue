@@ -3,6 +3,22 @@
     <SiteHeader />
 
     <main class="products-main">
+      <section class="products-hero">
+        <div class="products-hero-inner">
+          <div>
+            <h1 class="products-hero-title">{{ $t("product.heroTitle") }}</h1>
+            <p class="products-hero-subtitle">
+              {{ $t("product.heroSubtitle") }}
+            </p>
+          </div>
+          <div class="products-hero-tags">
+            <span class="hero-tag">⚡ {{ $t("product.tagInstant") }}</span>
+            <span class="hero-tag">🛡 {{ $t("product.tagSafe") }}</span>
+            <span class="hero-tag">🤝 {{ $t("product.tagSupport") }}</span>
+          </div>
+        </div>
+      </section>
+
       <section class="products-grid-wrap">
         <div
           v-if="!loading && !error && products.length"
@@ -271,6 +287,51 @@ onMounted(async () => {
 .products-main {
   flex: 1;
   padding: 96px 150px 60px; /* chừa khoảng dưới header fixed */
+}
+
+.products-hero {
+  margin-top: 8px;
+  margin-bottom: 10px;
+}
+
+.products-hero-inner {
+  border-radius: 18px;
+  padding: 16px 18px 16px;
+  background:
+    radial-gradient(circle at 0 0, rgba(1, 123, 251, 0.24), transparent 55%),
+    rgba(5, 15, 35, 0.92);
+  border: 1px solid rgba(1, 123, 251, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.products-hero-title {
+  margin: 0 0 4px;
+  font-size: 1.5rem;
+  font-weight: 650;
+}
+
+.products-hero-subtitle {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.products-hero-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.hero-tag {
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  background: rgba(15, 23, 42, 0.9);
+  font-size: 0.78rem;
+  color: var(--text-secondary);
 }
 
 .products-grid-wrap {

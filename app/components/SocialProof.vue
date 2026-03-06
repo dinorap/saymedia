@@ -1,8 +1,5 @@
 <template>
   <div class="social-proof-panel" aria-live="polite">
-    <div class="social-proof-header">
-      <span class="social-proof-title">{{ $t("socialProof.title") || "Đơn hàng gần đây" }}</span>
-    </div>
     <div class="social-proof-list">
       <div
         v-for="item in displayWithTime"
@@ -96,32 +93,22 @@ onUnmounted(() => {
 
 <style scoped>
 .social-proof-panel {
-  position: fixed;
-  bottom: 1.5rem;
-  right: 1.5rem;
-  width: 300px;
-  max-height: 320px;
-  background: var(--bg-card);
-  border: 1px solid rgba(1, 123, 251, 0.3);
-  border-radius: 12px;
-  box-shadow: var(--neon-shadow);
-  backdrop-filter: blur(12px);
+  width: 100%;
+  max-width: 420px;
+  max-height: 280px;
+  background:
+    radial-gradient(circle at 0 0, rgba(1, 123, 251, 0.2), transparent 55%),
+    rgba(5, 15, 35, 0.92);
+  border-radius: 16px;
+  border: 1px solid rgba(1, 123, 251, 0.35);
+  box-shadow:
+    0 0 25px rgba(1, 123, 251, 0.45),
+    0 12px 40px rgba(15, 23, 42, 0.9);
+  backdrop-filter: blur(16px);
   z-index: 40;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-}
-
-.social-proof-header {
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid rgba(1, 123, 251, 0.2);
-  flex-shrink: 0;
-}
-
-.social-proof-title {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--text-primary);
 }
 
 .social-proof-list {
@@ -150,9 +137,10 @@ onUnmounted(() => {
 
 .social-proof-item {
   padding: 0.6rem 0.8rem;
-  background: rgba(1, 123, 251, 0.06);
-  border-radius: 8px;
-  border: 1px solid rgba(1, 123, 251, 0.15);
+  background: rgba(15, 23, 42, 0.88);
+  border-radius: 10px;
+  border: 1px solid rgba(1, 123, 251, 0.24);
+  box-shadow: 0 0 16px rgba(1, 123, 251, 0.15);
 }
 
 .social-proof-text {

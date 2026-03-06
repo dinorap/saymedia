@@ -279,25 +279,26 @@
                   </p>
                 </div>
                 <div class="form-row">
-                  <label>{{ $t("admin.longDescription") || "Mô tả chi tiết" }}</label>
+                  <label>{{ $t("admin.productSupportContact") || "Thông tin liên hệ hỗ trợ cho sản phẩm" }}</label>
                   <textarea
-                    v-model="form.long_description"
+                    v-model="form.support_contact"
                     class="input input--textarea"
                     rows="4"
+                    :placeholder="$t('admin.productSupportContactPlaceholder')"
                   />
                 </div>
               </section>
               <section class="modal-section preview-section">
                 <h4 class="modal-section-title">
-                  {{ $t("admin.longDescription") || "Mô tả chi tiết" }} - Preview
+                  {{ $t("admin.longDescription") || "Mô tả chi tiết" }}
                 </h4>
                 <div class="preview-box">
-                  <p v-if="!form.long_description" class="preview-empty">
-                    {{ $t("admin.noData") }}
-                  </p>
-                  <div v-else class="preview-content">
-                    {{ form.long_description }}
-                  </div>
+                  <textarea
+                    v-model="form.long_description"
+                    class="input input--textarea preview-textarea"
+                    rows="6"
+                    :placeholder="$t('admin.longDescription') || 'Mô tả chi tiết sản phẩm...'"
+                  />
                 </div>
               </section>
             </div>
@@ -339,6 +340,7 @@ const form = reactive({
   name: "",
   description: "",
   long_description: "",
+  support_contact: "",
   download_url: "",
   thumbnail_url: "",
   images_text: "",
@@ -528,6 +530,7 @@ function openModal(item = null) {
   form.name = item?.name ?? "";
   form.description = item?.description ?? "";
   form.long_description = item?.long_description ?? "";
+  form.support_contact = item?.support_contact ?? "";
   form.download_url = item?.download_url ?? "";
   form.thumbnail_url = item?.thumbnail_url ?? "";
   form.images_text = "";
@@ -564,6 +567,7 @@ async function save() {
       name: form.name?.trim(),
       description: form.description?.trim(),
       long_description: form.long_description?.trim(),
+      support_contact: form.support_contact?.trim(),
       download_url: form.download_url?.trim(),
       thumbnail_url: form.thumbnail_url?.trim(),
       images,
@@ -736,8 +740,6 @@ onMounted(async () => {
   border: 1px solid rgba(148, 163, 184, 0.3);
   background: rgba(15, 23, 42, 0.8);
   min-height: 80px;
-  max-height: 220px;
-  overflow-y: auto;
 }
 
 .preview-empty {
@@ -750,6 +752,21 @@ onMounted(async () => {
   white-space: pre-line;
   font-size: 0.9rem;
   color: var(--text-secondary);
+}
+
+.preview-textarea {
+  width: 100%;
+  min-height: 120px;
+  max-height: 260px;
+  resize: vertical;
+  white-space: pre-wrap;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: none; /* Firefox */
+}
+
+.preview-textarea::-webkit-scrollbar {
+  display: none; /* Chrome, Safari */
 }
 .table-wrap {
   overflow-x: auto;
@@ -860,6 +877,9 @@ onMounted(async () => {
   max-width: 760px;
   width: 100%;
   box-shadow: 0 0 40px rgba(1, 123, 251, 0.2);
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
 }
 .modal-title {
   font-size: 1.25rem;
@@ -871,6 +891,12 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  overflow-y: auto;
+  scrollbar-width: none; /* Firefox */
+}
+
+.modal-form::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Edge */
 }
 .modal-grid {
   display: grid;

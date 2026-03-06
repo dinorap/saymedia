@@ -300,3 +300,7 @@ definePageMeta({
   middleware: ["admin"],
 });
 </script>
+
+<style scoped>
+/* admin dashboard content only, styles come from app/assets/css/layouts/admin.css */
+</style>

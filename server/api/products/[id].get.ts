@@ -12,6 +12,7 @@ export default defineEventHandler(async (event) => {
         id,
         name,
         description,
+        support_contact,
         long_description,
         price,
         type,

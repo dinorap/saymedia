@@ -54,6 +54,14 @@
 
         <div class="profile-actions">
           <button
+            v-if="adminContact"
+            type="button"
+            class="btn-secondary"
+            @click="showAdminContactModal = true"
+          >
+            {{ $t("profile.adminContactTitle") }}
+          </button>
+          <button
             type="button"
             class="btn-secondary"
             @click="showHistoryModal = true"
@@ -166,6 +174,37 @@
       </div>
     </Teleport>
 
+    <!-- Modal xem thông tin liên hệ admin -->
+    <Teleport to="body">
+      <div
+        v-if="showAdminContactModal && adminContact"
+        class="profile-modal-overlay"
+        @click.self="showAdminContactModal = false"
+      >
+        <div class="profile-modal">
+          <h3 class="profile-modal-title">
+            {{ $t("profile.adminContactTitle") }}
+          </h3>
+          <p class="profile-subtitle">
+            {{ $t("profile.adminContactLabel") }}:
+            <strong>{{ adminContact.adminName }}</strong>
+          </p>
+          <pre class="profile-admin-contact-text">
+{{ adminContact.contact || $t("profile.adminContactEmpty") }}
+</pre>
+          <div class="profile-modal-actions">
+            <button
+              type="button"
+              class="btn-primary"
+              @click="showAdminContactModal = false"
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
     <PaymentModal
       :model-value="showDepositModal"
       @update:model-value="showDepositModal = $event"
@@ -211,7 +250,10 @@ const quickStats = reactive({
   orderCount: 0,
 });
 
+const adminContact = ref(null);
+
 const showChangePassword = ref(false);
+const showAdminContactModal = ref(false);
 const pwForm = reactive({
   oldPassword: "",
   newPassword: "",
@@ -259,6 +301,16 @@ async function loadQuickStats() {
 onMounted(async () => {
   await loadProfile();
   await loadQuickStats();
+  try {
+    const res = await $fetch("/api/users/my-admin-contact");
+    if (res?.success && res.data) {
+      adminContact.value = res.data;
+    } else {
+      adminContact.value = null;
+    }
+  } catch {
+    adminContact.value = null;
+  }
 });
 
 function formatVnd(v) {

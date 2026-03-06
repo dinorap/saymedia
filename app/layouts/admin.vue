@@ -68,6 +68,14 @@
           <span class="sidebar-profile-chevron" aria-hidden="true">›</span>
         </button>
         <button
+          v-if="currentUser"
+          type="button"
+          class="sidebar-ref-btn"
+          @click="showContactInfo = true"
+        >
+          📇 Thông tin liên hệ
+        </button>
+        <button
           v-if="registerRefLink"
           type="button"
           class="sidebar-ref-btn"
@@ -75,7 +83,11 @@
         >
           🔗 Copy link đăng ký
         </button>
-        <button type="button" class="sidebar-ref-btn sidebar-logout-btn" @click="logout">
+        <button
+          type="button"
+          class="sidebar-ref-btn sidebar-logout-btn"
+          @click="logout"
+        >
           {{ $t("admin.logout") }}
         </button>
       </div>
@@ -171,6 +183,52 @@
         </div>
       </div>
     </Teleport>
+
+    <!-- Modal thông tin liên hệ -->
+    <Teleport to="body">
+      <div
+        v-if="showContactInfo"
+        class="admin-modal-overlay"
+        @click.self="showContactInfo = false"
+      >
+        <div class="admin-modal">
+          <h3 class="admin-modal-title">
+            {{ $t("admin.contactInfoTitle") }}
+          </h3>
+          <p class="admin-modal-text">
+            {{ $t("admin.contactInfoHint") }}
+          </p>
+          <div class="admin-form-row">
+            <textarea
+              v-model="contactInfo"
+              class="admin-input"
+              rows="4"
+              :placeholder="$t('admin.contactInfoPlaceholder')"
+            />
+          </div>
+          <p v-if="contactSaved" class="admin-success-msg">
+            {{ $t("admin.contactInfoSaved") }}
+          </p>
+          <div class="admin-modal-actions">
+            <button
+              type="button"
+              class="admin-btn-secondary"
+              @click="showContactInfo = false"
+            >
+              {{ $t("admin.cancel") }}
+            </button>
+            <button
+              type="button"
+              class="admin-btn-primary"
+              :disabled="savingContact"
+              @click="saveContact"
+            >
+              {{ savingContact ? "..." : $t("admin.save") }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -181,6 +239,10 @@ const { show: showToast } = useToast();
 
 const currentUser = ref(null);
 const showChangePassword = ref(false);
+const showContactInfo = ref(false);
+const contactInfo = ref("");
+const savingContact = ref(false);
+const contactSaved = ref(false);
 const pwForm = reactive({
   oldPassword: "",
   newPassword: "",
@@ -199,7 +261,12 @@ const registerRefLink = computed(() => {
 onMounted(async () => {
   try {
     const res = await $fetch("/api/auth/me");
-    if (res?.success && res.user) currentUser.value = res.user;
+    if (res?.success && res.user) {
+      currentUser.value = res.user;
+      if (res.user.contact_info) {
+        contactInfo.value = String(res.user.contact_info || "");
+      }
+    }
   } catch {
     currentUser.value = null;
   }
@@ -253,7 +320,8 @@ const pageTitle = computed(() => {
   if (name.includes("products")) return t("admin.products");
   if (name.includes("services")) return t("admin.services");
   if (name.includes("revenue")) return t("admin.revenue");
-  if (name.includes("ledger")) return t("admin.creditLedger") || "Sổ sao kê tín chỉ";
+  if (name.includes("ledger"))
+    return t("admin.creditLedger") || "Sổ sao kê tín chỉ";
   if (name.includes("logs")) return t("admin.logs");
   return t("admin.profileName");
 });
@@ -291,5 +359,32 @@ async function copyRegisterRefLink() {
       "error",
     );
   }
+}
+
+async function saveContact() {
+  if (savingContact.value) return;
+  savingContact.value = true;
+  contactSaved.value = false;
+  try {
+    await $fetch("/api/admin/profile/contact", {
+      method: "POST",
+      body: { contact: contactInfo.value },
+    });
+    contactSaved.value = true;
+    if (currentUser.value) {
+      currentUser.value.contact_info = contactInfo.value;
+    }
+    setTimeout(() => {
+      contactSaved.value = false;
+    }, 2000);
+  } catch {
+    showToast(
+      locale.value === "vi"
+        ? "Lưu thông tin liên hệ thất bại"
+        : "Failed to save contact info",
+      "error",
+    );
+  }
+  savingContact.value = false;
 }
 </script>

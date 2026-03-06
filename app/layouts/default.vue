@@ -4,11 +4,13 @@
       <NuxtPage />
     </main>
     <SiteFooter />
+    <ContactBubble />
   </div>
 </template>
 
 <script setup>
 import SiteFooter from "~/components/SiteFooter.vue";
+import ContactBubble from "~/components/ContactBubble.vue";
 </script>
 
 <style scoped>
