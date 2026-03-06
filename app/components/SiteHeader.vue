@@ -158,10 +158,16 @@ function goProfile() {
   justify-content: space-between;
   align-items: center;
   padding: 16px 150px;
-  border-bottom: 1px solid rgba(1, 123, 251, 0.35);
-  background: rgb(4 15 39 / 97%);
-  backdrop-filter: blur(14px);
-  box-shadow: 0 2px 24px rgba(0, 0, 0, 0.25), 0 0 24px rgba(1, 123, 251, 0.06);
+  border-bottom: 1px solid rgba(1, 123, 251, 0.25);
+  background: linear-gradient(
+    180deg,
+    rgba(4, 15, 39, 0.65),
+    rgba(4, 15, 39, 0.35)
+  );
+  backdrop-filter: blur(18px);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.45),
+    0 0 30px rgba(1, 123, 251, 0.14);
 }
 
 .site-logo {

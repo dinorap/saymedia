@@ -95,7 +95,7 @@
                     {{ p.type || "tool" }}
                   </span>
                   <h2 class="product-name">
-                  {{ p.name }}
+                    {{ p.name }}
                   </h2>
                 </div>
                 <div class="product-row">
@@ -278,9 +278,6 @@ onMounted(async () => {
   min-height: 100%;
   display: flex;
   flex-direction: column;
-  background:
-    radial-gradient(circle at top, rgba(1, 123, 251, 0.2), transparent),
-    var(--bg-deep);
   color: var(--text-primary);
 }
 
@@ -329,7 +326,7 @@ onMounted(async () => {
   padding: 4px 10px;
   border-radius: 999px;
   border: 1px solid rgba(148, 163, 184, 0.45);
-  background: rgba(15, 23, 42, 0.9);
+  color: var(--text-primary);
   font-size: 0.78rem;
   color: var(--text-secondary);
 }
@@ -345,7 +342,8 @@ onMounted(async () => {
   gap: 1rem;
   padding: 0.75rem 1rem;
   margin-bottom: 8px;
-  background: rgba(5, 15, 35, 0.6);
+  color: var(--text-primary);
+  background: rgba(5, 15, 35, 0.95);
   border: 1px solid rgba(1, 123, 251, 0.25);
   border-radius: 10px;
 }
@@ -372,7 +370,7 @@ onMounted(async () => {
 .input--sm {
   padding: 0.45rem 0.75rem;
   min-width: 170px;
-  background: rgba(5, 15, 35, 0.9);
+  color: var(--text-primary);
   border: 1px solid rgba(1, 123, 251, 0.3);
   border-radius: 8px;
   color: var(--text-primary);
@@ -393,10 +391,12 @@ onMounted(async () => {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px 16px;
+
+  border-radius: 12px;
 }
 
 .product-card {
-  background: rgba(5, 15, 35, 0.9);
+  color: var(--text-primary);
   border-radius: 16px;
   padding: 14px 16px;
   border: 1px solid rgba(1, 123, 251, 0.35);
@@ -406,6 +406,7 @@ onMounted(async () => {
   align-items: flex-start;
   gap: 16px;
   cursor: pointer;
+  background: rgba(5, 15, 35, 0.95);
 }
 
 .product-left {
@@ -434,7 +435,7 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: radial-gradient(circle at top, rgba(15, 23, 42, 0.9), #020617);
+  color: var(--text-primary);
   font-size: 1.4rem;
   font-weight: 700;
   color: var(--blue-bright);
@@ -463,7 +464,7 @@ onMounted(async () => {
 .badge-main {
   padding: 3px 8px;
   border-radius: 999px;
-  background: rgba(34, 197, 94, 0.15);
+  color: var(--text-primary);
   color: #bbf7d0;
   font-size: 0.75rem;
   font-weight: 600;
@@ -523,41 +524,6 @@ onMounted(async () => {
   flex-direction: column;
   gap: 6px;
   align-items: flex-end;
-}
-
-.btn-primary {
-  padding: 0.5rem 1.25rem;
-  background: var(--blue-bright);
-  color: #fff;
-  border: none;
-  border-radius: 999px;
-  font-weight: 600;
-  cursor: pointer;
-  font-size: 0.9rem;
-  box-shadow: 0 0 16px rgba(1, 123, 251, 0.35);
-}
-
-.btn-primary:hover:not(:disabled) {
-  filter: brightness(1.08);
-}
-
-.btn-primary:disabled {
-  opacity: 0.8;
-  cursor: wait;
-}
-
-.btn-secondary {
-  padding: 0.5rem 1.1rem;
-  border-radius: 999px;
-  border: 1px solid rgba(148, 163, 184, 0.5);
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--text-secondary);
-  font-size: 0.85rem;
-  cursor: pointer;
-}
-.btn-secondary:hover {
-  border-color: rgba(1, 123, 251, 0.5);
-  color: var(--text-primary);
 }
 
 @media (max-width: 1024px) {

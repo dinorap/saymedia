@@ -75,10 +75,6 @@ import SiteHeader from "~/components/SiteHeader.vue";
   min-height: 100%;
   display: flex;
   flex-direction: column;
-  background:
-    radial-gradient(circle at 20% -10%, rgba(1, 123, 251, 0.26), transparent 55%),
-    radial-gradient(circle at 90% 0%, rgba(56, 189, 248, 0.16), transparent 55%),
-    var(--bg-deep);
   color: var(--text-primary);
 }
 

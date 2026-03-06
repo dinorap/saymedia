@@ -22,11 +22,7 @@
           </NuxtLink>
         </div>
       </div>
-      <div class="hero-image">
-        <div class="hero-decor">
-          <span class="glow-orb"></span>
-        </div>
-      </div>
+      <div class="hero-image"></div>
     </main>
 
     <section id="services" class="stats-container">
@@ -141,18 +137,6 @@ const isLoggedIn = computed(() => roleCookie.value === "user");
 </script>
 
 <style scoped>
-.landing-page {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  background:
-    radial-gradient(circle at 20% -10%, rgba(1, 123, 251, 0.35), transparent 55%),
-    radial-gradient(circle at 85% 0%, rgba(56, 189, 248, 0.25), transparent 55%),
-    radial-gradient(circle at 40% 120%, rgba(56, 189, 248, 0.18), transparent 55%),
-    url("/background.png") center top / cover no-repeat,
-    #020617;
-}
-
 .cta-buttons a {
   border-radius: 999px;
   text-decoration: none;

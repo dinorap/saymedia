@@ -379,9 +379,6 @@ onMounted(initUser);
   min-height: 100%;
   display: flex;
   flex-direction: column;
-  background:
-    radial-gradient(circle at top, rgba(1, 123, 251, 0.2), transparent),
-    var(--bg-deep);
   color: var(--text-primary);
 }
 .cart-main {
@@ -449,7 +446,7 @@ onMounted(initUser);
   padding: 14px;
   border-radius: 14px;
   border: 1px solid rgba(1, 123, 251, 0.25);
-  background: rgba(15, 23, 42, 0.85);
+  color: var(--text-primary);
 }
 
 .select-cell {
@@ -481,7 +478,7 @@ onMounted(initUser);
   display: flex;
   align-items: center;
   justify-content: center;
-  background: radial-gradient(circle at top, rgba(15, 23, 42, 0.9), #020617);
+  color: var(--text-primary);
   color: var(--blue-bright);
   font-weight: 700;
   font-size: 1.3rem;
@@ -530,7 +527,7 @@ onMounted(initUser);
 }
 .btn-primary {
   padding: 0.5rem 1.1rem;
-  background: var(--blue-bright);
+  color: var(--text-primary);
   color: #fff;
   border: none;
   border-radius: 999px;
@@ -539,7 +536,7 @@ onMounted(initUser);
 }
 
 .btn-outline {
-  background: transparent;
+  color: var(--text-primary);
   border: 1px solid var(--blue-bright);
   color: var(--text-primary);
 }
@@ -547,7 +544,7 @@ onMounted(initUser);
   padding: 0.5rem 1.1rem;
   border-radius: 999px;
   border: 1px solid rgba(148, 163, 184, 0.55);
-  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-primary);
   color: var(--text-secondary);
   text-decoration: none;
   display: inline-flex;
@@ -558,7 +555,7 @@ onMounted(initUser);
   padding: 0.5rem 1.1rem;
   border-radius: 999px;
   border: 1px solid rgba(239, 68, 68, 0.6);
-  background: rgba(239, 68, 68, 0.12);
+  color: var(--text-primary);
   color: #fecaca;
   cursor: pointer;
   font-weight: 600;
@@ -568,7 +565,7 @@ onMounted(initUser);
   cursor: not-allowed;
 }
 .btn-link {
-  background: transparent;
+  color: var(--text-primary);
   border: 1px solid rgba(148, 163, 184, 0.35);
   color: var(--text-secondary);
   padding: 0.5rem 1rem;
@@ -578,7 +575,7 @@ onMounted(initUser);
 .cart-summary {
   border-radius: 14px;
   border: 1px solid rgba(1, 123, 251, 0.25);
-  background: rgba(15, 23, 42, 0.85);
+  color: var(--text-primary);
   padding: 16px;
 }
 .summary-title {
@@ -619,7 +616,7 @@ onMounted(initUser);
 .checkout-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.65);
+  color: var(--text-primary);
   backdrop-filter: blur(6px);
   display: flex;
   align-items: center;
@@ -631,7 +628,7 @@ onMounted(initUser);
 .checkout-modal {
   width: 100%;
   max-width: 420px;
-  background: var(--bg-card);
+  color: var(--text-primary);
   border: 1px solid rgba(1, 123, 251, 0.4);
   border-radius: 14px;
   box-shadow: 0 0 40px rgba(1, 123, 251, 0.2);

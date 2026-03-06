@@ -74,10 +74,6 @@ import SiteHeader from "~/components/SiteHeader.vue";
   min-height: 100%;
   display: flex;
   flex-direction: column;
-  background:
-    radial-gradient(circle at 15% -10%, rgba(1, 123, 251, 0.26), transparent 55%),
-    radial-gradient(circle at 90% 0%, rgba(56, 189, 248, 0.18), transparent 55%),
-    var(--bg-deep);
   color: var(--text-primary);
 }
 
@@ -132,7 +128,7 @@ import SiteHeader from "~/components/SiteHeader.vue";
 .pricing-card {
   border-radius: 18px;
   padding: 18px 18px 20px;
-  background: rgba(5, 15, 35, 0.94);
+  color: var(--text-primary);
   border: 1px solid rgba(148, 163, 184, 0.35);
   box-shadow: 0 0 28px rgba(15, 23, 42, 0.9);
 }
@@ -151,7 +147,7 @@ import SiteHeader from "~/components/SiteHeader.vue";
   right: 14px;
   padding: 3px 10px;
   border-radius: 999px;
-  background: rgba(34, 197, 94, 0.15);
+  color: var(--text-primary);
   border: 1px solid rgba(34, 197, 94, 0.5);
   font-size: 0.75rem;
   font-weight: 700;

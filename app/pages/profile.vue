@@ -54,14 +54,6 @@
 
         <div class="profile-actions">
           <button
-            v-if="adminContact"
-            type="button"
-            class="btn-secondary"
-            @click="showAdminContactModal = true"
-          >
-            {{ $t("profile.adminContactTitle") }}
-          </button>
-          <button
             type="button"
             class="btn-secondary"
             @click="showHistoryModal = true"
@@ -174,37 +166,6 @@
       </div>
     </Teleport>
 
-    <!-- Modal xem thông tin liên hệ admin -->
-    <Teleport to="body">
-      <div
-        v-if="showAdminContactModal && adminContact"
-        class="profile-modal-overlay"
-        @click.self="showAdminContactModal = false"
-      >
-        <div class="profile-modal">
-          <h3 class="profile-modal-title">
-            {{ $t("profile.adminContactTitle") }}
-          </h3>
-          <p class="profile-subtitle">
-            {{ $t("profile.adminContactLabel") }}:
-            <strong>{{ adminContact.adminName }}</strong>
-          </p>
-          <pre class="profile-admin-contact-text">
-{{ adminContact.contact || $t("profile.adminContactEmpty") }}
-</pre>
-          <div class="profile-modal-actions">
-            <button
-              type="button"
-              class="btn-primary"
-              @click="showAdminContactModal = false"
-            >
-              OK
-            </button>
-          </div>
-        </div>
-      </div>
-    </Teleport>
-
     <PaymentModal
       :model-value="showDepositModal"
       @update:model-value="showDepositModal = $event"
@@ -250,10 +211,7 @@ const quickStats = reactive({
   orderCount: 0,
 });
 
-const adminContact = ref(null);
-
 const showChangePassword = ref(false);
-const showAdminContactModal = ref(false);
 const pwForm = reactive({
   oldPassword: "",
   newPassword: "",
@@ -301,16 +259,6 @@ async function loadQuickStats() {
 onMounted(async () => {
   await loadProfile();
   await loadQuickStats();
-  try {
-    const res = await $fetch("/api/users/my-admin-contact");
-    if (res?.success && res.data) {
-      adminContact.value = res.data;
-    } else {
-      adminContact.value = null;
-    }
-  } catch {
-    adminContact.value = null;
-  }
 });
 
 function formatVnd(v) {
@@ -372,9 +320,6 @@ async function submitChangePassword() {
   min-height: 100%;
   display: flex;
   flex-direction: column;
-  background:
-    radial-gradient(circle at top, rgba(1, 123, 251, 0.2), transparent),
-    var(--bg-deep);
   color: var(--text-primary);
 }
 
@@ -384,7 +329,7 @@ async function submitChangePassword() {
   align-items: center;
   padding: 16px 150px;
   border-bottom: 1px solid rgba(1, 123, 251, 0.3);
-  background: rgb(4 15 39 / 95%);
+  color: var(--text-primary);
   backdrop-filter: blur(12px);
   box-shadow:
     0 0 20px rgba(1, 123, 251, 0.08),
@@ -423,7 +368,7 @@ async function submitChangePassword() {
 
 .profile-page .nav-links a:hover {
   color: var(--blue-bright);
-  background: rgba(1, 123, 251, 0.1);
+  color: var(--text-primary);
   text-shadow:
     0 0 15px var(--blue-glow),
     0 0 30px rgba(1, 123, 251, 0.4);
@@ -442,7 +387,7 @@ async function submitChangePassword() {
 }
 
 .profile-page .lang-btn {
-  background: none;
+  color: var(--text-primary);
   border: none;
   color: var(--text-secondary);
   font-size: 15px;
@@ -482,7 +427,7 @@ async function submitChangePassword() {
 }
 
 .profile-page .btn-login {
-  background: transparent;
+  color: var(--text-primary);
   color: var(--text-primary);
   border: 1px solid rgba(1, 123, 251, 0.5);
   box-shadow: 0 0 15px rgba(1, 123, 251, 0.2);
@@ -490,7 +435,7 @@ async function submitChangePassword() {
 
 .profile-page .btn-login:hover {
   border-color: var(--blue-bright);
-  background: var(--blue-soft);
+  color: var(--text-primary);
   color: var(--blue-bright);
   box-shadow:
     0 0 25px var(--blue-glow),
@@ -502,7 +447,7 @@ async function submitChangePassword() {
 }
 
 .profile-page .btn-user-name {
-  background: transparent;
+  color: var(--text-primary);
   color: var(--text-primary);
   border: 1px solid rgba(1, 123, 251, 0.5);
   padding: 10px 24px;
@@ -515,7 +460,7 @@ async function submitChangePassword() {
 
 .profile-page .btn-user-name:hover {
   border-color: var(--blue-bright);
-  background: var(--blue-soft);
+  color: var(--text-primary);
   color: var(--blue-bright);
 }
 
@@ -525,7 +470,7 @@ async function submitChangePassword() {
   right: 0;
   margin-top: 8px;
   min-width: 140px;
-  background: var(--bg-nav);
+  color: var(--text-primary);
   border: 1px solid rgba(1, 123, 251, 0.45);
   border-radius: 10px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
@@ -547,7 +492,7 @@ async function submitChangePassword() {
   width: 100%;
   padding: 12px 16px;
   text-align: left;
-  background: none;
+  color: var(--text-primary);
   border: none;
   color: var(--text-primary);
   font-size: 15px;
@@ -556,7 +501,7 @@ async function submitChangePassword() {
 }
 
 .profile-page .dropdown-item:hover {
-  background: rgba(1, 123, 251, 0.15);
+  color: var(--text-primary);
   color: var(--blue-bright);
 }
 
@@ -571,9 +516,10 @@ async function submitChangePassword() {
 .profile-card {
   width: 100%;
   max-width: 560px;
-  background: var(--bg-card);
+  color: var(--text-primary);
   border-radius: 1rem;
   padding: 2rem;
+   background: rgba(5, 15, 35, 0.96);
   box-shadow: var(--neon-shadow);
   border: 1px solid rgba(255, 255, 255, 0.06);
 }
@@ -589,7 +535,7 @@ async function submitChangePassword() {
   width: 48px;
   height: 48px;
   border-radius: 999px;
-  background: rgba(1, 123, 251, 0.15);
+  color: var(--text-primary);
   border: 1px solid rgba(1, 123, 251, 0.5);
   display: flex;
   align-items: center;
@@ -650,7 +596,7 @@ async function submitChangePassword() {
 .profile-balance {
   padding: 0.8rem 1rem;
   border-radius: 0.9rem;
-  background: rgba(1, 123, 251, 0.12);
+  color: var(--text-primary);
   border: 1px solid rgba(1, 123, 251, 0.45);
   display: flex;
   flex-direction: column;
@@ -686,7 +632,7 @@ async function submitChangePassword() {
 
 .profile-stat-card {
   border: 1px solid rgba(1, 123, 251, 0.25);
-  background: rgba(1, 123, 251, 0.07);
+  color: var(--text-primary);
   border-radius: 0.75rem;
   padding: 0.7rem 0.9rem;
 }
@@ -709,7 +655,7 @@ async function submitChangePassword() {
   padding: 0.65rem 0.85rem;
   border-radius: 0.7rem;
   border: 1px solid rgba(250, 204, 21, 0.35);
-  background: rgba(250, 204, 21, 0.1);
+  color: var(--text-primary);
   color: #fde68a;
   font-size: 0.86rem;
 }
@@ -751,7 +697,7 @@ async function submitChangePassword() {
 }
 
 .btn-secondary {
-  background: transparent;
+  color: var(--text-primary);
   color: var(--text-secondary);
   border-color: var(--btn-secondary-border);
 }
@@ -769,7 +715,7 @@ async function submitChangePassword() {
 .profile-modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(2, 6, 23, 0.8);
+  color: var(--text-primary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -779,7 +725,7 @@ async function submitChangePassword() {
 .profile-modal {
   width: 100%;
   max-width: 420px;
-  background: var(--bg-card);
+  color: var(--text-primary);
   border-radius: 1rem;
   padding: 1.75rem;
   box-shadow: var(--neon-shadow);
@@ -808,7 +754,7 @@ async function submitChangePassword() {
   padding: 0.6rem 0.8rem;
   border-radius: 0.5rem;
   border: 1px solid var(--input-border);
-  background: var(--input-bg);
+  color: var(--text-primary);
   color: var(--text-primary);
   font-size: 0.95rem;
   outline: none;
