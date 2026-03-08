@@ -53,10 +53,10 @@ export default defineEventHandler(async (event) => {
         httpOnly: true,
         maxAge: 60 * 60 * 24 * 30,
         path: '/',
-        sameSite: 'lax',
+        sameSite: 'strict',
         secure: process.env.NODE_ENV === 'production',
       })
-      setCookie(event, 'user_role', 'user', { path: '/', sameSite: 'lax', secure: process.env.NODE_ENV === 'production' })
+      setCookie(event, 'user_role', 'user', { path: '/', sameSite: 'strict', secure: process.env.NODE_ENV === 'production' })
       return { success: true, role: 'user', message: 'Đăng nhập bằng OTP thành công!' }
     }
 
@@ -89,10 +89,10 @@ export default defineEventHandler(async (event) => {
           httpOnly: true,
           maxAge: 60 * 60 * 24 * 7,
           path: '/',
-          sameSite: 'lax',
+          sameSite: 'strict',
           secure: process.env.NODE_ENV === 'production',
         });
-        setCookie(event, 'user_role', admin.role, { path: '/', sameSite: 'lax', secure: process.env.NODE_ENV === 'production' })
+        setCookie(event, 'user_role', admin.role, { path: '/', sameSite: 'strict', secure: process.env.NODE_ENV === 'production' })
         return { success: true, role: admin.role, message: 'Admin login thành công!' };
       }
     }
@@ -120,10 +120,10 @@ export default defineEventHandler(async (event) => {
           httpOnly: true,
           maxAge: 60 * 60 * 24 * 30,
           path: '/',
-          sameSite: 'lax',
+          sameSite: 'strict',
           secure: process.env.NODE_ENV === 'production',
         });
-        setCookie(event, 'user_role', 'user', { path: '/', sameSite: 'lax', secure: process.env.NODE_ENV === 'production' })
+        setCookie(event, 'user_role', 'user', { path: '/', sameSite: 'strict', secure: process.env.NODE_ENV === 'production' })
         return { success: true, role: 'user', message: 'Khách login thành công!' };
       }
     }

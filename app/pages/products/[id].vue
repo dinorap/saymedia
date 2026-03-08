@@ -15,10 +15,11 @@
               >
                 ‹
               </button>
-              <img
+              <NuxtImg
                 :src="activeImage"
                 :alt="product.name"
                 class="detail-thumb"
+                loading="lazy"
               />
               <button
                 v-if="images.length > 1"
@@ -43,7 +44,7 @@
                 @click="setActiveImage(img)"
                 :aria-label="`thumb-${idx + 1}`"
               >
-                <img :src="img" :alt="product.name + ' thumb ' + (idx + 1)" />
+                <NuxtImg :src="img" :alt="product.name + ' thumb ' + (idx + 1)" loading="lazy" />
               </button>
             </div>
           </div>
@@ -220,7 +221,7 @@
                   :to="`/products/${sp.id}`"
                 >
                   <div class="similar-thumb">
-                    <img
+                    <NuxtImg
                       v-if="sp.thumbnail_url"
                       :src="sp.thumbnail_url"
                       :alt="sp.name"
@@ -256,9 +257,6 @@
         <aside class="hero-right">
           <div class="buy-card">
             <div class="buy-badges">
-              <span class="detail-badge-main">{{
-                $t("product.badgeProduct")
-              }}</span>
               <span class="detail-badge-type">
                 {{ (product.type || "tool").toUpperCase() }}
               </span>
@@ -407,8 +405,11 @@
 </template>
 
 <script setup>
+import { defineAsyncComponent } from "vue";
 import SiteHeader from "~/components/SiteHeader.vue";
-import ConfirmPurchaseModal from "~/components/product/ConfirmPurchaseModal.vue";
+const ConfirmPurchaseModal = defineAsyncComponent(
+  () => import("~/components/product/ConfirmPurchaseModal.vue")
+);
 
 const route = useRoute();
 const { locale, t } = useI18n();

@@ -19,7 +19,13 @@ export default defineNuxtConfig({
     '~/assets/css/pages/dashboard.css'
   ],
 
-  modules: ['@nuxtjs/i18n'],
+  modules: ['@pinia/nuxt', '@nuxt/image', '@nuxtjs/i18n'],
+
+  image: {
+    provider: 'none',
+    format: ['webp'],
+    quality: 80,
+  },
 
   i18n: {
     locales: [

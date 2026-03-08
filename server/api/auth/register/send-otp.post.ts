@@ -2,6 +2,7 @@ import jwt from 'jsonwebtoken'
 import pool from '../../../utils/db'
 import { setOtp } from '../../../utils/otpStore'
 import { sendOtpEmail } from '../../../utils/email'
+import { checkOtpRateLimit } from '../../../utils/otpRateLimit'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'chuoi_bi_mat_jwt_ngau_nhien_cua_sep_123456'
 const COOKIE_NAME = 'register_ref_claim'
@@ -27,6 +28,8 @@ export default defineEventHandler(async (event) => {
   if (byEmail.length > 0) {
     throw createError({ statusCode: 400, statusMessage: 'Email đã được đăng ký!' })
   }
+
+  checkOtpRateLimit(event, e)
 
   let adminId = 1
   const token = getCookie(event, COOKIE_NAME)

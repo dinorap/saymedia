@@ -65,7 +65,7 @@ export default defineEventHandler(async (event) => {
         type,
         is_active
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
     [
       currentUser.id,

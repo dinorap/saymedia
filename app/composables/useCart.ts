@@ -1,70 +1,95 @@
+import { storeToRefs } from "pinia";
+import { useCartStore } from "~/stores/cart";
+
+/**
+ * Composable giỏ hàng: chỉ lưu DB (user đã đăng nhập). Khách không đăng nhập: giỏ in-memory, mất khi tải lại trang.
+ */
 export function useCart() {
-  const cart = useState<any[]>("cart", () => []);
+  const store = useCartStore();
+  const { cart } = storeToRefs(store);
+  const roleCookie = process.client ? useCookie("user_role", { path: "/" }) : null;
 
+  // Chỉ lưu giỏ trên DB khi đã đăng nhập (user). Khách: giỏ in-memory, mất khi reload.
   if (process.client) {
-    const initialized = useState<boolean>("cart_init", () => false);
-    if (!initialized.value) {
-      try {
-        const raw = localStorage.getItem("cart");
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          if (Array.isArray(parsed)) {
-            cart.value = parsed;
+    const role = roleCookie?.value;
+    if (role !== "user") {
+      if (store.loadedFromServer) store.reset();
+      else store.loadedFromServer = true;
+    } else if (!store.loadedFromServer) {
+      $fetch("/api/cart/my")
+        .then((res: any) => {
+          if (res?.success && Array.isArray(res.items)) {
+            store.setItems(res.items);
+          } else {
+            store.loadedFromServer = true;
           }
-        }
-      } catch {
-        cart.value = [];
-      }
-      initialized.value = true;
+        })
+        .catch(() => {
+          store.loadedFromServer = true;
+        });
     }
+  }
 
-    watch(
-      cart,
-      (val) => {
+  async function addAndSync(product: {
+    id: number;
+    name?: string;
+    price?: number;
+    thumbnail_url?: string | null;
+    type?: string | null;
+  }) {
+    store.add(product);
+    if (process.client) {
+      const role = useCookie("user_role", { path: "/" }).value;
+      if (role === "user") {
         try {
-          localStorage.setItem("cart", JSON.stringify(val));
+          await $fetch("/api/cart/add", {
+            method: "POST",
+            body: { product_id: product.id, qty: 1 },
+          });
+        } catch {
+          // ignore sync error, local cart vẫn hoạt động
+        }
+      }
+    }
+  }
+
+  async function removeAndSync(id: number) {
+    store.remove(id);
+    if (process.client) {
+      const role = useCookie("user_role", { path: "/" }).value;
+      if (role === "user") {
+        try {
+          await $fetch("/api/cart/remove", {
+            method: "POST",
+            body: { product_id: id },
+          });
         } catch {
           // ignore
         }
-      },
-      { deep: true },
-    );
+      }
+    }
   }
 
-  function add(product: any) {
-    if (!product || !product.id) return;
-    const existing = cart.value.find((p) => p.id === product.id);
-    if (existing) return;
-    cart.value.push({
-      id: product.id,
-      name: product.name,
-      price: Number(product.price || 0),
-      thumbnail_url: product.thumbnail_url || null,
-      type: product.type || null,
-      qty: 1,
-    });
+  async function clearAndSync() {
+    store.clear();
+    if (process.client) {
+      const role = useCookie("user_role", { path: "/" }).value;
+      if (role === "user") {
+        try {
+          await $fetch("/api/cart/clear", { method: "POST" });
+        } catch {
+          // ignore
+        }
+      }
+    }
   }
-
-  function remove(id: number) {
-    cart.value = cart.value.filter((p) => p.id !== id);
-  }
-
-  function clear() {
-    cart.value = [];
-  }
-
-  const count = computed(() => cart.value.length);
-  const total = computed(() =>
-    cart.value.reduce((sum, item) => sum + Number(item.price || 0) * Number(item.qty || 1), 0),
-  );
 
   return {
     cart,
-    add,
-    remove,
-    clear,
-    count,
-    total,
+    add: addAndSync,
+    remove: removeAndSync,
+    clear: clearAndSync,
+    count: computed(() => store.count),
+    total: computed(() => store.total),
   };
 }
-

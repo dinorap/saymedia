@@ -1,6 +1,7 @@
 import pool from '../../utils/db'
 import { setOtp } from '../../utils/otpStore'
 import { sendOtpEmail } from '../../utils/email'
+import { checkOtpRateLimit } from '../../utils/otpRateLimit'
 
 export default defineEventHandler(async (event) => {
   const body = await readBody(event)
@@ -9,6 +10,8 @@ export default defineEventHandler(async (event) => {
   if (!email) {
     throw createError({ statusCode: 400, statusMessage: 'Vui lòng nhập email!' })
   }
+
+  checkOtpRateLimit(event, email)
 
   const [users]: any = await pool.query('SELECT id FROM users WHERE email = ?', [email])
   if (users.length === 0) {

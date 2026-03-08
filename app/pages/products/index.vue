@@ -46,9 +46,7 @@
             </div>
           </div>
         </div>
-        <div v-if="loading" class="state-text">
-          {{ $t("admin.loading") }}
-        </div>
+        <AppLoading v-if="loading" />
         <div v-else-if="error" class="state-text state-text--error">
           {{ error }}
         </div>
@@ -68,11 +66,12 @@
             >
               <div class="product-left">
                 <div class="product-thumb-wrap">
-                  <img
+                  <NuxtImg
                     v-if="p.thumbnail_url"
                     :src="p.thumbnail_url"
                     :alt="p.name"
                     class="product-thumb"
+                    loading="lazy"
                   />
                   <div v-else class="product-thumb placeholder">
                     <span>{{ p.name.charAt(0).toUpperCase() }}</span>
@@ -88,9 +87,6 @@
 
               <div class="product-main">
                 <div class="product-header-row">
-                  <span class="badge-main">
-                    {{ locale === "vi" ? "Sản phẩm" : "Product" }}
-                  </span>
                   <span class="badge-type">
                     {{ p.type || "tool" }}
                   </span>
@@ -138,9 +134,12 @@
 </template>
 
 <script setup>
+import { defineAsyncComponent } from "vue";
 import { useI18n } from "vue-i18n";
 import SiteHeader from "~/components/SiteHeader.vue";
-import ConfirmPurchaseModal from "~/components/product/ConfirmPurchaseModal.vue";
+const ConfirmPurchaseModal = defineAsyncComponent(
+  () => import("~/components/product/ConfirmPurchaseModal.vue")
+);
 
 const { locale, t } = useI18n();
 const { show: showToast } = useToast();

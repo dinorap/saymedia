@@ -1,0 +1,47 @@
+import jwt from "jsonwebtoken";
+import pool from "../../utils/db";
+
+const JWT_SECRET =
+  process.env.JWT_SECRET || "chuoi_bi_mat_jwt_ngau_nhien_cua_sep_123456";
+
+export default defineEventHandler(async (event) => {
+  const token = getCookie(event, "auth_token");
+  if (!token) {
+    throw createError({ statusCode: 401, statusMessage: "Chưa đăng nhập" });
+  }
+
+  let decoded: { id: number; role: string };
+  try {
+    decoded = jwt.verify(token, JWT_SECRET) as { id: number; role: string };
+  } catch {
+    throw createError({
+      statusCode: 401,
+      statusMessage: "Phiên đăng nhập hết hạn",
+    });
+  }
+
+  if (decoded.role !== "user") {
+    throw createError({
+      statusCode: 403,
+      statusMessage: "Chỉ người dùng mới sử dụng giỏ hàng",
+    });
+  }
+
+  const body = await readBody(event);
+  const productId = Number(body?.product_id || 0);
+
+  if (!Number.isInteger(productId) || productId <= 0) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: "Sản phẩm không hợp lệ",
+    });
+  }
+
+  await pool.query(
+    "DELETE FROM user_cart_items WHERE user_id = ? AND product_id = ?",
+    [decoded.id, productId],
+  );
+
+  return { success: true };
+});
+

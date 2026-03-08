@@ -40,9 +40,7 @@
     </div>
 
     <div class="table-wrap card">
-      <div v-if="loading" class="table-loading">
-        {{ $t("admin.loading") }}
-      </div>
+      <AppLoading v-if="loading" />
       <div v-else-if="!deposits.length" class="table-empty">
         {{ $t("admin.noData") }}
       </div>

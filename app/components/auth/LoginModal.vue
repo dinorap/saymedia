@@ -95,6 +95,10 @@
 </template>
 
 <script setup>
+import { defineAsyncComponent } from "vue";
+const AuthModal = defineAsyncComponent(() => import("~/components/auth/AuthModal.vue"));
+const AuthForgotPasswordModal = defineAsyncComponent(() => import("~/components/auth/AuthForgotPasswordModal.vue"));
+
 defineProps({
   modelValue: { type: Boolean, default: false },
   standalone: { type: Boolean, default: false }

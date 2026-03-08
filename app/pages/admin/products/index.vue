@@ -37,9 +37,7 @@
       </button>
     </div>
     <div class="table-wrap card">
-      <div v-if="loading" class="table-loading">
-        {{ $t("admin.loading") }}
-      </div>
+      <AppLoading v-if="loading" />
       <div v-else-if="!hasItems" class="table-empty">
         {{ $t("admin.noData") }}
       </div>
@@ -64,11 +62,12 @@
             <td>{{ idx + 1 }}</td>
             <td>{{ item.name }}</td>
             <td class="col-thumb">
-              <img
+              <NuxtImg
                 v-if="item.thumbnail_url"
                 :src="item.thumbnail_url"
-                alt="thumb"
+                :alt="item.name || 'thumb'"
                 class="thumb-img"
+                loading="lazy"
               />
               <span v-else>-</span>
             </td>
@@ -250,7 +249,7 @@
                     </button>
                   </div>
                   <div v-if="form.thumbnail_url" class="thumb-preview-wrap">
-                    <img :src="form.thumbnail_url" alt="thumbnail preview" class="thumb-preview" />
+                    <NuxtImg :src="form.thumbnail_url" alt="thumbnail preview" class="thumb-preview" />
                   </div>
                 </div>
                 <div class="form-row">

@@ -56,10 +56,11 @@
               />
             </div>
             <div class="thumb">
-              <img
+              <NuxtImg
                 v-if="item.thumbnail_url"
                 :src="item.thumbnail_url"
                 :alt="item.name"
+                loading="lazy"
               />
               <div v-else class="thumb placeholder">
                 <span>{{ item.name?.charAt(0)?.toUpperCase() }}</span>
@@ -78,7 +79,7 @@
               <span class="unit">{{ $t("product.points") }}</span>
             </div>
             <div class="actions">
-              <button type="button" class="btn-link" @click="remove(item.id)">
+              <button type="button" class="btn-danger" @click="remove(item.id)">
                 {{ $t("cart.remove") }}
               </button>
               <button
@@ -171,8 +172,11 @@
 </template>
 
 <script setup>
+import { defineAsyncComponent } from "vue";
 import SiteHeader from "~/components/SiteHeader.vue";
-import ConfirmPurchaseModal from "~/components/product/ConfirmPurchaseModal.vue";
+const ConfirmPurchaseModal = defineAsyncComponent(
+  () => import("~/components/product/ConfirmPurchaseModal.vue"),
+);
 
 const { locale, t } = useI18n();
 const { show: showToast } = useToast();
@@ -383,7 +387,7 @@ onMounted(initUser);
 }
 .cart-main {
   flex: 1;
-  padding: 32px 150px 64px;
+  padding: 96px 150px 64px; /* chừa khoảng dưới header cố định */
 }
 .cart-header {
   display: flex;
@@ -391,10 +395,15 @@ onMounted(initUser);
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 16px;
+  padding: 16px 20px;
+  background: rgba(5, 15, 35, 0.95);
+  border: 1px solid rgba(1, 123, 251, 0.25);
+  border-radius: 12px;
 }
 .cart-title {
   margin: 0;
-  font-size: 1.9rem;
+  font-size: 1.6rem;
+  font-weight: 500;
 }
 .cart-actions {
   display: flex;
@@ -403,9 +412,12 @@ onMounted(initUser);
   justify-content: flex-end;
 }
 .cart-empty {
-  padding: 60px 0;
+  padding: 60px 24px;
   text-align: center;
   color: var(--text-secondary);
+  background: rgba(5, 15, 35, 0.95);
+  border: 1px solid rgba(1, 123, 251, 0.25);
+  border-radius: 12px;
 }
 .cart-grid {
   display: grid;
@@ -417,6 +429,10 @@ onMounted(initUser);
   display: flex;
   flex-direction: column;
   gap: 12px;
+  padding: 16px;
+  background: rgba(5, 15, 35, 0.95);
+  border: 1px solid rgba(1, 123, 251, 0.25);
+  border-radius: 12px;
 }
 
 .cart-toolbar {
@@ -446,6 +462,7 @@ onMounted(initUser);
   padding: 14px;
   border-radius: 14px;
   border: 1px solid rgba(1, 123, 251, 0.25);
+  background: rgba(8, 20, 45, 0.9);
   color: var(--text-primary);
 }
 
@@ -554,9 +571,9 @@ onMounted(initUser);
 .btn-danger {
   padding: 0.5rem 1.1rem;
   border-radius: 999px;
-  border: 1px solid rgba(239, 68, 68, 0.6);
-  color: var(--text-primary);
-  color: #fecaca;
+  border: 1px solid rgba(239, 68, 68, 0.8);
+  background: linear-gradient(135deg, #ef4444, #b91c1c);
+  color: #fff;
   cursor: pointer;
   font-weight: 600;
 }
@@ -575,6 +592,7 @@ onMounted(initUser);
 .cart-summary {
   border-radius: 14px;
   border: 1px solid rgba(1, 123, 251, 0.25);
+  background: rgba(5, 15, 35, 0.95);
   color: var(--text-primary);
   padding: 16px;
 }
@@ -616,6 +634,7 @@ onMounted(initUser);
 .checkout-overlay {
   position: fixed;
   inset: 0;
+  background: rgba(0, 0, 0, 0.5);
   color: var(--text-primary);
   backdrop-filter: blur(6px);
   display: flex;
@@ -628,6 +647,7 @@ onMounted(initUser);
 .checkout-modal {
   width: 100%;
   max-width: 420px;
+  background: rgba(5, 15, 35, 0.98);
   color: var(--text-primary);
   border: 1px solid rgba(1, 123, 251, 0.4);
   border-radius: 14px;

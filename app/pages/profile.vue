@@ -190,12 +190,21 @@
 </template>
 
 <script setup>
+import { defineAsyncComponent } from "vue";
 import { useI18n } from "vue-i18n";
 import SiteHeader from "~/components/SiteHeader.vue";
-import PaymentModal from "~/components/payment/PaymentModal.vue";
-import PaymentHistoryModal from "~/components/payment/PaymentHistoryModal.vue";
-import OrderHistoryModal from "~/components/OrderHistoryModal.vue";
-import CreditLedgerModal from "~/components/CreditLedgerModal.vue";
+const PaymentModal = defineAsyncComponent(
+  () => import("~/components/payment/PaymentModal.vue")
+);
+const PaymentHistoryModal = defineAsyncComponent(
+  () => import("~/components/payment/PaymentHistoryModal.vue")
+);
+const OrderHistoryModal = defineAsyncComponent(
+  () => import("~/components/OrderHistoryModal.vue")
+);
+const CreditLedgerModal = defineAsyncComponent(
+  () => import("~/components/CreditLedgerModal.vue")
+);
 const { t, locale, setLocale } = useI18n();
 const { show: showToast } = useToast();
 
