@@ -3,7 +3,13 @@ import { join, extname } from "node:path";
 import crypto from "node:crypto";
 
 const MAX_SIZE = 5 * 1024 * 1024; // 5MB
-const ALLOWED_MIME_PREFIX = "image/";
+const ALLOWED_MIMES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+]);
+const ALLOWED_EXT = new Set([".jpg", ".jpeg", ".png", ".webp", ".gif"]);
 
 export default defineEventHandler(async (event) => {
   const currentUser = event.context.user;
@@ -33,11 +39,11 @@ export default defineEventHandler(async (event) => {
   for (const part of form) {
     if (!part.filename || !part.data) continue;
 
-    const mime = part.type || "";
-    if (!mime.startsWith(ALLOWED_MIME_PREFIX)) {
+    const mime = (part.type || "").toLowerCase().split(";")[0].trim();
+    if (!ALLOWED_MIMES.has(mime)) {
       throw createError({
         statusCode: 400,
-        statusMessage: "Chỉ hỗ trợ upload file ảnh",
+        statusMessage: "Chỉ chấp nhận ảnh JPEG, PNG, WebP, GIF (đúng MIME)",
       });
     }
 
@@ -49,11 +55,13 @@ export default defineEventHandler(async (event) => {
     }
 
     const originalExt = extname(part.filename || "").toLowerCase();
-    const safeExt =
-      [".jpg", ".jpeg", ".png", ".webp", ".gif"].includes(originalExt) ||
-      originalExt === ""
-        ? originalExt || ".jpg"
-        : ".jpg";
+    if (!ALLOWED_EXT.has(originalExt)) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: "Phần mở rộng file phải là .jpg, .jpeg, .png, .webp, .gif",
+      });
+    }
+    const safeExt = originalExt || ".jpg";
 
     const fileName =
       crypto.randomBytes(16).toString("hex") + Date.now().toString(36) + safeExt;

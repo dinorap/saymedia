@@ -1,10 +1,23 @@
 import pool from "../../../utils/db";
+import {
+  cacheGet,
+  cacheSet,
+  PRODUCT_SIMILAR_KEY,
+} from "../../../utils/cache";
+
+const CACHE_TTL = 60;
 
 export default defineEventHandler(async (event) => {
   const id = Number(getRouterParam(event, "id"));
   if (!Number.isFinite(id) || id <= 0) {
     throw createError({ statusCode: 400, statusMessage: "Sản phẩm không hợp lệ" });
   }
+
+  const limit = Math.min(Math.max(Number(getQuery(event)?.limit || 6) || 6, 1), 12);
+  const cached = cacheGet<{ success: true; data: any[] }>(
+    PRODUCT_SIMILAR_KEY(id, limit)
+  );
+  if (cached) return cached;
 
   const [[current]]: any = await pool.query(
     "SELECT id, type FROM products WHERE id = ? AND is_active = 1 LIMIT 1",
@@ -14,7 +27,6 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 404, statusMessage: "Không tìm thấy sản phẩm" });
   }
 
-  const limit = Math.min(Math.max(Number(getQuery(event)?.limit || 6) || 6, 1), 12);
   const out: any[] = [];
   const seen = new Set<number>([id]);
 
@@ -56,6 +68,8 @@ export default defineEventHandler(async (event) => {
     }
   }
 
-  return { success: true, data: out };
+  const result = { success: true, data: out };
+  cacheSet(PRODUCT_SIMILAR_KEY(id, limit), result, CACHE_TTL);
+  return result;
 });
 

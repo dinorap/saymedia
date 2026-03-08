@@ -8,6 +8,7 @@ import {
   buildQrUrl,
   convertVndToCredit,
 } from '../../utils/payment'
+import { paymentQrSchema, parseBodyOrThrow } from '../../utils/schemas'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'chuoi_bi_mat_jwt_ngau_nhien_cua_sep_123456'
 
@@ -26,11 +27,8 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 403, statusMessage: 'Chỉ người dùng mới nạp tiền được' })
   }
 
-  const body = await readBody(event)
-  const amount = parseInt(String(body?.amount || 0), 10)
-  if (!amount || amount < 10000) {
-    throw createError({ statusCode: 400, statusMessage: 'Số tiền tối thiểu là 10.000 VND' })
-  }
+  const body = parseBodyOrThrow(await readBody(event), paymentQrSchema)
+  const amount = body.amount
   const converted = convertVndToCredit(amount)
   if (converted.credit <= 0) {
     throw createError({

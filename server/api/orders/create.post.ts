@@ -6,6 +6,7 @@ import {
   ensureCreditLedgerSchema,
 } from "../../utils/creditLedger";
 import { addSocialProofItem } from "../../utils/socialProof";
+import { orderCreateSchema, parseBodyOrThrow } from "../../utils/schemas";
 
 const JWT_SECRET =
   process.env.JWT_SECRET || "chuoi_bi_mat_jwt_ngau_nhien_cua_sep_123456";
@@ -36,11 +37,8 @@ export default defineEventHandler(async (event) => {
   checkOrderCreateRateLimit(decoded.id);
   await ensureCreditLedgerSchema();
 
-  const body = await readBody(event);
-  const productId = Number(body?.product_id || 0);
-  if (!Number.isFinite(productId) || productId <= 0) {
-    throw createError({ statusCode: 400, statusMessage: "Sản phẩm không hợp lệ" });
-  }
+  const body = parseBodyOrThrow(await readBody(event), orderCreateSchema);
+  const productId = body.product_id;
 
   const conn = await pool.getConnection();
   try {

@@ -1,6 +1,16 @@
 import pool from "../utils/db";
+import {
+  cacheGet,
+  cacheSet,
+  PRODUCTS_LIST_KEY,
+} from "../utils/cache";
+
+const CACHE_TTL = 60;
 
 export default defineEventHandler(async () => {
+  const cached = cacheGet<{ success: true; data: any[] }>(PRODUCTS_LIST_KEY);
+  if (cached) return cached;
+
   const [rows]: any = await pool.query(
     `
       SELECT
@@ -17,9 +27,8 @@ export default defineEventHandler(async () => {
     `,
   );
 
-  return {
-    success: true,
-    data: rows,
-  };
+  const result = { success: true, data: rows };
+  cacheSet(PRODUCTS_LIST_KEY, result, CACHE_TTL);
+  return result;
 });
 

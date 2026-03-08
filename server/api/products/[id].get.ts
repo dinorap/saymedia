@@ -1,10 +1,16 @@
 import pool from "../../utils/db";
+import { cacheGet, cacheSet, PRODUCT_DETAIL_KEY } from "../../utils/cache";
+
+const CACHE_TTL = 60;
 
 export default defineEventHandler(async (event) => {
   const id = Number(getRouterParam(event, "id"));
   if (!Number.isFinite(id) || id <= 0) {
     throw createError({ statusCode: 400, statusMessage: "Sản phẩm không hợp lệ" });
   }
+
+  const cached = cacheGet<{ success: true; data: any }>(PRODUCT_DETAIL_KEY(id));
+  if (cached) return cached;
 
   const [rows]: any = await pool.query(
     `
@@ -46,12 +52,14 @@ export default defineEventHandler(async (event) => {
 
   delete product.images_json;
 
-  return {
+  const result = {
     success: true,
     data: {
       ...product,
       images,
     },
   };
+  cacheSet(PRODUCT_DETAIL_KEY(id), result, CACHE_TTL);
+  return result;
 });
 

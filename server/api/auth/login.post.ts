@@ -4,9 +4,11 @@ import pool from '../../utils/db'
 import { consumeOtp } from '../../utils/otpStore'
 import { checkLoginRateLimit, recordLoginFailure, clearLoginFailure } from '../../utils/rateLimit'
 import { addAuditLog } from '../../utils/audit'
+import { loginSchema, parseBodyOrThrow } from '../../utils/schemas'
 
 export default defineEventHandler(async (event) => {
-  const body = await readBody(event)
+  const raw = await readBody(event)
+  const body = parseBodyOrThrow(raw, loginSchema)
   const { username, password, email, otp } = body
 
   const jwtSecret = process.env.JWT_SECRET || 'chuoi_bi_mat_jwt_ngau_nhien_cua_sep_123456'

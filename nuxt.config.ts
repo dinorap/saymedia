@@ -7,6 +7,11 @@ export default defineNuxtConfig({
     port: 9000
   },
 
+  routeRules: {
+    '/products': { swr: 60 },
+    '/products/**': { swr: 60 },
+  },
+
   css: [
     '~/assets/css/reset.css',
     '~/assets/css/theme.css',

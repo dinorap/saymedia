@@ -87,6 +87,12 @@ export async function ensureCommerceSchema() {
     )
   `);
 
+  // Index cho truy vấn nhanh khi data lớn (>100k record).
+  await addColumnIfMissing("CREATE INDEX idx_orders_user_id ON orders(user_id)");
+  await addColumnIfMissing("CREATE INDEX idx_orders_created_at ON orders(created_at)");
+  await addColumnIfMissing("CREATE INDEX idx_orders_status ON orders(status)");
+  await addColumnIfMissing("CREATE INDEX idx_products_is_active_created ON products(is_active, created_at)");
+
   commerceSchemaReady = true;
 }
 
