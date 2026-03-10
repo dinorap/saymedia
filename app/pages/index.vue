@@ -81,51 +81,67 @@
 
     <div class="landing-two-col">
       <section class="landing-section landing-section--social-proof">
-        <div class="landing-section-head landing-section-head--left">
-          <h2 class="landing-section-title">
-            {{ $t("socialProof.title") || "Đơn hàng gần đây" }}
-          </h2>
+        <div class="landing-social-head-row">
+          <div class="landing-section-head landing-section-head--left">
+            <h2 class="landing-section-title">
+              {{ $t("socialProof.title") || "Đơn hàng gần đây" }}
+            </h2>
+          </div>
+          <div
+            class="landing-section-head landing-section-head--left landing-section-head--chat"
+          >
+            <h2 class="landing-section-title">Cộng đồng đang chat</h2>
+            <p class="landing-section-subtitle landing-section-subtitle--chat">
+              Mọi tài khoản đều có thể nhắn – dùng lịch sự, không spam.
+            </p>
+          </div>
         </div>
-        <div class="landing-social-proof-wrap">
-          <SocialProof />
+        <div class="landing-social-row">
+          <div class="landing-social-col">
+            <div class="landing-social-proof-wrap">
+              <SocialProof />
+            </div>
+          </div>
+          <div class="landing-social-col landing-social-col--chat">
+            <CommunityChat />
+          </div>
         </div>
-        <CommunityChat />
-      </section>
-
-      <section class="landing-section landing-section--how">
-        <div class="landing-section-head landing-section-head--left">
-          <h2 class="landing-section-title">
-            {{ $t("home.howTitle") }}
-          </h2>
-          <p class="landing-section-subtitle">
-            {{ $t("home.howSubtitle") }}
-          </p>
-        </div>
-        <ol class="how-steps">
-          <li class="how-step">
-            <span class="how-step-index">1</span>
-            <div class="how-step-body">
-              <div class="how-step-title">{{ $t("home.howStep1Title") }}</div>
-              <div class="how-step-text">{{ $t("home.howStep1Body") }}</div>
-            </div>
-          </li>
-          <li class="how-step">
-            <span class="how-step-index">2</span>
-            <div class="how-step-body">
-              <div class="how-step-title">{{ $t("home.howStep2Title") }}</div>
-              <div class="how-step-text">{{ $t("home.howStep2Body") }}</div>
-            </div>
-          </li>
-          <li class="how-step">
-            <span class="how-step-index">3</span>
-            <div class="how-step-body">
-              <div class="how-step-title">{{ $t("home.howStep3Title") }}</div>
-              <div class="how-step-text">{{ $t("home.howStep3Body") }}</div>
-            </div>
-          </li>
-        </ol>
       </section>
     </div>
+
+    <section class="landing-section landing-section--how">
+      <div class="landing-section-head landing-section-head--left">
+        <h2 class="landing-section-title">
+          {{ $t("home.howTitle") }}
+        </h2>
+        <p class="landing-section-subtitle">
+          {{ $t("home.howSubtitle") }}
+        </p>
+      </div>
+      <ol class="how-steps">
+        <li class="how-step">
+          <span class="how-step-index">1</span>
+          <div class="how-step-body">
+            <div class="how-step-title">{{ $t("home.howStep1Title") }}</div>
+            <div class="how-step-text">{{ $t("home.howStep1Body") }}</div>
+          </div>
+        </li>
+        <li class="how-step">
+          <span class="how-step-index">2</span>
+          <div class="how-step-body">
+            <div class="how-step-title">{{ $t("home.howStep2Title") }}</div>
+            <div class="how-step-text">{{ $t("home.howStep2Body") }}</div>
+          </div>
+        </li>
+        <li class="how-step">
+          <span class="how-step-index">3</span>
+          <div class="how-step-body">
+            <div class="how-step-title">{{ $t("home.howStep3Title") }}</div>
+            <div class="how-step-text">{{ $t("home.howStep3Body") }}</div>
+          </div>
+        </li>
+      </ol>
+    </section>
   </div>
 </template>
 
@@ -177,16 +193,67 @@ const isLoggedIn = computed(() => roleCookie.value === "user");
   display: flex;
 }
 
+.landing-social-head-row {
+  display: flex;
+
+  align-items: flex-end;
+  gap: 24px;
+  margin-bottom: 12px;
+}
+
+.landing-section-head--chat {
+  text-align: right;
+}
+
+.landing-section-subtitle--chat {
+  font-size: 0.85rem;
+}
+
+.landing-social-row {
+  display: flex;
+  gap: 28px;
+  align-items: stretch;
+}
+
+.landing-social-col {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+}
+
+.landing-social-col:first-child {
+  flex: 0.5;
+}
+
+.landing-social-col--chat {
+  display: flex;
+  flex: 0.5;
+}
+
+.landing-social-col > * {
+  flex: 1;
+  width: 100%;
+}
+
+/* Kéo panel đơn hàng gần đây cao đều với khung chat */
+.landing-social-col .social-proof-panel {
+  height: 100%;
+}
+
+/* Ẩn header bên trong component chat để tránh trùng title */
+.landing-social-col--chat .community-chat .chat-header {
+  display: none;
+}
+
 .landing-section-head {
   max-width: 720px;
-  margin: 0 auto 32px;
+
   text-align: center;
 }
 
 .landing-section-head--left {
-  margin: 0 0 24px;
   max-width: none;
-  text-align: left;
+  flex: 0.5;
 }
 
 .landing-section-title {

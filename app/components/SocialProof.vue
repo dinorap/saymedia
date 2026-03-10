@@ -111,8 +111,8 @@ onUnmounted(() => {
 <style scoped>
 .social-proof-panel {
   width: 100%;
-  max-width: 420px;
-  max-height: 280px;
+  max-height: 420px;
+
   background:
     radial-gradient(circle at 0 0, rgba(1, 123, 251, 0.2), transparent 55%),
     rgba(5, 15, 35, 0.92);

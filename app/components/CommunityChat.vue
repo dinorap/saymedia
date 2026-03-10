@@ -1,11 +1,6 @@
 <template>
   <div class="community-chat">
-    <div class="chat-header">
-      <h2 class="chat-title">Cộng đồng đang chat</h2>
-      <p class="chat-subtitle">
-        Mọi tài khoản đều có thể nhắn – dùng lịch sự, không spam.
-      </p>
-    </div>
+    <div class="chat-header"></div>
 
     <div class="chat-box">
       <div ref="messagesEl" class="chat-messages">
@@ -154,7 +149,10 @@ async function handleSend() {
 
 function setupWebSocket() {
   if (typeof window === "undefined") return;
-  if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
+  if (
+    ws &&
+    (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)
+  ) {
     return;
   }
 
@@ -228,14 +226,6 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.community-chat {
-  margin-top: 24px;
-}
-
-.chat-header {
-  margin-bottom: 10px;
-}
-
 .chat-title {
   margin: 0 0 4px;
   font-size: 1.1rem;
