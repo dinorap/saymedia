@@ -28,61 +28,31 @@ export default defineEventHandler(async (event) => {
     });
   }
 
-  let rows: any[] = [];
+  await ensurePaymentSchema();
 
-  try {
-    await ensurePaymentSchema();
-    const [result]: any = await pool.query(
-      `
-        SELECT
-          id,
-          code,
-          bonus_percent,
-          bonus_credit,
-          max_total_uses,
-          max_uses_per_user,
-          min_amount,
-          starts_at,
-          ends_at,
-          daily_start_time,
-          daily_end_time,
-          created_at
-        FROM deposit_promotions
-        ORDER BY created_at DESC, id DESC
-      `,
-    );
-    rows = result || [];
-  } catch (e: any) {
-    // Nếu DB cũ chưa có cột daily_* thì fallback: query không dùng 2 cột đó.
-    if (e?.code === "ER_BAD_FIELD_ERROR") {
-      const [result]: any = await pool.query(
-        `
-          SELECT
-            id,
-            code,
-            bonus_percent,
-            bonus_credit,
-            max_total_uses,
-            max_uses_per_user,
-            min_amount,
-            starts_at,
-            ends_at,
-            NULL AS daily_start_time,
-            NULL AS daily_end_time,
-            created_at
-          FROM deposit_promotions
-          ORDER BY created_at DESC, id DESC
-        `,
-      );
-      rows = result || [];
-    } else {
-      throw e;
-    }
-  }
+  const [rows]: any = await pool.query(
+    `
+      SELECT
+        id,
+        code,
+        bonus_percent,
+        bonus_credit,
+        max_total_uses,
+        max_uses_per_user,
+        min_amount,
+        starts_at,
+        ends_at,
+        daily_start_time,
+        daily_end_time,
+        created_at
+      FROM deposit_promotions
+      ORDER BY created_at DESC, id DESC
+    `,
+  );
 
   return {
     success: true,
-    data: rows,
+    data: rows || [],
   };
 });
 

@@ -262,6 +262,8 @@
 <script setup>
 import { ref, onBeforeUnmount } from "vue";
 
+const { show: showToast } = useToast();
+
 const props = defineProps({
   modelValue: {
     type: Boolean,
@@ -353,6 +355,7 @@ const startPaymentPolling = async () => {
           amount: statusRes.actual_amount || statusRes.transfer_amount,
           newCredit: statusRes.new_credit,
         });
+        showToast("Nạp tiền thành công!", "success");
       } else if (
         statusRes?.status === "expired" ||
         statusRes?.status === "cancelled"
@@ -485,12 +488,13 @@ const testPayment = async () => {
 
     if (res.success) {
       stopQrCountdown();
-      qrData.value = null;
-      handleClose();
-      emit("success", {
+        qrData.value = null;
+        handleClose();
+        emit("success", {
         amount: res.actual_amount || res.amount,
         newCredit: res.new_credit,
       });
+        showToast("Nạp tiền test thành công!", "success");
     }
   } catch (err) {
     if (err.data?.error) {

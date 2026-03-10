@@ -211,6 +211,8 @@
 <script setup>
 definePageMeta({ layout: "admin", middleware: ["admin"] });
 
+const { show: showToast } = useToast();
+
 const items = ref([]);
 const saving = ref(false);
 const error = ref("");
@@ -276,6 +278,7 @@ async function deletePromo(p) {
       form.daily_end_time = "";
     }
     await fetchPromos();
+    showToast(`Đã xóa mã "${p.code}".`, "success");
   } catch (e) {
     error.value =
       e?.data?.statusMessage || "Không xóa được mã khuyến mại, thử lại sau.";
@@ -326,6 +329,7 @@ async function handleSubmit() {
       },
     });
     await fetchPromos();
+    showToast("Đã lưu mã khuyến mại.", "success");
   } catch (e) {
     error.value =
       e?.data?.statusMessage || "Không lưu được mã khuyến mại, thử lại sau.";

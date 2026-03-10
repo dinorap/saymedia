@@ -191,7 +191,10 @@ function setupWebSocket() {
   if (typeof window === "undefined") return;
   if (!threadId.value) return;
 
-  if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
+  if (
+    ws &&
+    (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)
+  ) {
     return;
   }
 
@@ -220,7 +223,11 @@ function setupWebSocket() {
   ws.addEventListener("message", (event) => {
     try {
       const data = JSON.parse(event.data);
-      if (data.type === "support_message" && data.threadId === threadId.value && data.message) {
+      if (
+        data.type === "support_message" &&
+        data.threadId === threadId.value &&
+        data.message
+      ) {
         messages.value.push(data.message);
         scrollToBottom();
         const lastAt = new Date(
@@ -261,10 +268,7 @@ async function toggleBubble() {
   if (roleCookie.value !== "user") {
     const { show: showToast } = useToast();
     const route = useRoute();
-    showToast(
-      "Vui lòng đăng nhập để chat với admin.",
-      "info",
-    );
+    showToast("Vui lòng đăng nhập để chat với admin.", "info");
     navigateTo(`/login?next=${route.fullPath || "/"}`);
     return;
   }
