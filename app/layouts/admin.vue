@@ -28,6 +28,10 @@
           <span class="sidebar-item-icon" aria-hidden="true">💰</span>
           <span class="sidebar-item-label">{{ $t("admin.deposits") }}</span>
         </NuxtLink>
+        <NuxtLink to="/admin/deposit-promotions" class="sidebar-item">
+          <span class="sidebar-item-icon" aria-hidden="true">🎟️</span>
+          <span class="sidebar-item-label">Mã khuyến mại nạp tiền</span>
+        </NuxtLink>
         <NuxtLink to="/admin/products" class="sidebar-item">
           <span class="sidebar-item-icon" aria-hidden="true">🛒</span>
           <span class="sidebar-item-label">{{ $t("admin.products") }}</span>

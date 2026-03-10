@@ -55,9 +55,23 @@ CREATE TABLE IF NOT EXISTS deposit_promotions (
     min_amount BIGINT NULL,
     starts_at TIMESTAMP NULL,
     ends_at TIMESTAMP NULL,
+    daily_start_time TIME NULL,
+    daily_end_time TIME NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX idx_deposit_promotions_code ON deposit_promotions(code);
+
+CREATE TABLE IF NOT EXISTS deposit_promo_tiers (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    promo_id INT NOT NULL,
+    min_amount BIGINT NOT NULL,
+    max_amount BIGINT NULL,
+    bonus_percent INT NULL,
+    bonus_credit BIGINT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (promo_id) REFERENCES deposit_promotions(id) ON DELETE CASCADE
+);
+CREATE INDEX idx_deposit_promo_tiers_promo_id ON deposit_promo_tiers(promo_id);
 
 CREATE TABLE services (
     id INT AUTO_INCREMENT PRIMARY KEY,

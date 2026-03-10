@@ -49,8 +49,9 @@
           <tr>
             <th>{{ $t("admin.id") }}</th>
             <th>{{ $t("admin.username") }}</th>
-            <th>{{ $t("payment.deposit.amount") }}</th>
-            <th>{{ $t("payment.deposit.amount") }} (thực)</th>
+            <th>Số tiền (VND)</th>
+            <th>Tín chỉ (dự kiến)</th>
+            <th>Tín chỉ đã cộng</th>
             <th>{{ $t("admin.status") }}</th>
             <th>{{ $t("admin.createdAt") }}</th>
           </tr>
@@ -62,7 +63,8 @@
             </td>
             <td>{{ tx.user_username }}</td>
             <td>{{ formatVnd(tx.amount) }}</td>
-            <td>{{ formatVnd(tx.actual_amount || tx.amount) }}</td>
+            <td>{{ formatCredit(tx.expected_credit) }}</td>
+            <td>{{ formatCredit(tx.credit_amount) }}</td>
             <td>
               <span class="badge" :class="statusClass(tx.status)">
                 {{ tx.status }}
@@ -187,8 +189,14 @@ function changePageSize() {
   fetchDeposits(1);
 }
 
+function formatCredit(v) {
+  const n = Number(v) || 0;
+  return n ? n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".") : "0";
+}
+
 function formatVnd(v) {
-  return (Number(v) || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  const n = Number(v) || 0;
+  return n ? n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".") : "0";
 }
 
 function formatDate(val) {

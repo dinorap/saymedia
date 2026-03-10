@@ -1,4 +1,5 @@
 import pool from '../../utils/db'
+import { convertVndToCredit } from '../../utils/payment'
 
 export default defineEventHandler(async (event) => {
   const currentUser = event.context.user
@@ -60,6 +61,7 @@ export default defineEventHandler(async (event) => {
       pt.provider,
       pt.amount,
       pt.actual_amount,
+      pt.credit_amount,
       pt.status,
       pt.memo,
       pt.created_at,
@@ -73,6 +75,12 @@ export default defineEventHandler(async (event) => {
     LIMIT ? OFFSET ?
   `
   const [rows]: any = await pool.query(dataQuery, [...params, limit, offset])
+
+  // Tính thêm expected_credit từ số tiền nạp, để hiển thị tín chỉ dự kiến
+  for (const row of rows) {
+    const conv = convertVndToCredit(Number(row.amount || 0))
+    row.expected_credit = conv.credit
+  }
 
   return {
     success: true,

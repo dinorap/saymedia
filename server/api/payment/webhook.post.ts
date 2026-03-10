@@ -114,6 +114,11 @@ export default defineEventHandler(async (event) => {
           WHERE code = ?
             AND (starts_at IS NULL OR starts_at <= NOW())
             AND (ends_at IS NULL OR ends_at >= NOW())
+            AND (
+              daily_start_time IS NULL
+              OR daily_end_time IS NULL
+              OR (TIME(NOW()) BETWEEN daily_start_time AND daily_end_time)
+            )
           LIMIT 1
         `,
         [promoCode],
@@ -144,9 +149,32 @@ export default defineEventHandler(async (event) => {
             !promo.max_total_uses || totalUses < Number(promo.max_total_uses || 0)
 
           if (underUserLimit && underTotalLimit) {
-            const percent = Number(promo.bonus_percent || 0)
-            const fixedBonus = Number(promo.bonus_credit || 0)
-            const percentBonus = percent > 0 ? Math.floor((credited * percent) / 100) : 0
+            // Chọn tier phù hợp (nếu có) theo số tiền nạp
+            const [[tier]]: any = await conn.query(
+              `
+                SELECT *
+                FROM deposit_promo_tiers
+                WHERE promo_id = ?
+                  AND min_amount <= ?
+                  AND (max_amount IS NULL OR max_amount > ?)
+                ORDER BY min_amount DESC
+                LIMIT 1
+              `,
+              [promo.id, transferAmount, transferAmount],
+            )
+
+            const basePercent = Number(promo.bonus_percent || 0)
+            const baseFixed = Number(promo.bonus_credit || 0)
+
+            const percent = tier
+              ? Number(tier.bonus_percent || basePercent)
+              : basePercent
+            const fixedBonus = tier
+              ? Number(tier.bonus_credit || baseFixed)
+              : baseFixed
+
+            const percentBonus =
+              percent > 0 ? Math.floor((credited * percent) / 100) : 0
             bonusCredit = percentBonus + (fixedBonus > 0 ? fixedBonus : 0)
             if (bonusCredit < 0) bonusCredit = 0
             credited += bonusCredit

@@ -83,6 +83,33 @@ const lastSeenAt = ref(0);
 const unreadCount = ref(0);
 const hasUnread = computed(() => unreadCount.value > 0);
 
+const STORAGE_KEY_PREFIX = "support_last_seen_";
+
+function getLastSeenStorageKey(id) {
+  return `${STORAGE_KEY_PREFIX}${id}`;
+}
+
+function loadLastSeenFromStorage(id) {
+  if (typeof window === "undefined" || !id) return 0;
+  try {
+    const raw = window.localStorage.getItem(getLastSeenStorageKey(id));
+    const ts = Number(raw);
+    if (!Number.isFinite(ts) || ts <= 0) return 0;
+    return ts;
+  } catch {
+    return 0;
+  }
+}
+
+function saveLastSeenToStorage(id, ts) {
+  if (typeof window === "undefined" || !id || !ts) return;
+  try {
+    window.localStorage.setItem(getLastSeenStorageKey(id), String(ts));
+  } catch {
+    // ignore
+  }
+}
+
 let ws = null;
 let wsReconnectTimer = null;
 let wsManuallyClosed = false;
@@ -111,6 +138,7 @@ async function loadThreadMessages() {
         if (open.value) {
           lastSeenAt.value = lastAt;
           unreadCount.value = 0;
+          saveLastSeenToStorage(threadId.value, lastSeenAt.value);
         } else {
           const newer = res.messages.filter((m) => {
             const ts = new Date(m.created_at || m.createdAt).getTime();
@@ -143,6 +171,7 @@ async function initBubble() {
         });
         if (threadRes?.success && threadRes.threadId) {
           threadId.value = threadRes.threadId;
+          lastSeenAt.value = loadLastSeenFromStorage(threadId.value);
           await loadThreadMessages();
           setupWebSocket();
         }
@@ -200,6 +229,7 @@ function setupWebSocket() {
         if (open.value) {
           lastSeenAt.value = lastAt;
           unreadCount.value = 0;
+          saveLastSeenToStorage(threadId.value, lastSeenAt.value);
         } else if (lastAt > lastSeenAt.value) {
           unreadCount.value += 1;
         }
@@ -250,6 +280,7 @@ async function toggleBubble() {
       const lastAt = new Date(last.created_at || last.createdAt).getTime();
       lastSeenAt.value = lastAt;
       unreadCount.value = 0;
+      saveLastSeenToStorage(threadId.value, lastSeenAt.value);
       setupWebSocket();
     }
   }
