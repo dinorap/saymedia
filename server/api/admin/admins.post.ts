@@ -21,7 +21,23 @@ export default defineEventHandler(async (event) => {
   if (!username?.trim() || !password) {
     throw createError({ statusCode: 400, statusMessage: 'Thiếu username hoặc password' })
   }
-  const r = role === 'admin_0' ? 'admin_0' : 'admin_1'
+
+  let r: 'admin_0' | 'admin_1' | 'admin_2'
+  if (role === 'admin_0') {
+    r = 'admin_0'
+  } else if (role === 'admin_2') {
+    // Đảm bảo cột role hỗ trợ admin_2 (enum) – idempotent
+    try {
+      await pool.query(
+        "ALTER TABLE admins MODIFY COLUMN role ENUM('admin_0', 'admin_1', 'admin_2') NOT NULL",
+      )
+    } catch {
+      // bỏ qua nếu đã đúng schema hoặc không phải ENUM
+    }
+    r = 'admin_2'
+  } else {
+    r = 'admin_1'
+  }
 
   const [byUsername]: any = await pool.query('SELECT id FROM admins WHERE username = ?', [username.trim()])
   if (byUsername.length > 0) {

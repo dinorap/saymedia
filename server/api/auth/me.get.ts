@@ -29,7 +29,7 @@ export default defineEventHandler(async (event) => {
         const [rows]: any = await pool.query('SELECT email FROM users WHERE id = ?', [decoded.id])
         if (rows.length > 0) user.email = rows[0].email
       }
-    } else if (decoded.role === 'admin_0' || decoded.role === 'admin_1') {
+    } else if (decoded.role === 'admin_0' || decoded.role === 'admin_1' || decoded.role === 'admin_2') {
       await ensureAdminContactSchema()
       const [rows]: any = await pool.query(
         'SELECT ref_code, contact_info FROM admins WHERE id = ? LIMIT 1',

@@ -138,6 +138,17 @@
                   </button>
                 </div>
 
+                <div class="promo-row">
+                  <label class="promo-label">Mã khuyến mại (nếu có)</label>
+                  <input
+                    v-model="promoCode"
+                    type="text"
+                    class="promo-input"
+                    autocomplete="off"
+                    placeholder="Nhập mã khuyến mại..."
+                  />
+                </div>
+
                 <div class="account-details">
                   <div class="detail-row">
                     <span class="detail-label"
@@ -272,6 +283,7 @@ const loading = ref(false);
 const error = ref("");
 const testingPayment = ref(false);
 const activePaymentTab = ref("bank");
+const promoCode = ref("");
 
 const formatTimeRemaining = (seconds) => {
   if (seconds <= 0) return "00:00";
@@ -412,6 +424,7 @@ const createQR = async () => {
       method: "POST",
       body: {
         amount: depositAmount.value,
+        promo_code: promoCode.value || null,
       },
     });
 
@@ -444,6 +457,7 @@ const handleClose = () => {
   qrExpired.value = false;
   depositAmount.value = 100000;
   depositAmountDisplay.value = "100.000";
+  promoCode.value = "";
   error.value = "";
 };
 
@@ -525,7 +539,7 @@ onBeforeUnmount(() => {
   border-radius: 20px;
   max-width: 100%;
   width: min(780px, 92vw);
-  height: min(720px, 90vh);
+  height: min(800px, 90vh);
   overflow: hidden;
   box-shadow: 0 25px 60px rgba(0, 0, 0, 0.35);
   border: 1px solid rgba(255, 255, 255, 0.22);
@@ -788,6 +802,28 @@ onBeforeUnmount(() => {
   transition: all 0.3s ease;
 }
 
+.promo-row {
+  margin-top: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.promo-label {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.promo-input {
+  width: 100%;
+  padding: 0.5rem 0.7rem;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  background: rgba(15, 23, 42, 0.98);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+}
+
 .quick-amount-btn:hover {
   border-color: var(--blue-border);
   background: rgba(1, 123, 251, 0.1);
@@ -986,7 +1022,7 @@ onBeforeUnmount(() => {
 @media (max-width: 768px) {
   .modal-content {
     width: 94vw;
-    height: 92vh;
+    height: 95vh;
   }
 
   .payment-content-grid {

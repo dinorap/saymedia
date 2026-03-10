@@ -46,6 +46,33 @@ export async function ensurePaymentSchema() {
     // Column may already exist.
   }
 
+  try {
+    await pool.query("ALTER TABLE payment_transactions ADD COLUMN promo_code VARCHAR(32) NULL")
+  } catch {
+    // Column may already exist.
+  }
+
+  try {
+    await pool.query("ALTER TABLE payment_transactions ADD COLUMN promo_bonus_credit BIGINT NULL")
+  } catch {
+    // Column may already exist.
+  }
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS deposit_promotions (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      code VARCHAR(32) NOT NULL UNIQUE,
+      bonus_percent INT NULL,
+      bonus_credit BIGINT NULL,
+      max_total_uses INT NULL,
+      max_uses_per_user INT NULL,
+      min_amount BIGINT NULL,
+      starts_at TIMESTAMP NULL,
+      ends_at TIMESTAMP NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `)
+
   schemaReady = true
 }
 

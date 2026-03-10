@@ -46,6 +46,10 @@
           <span class="sidebar-item-icon" aria-hidden="true">📄</span>
           <span class="sidebar-item-label">{{ $t("admin.logs") }}</span>
         </NuxtLink>
+        <NuxtLink to="/admin/support" class="sidebar-item">
+          <span class="sidebar-item-icon" aria-hidden="true">💬</span>
+          <span class="sidebar-item-label">Chat hỗ trợ</span>
+        </NuxtLink>
       </nav>
       <div class="sidebar-footer">
         <button
@@ -66,14 +70,6 @@
             currentUser?.username || $t("admin.profileName")
           }}</span>
           <span class="sidebar-profile-chevron" aria-hidden="true">›</span>
-        </button>
-        <button
-          v-if="currentUser"
-          type="button"
-          class="sidebar-ref-btn"
-          @click="showContactInfo = true"
-        >
-          📇 Thông tin liên hệ
         </button>
         <button
           v-if="registerRefLink"
@@ -184,51 +180,6 @@
       </div>
     </Teleport>
 
-    <!-- Modal thông tin liên hệ -->
-    <Teleport to="body">
-      <div
-        v-if="showContactInfo"
-        class="admin-modal-overlay"
-        @click.self="showContactInfo = false"
-      >
-        <div class="admin-modal">
-          <h3 class="admin-modal-title">
-            {{ $t("admin.contactInfoTitle") }}
-          </h3>
-          <p class="admin-modal-text">
-            {{ $t("admin.contactInfoHint") }}
-          </p>
-          <div class="admin-form-row">
-            <textarea
-              v-model="contactInfo"
-              class="admin-input"
-              rows="4"
-              :placeholder="$t('admin.contactInfoPlaceholder')"
-            />
-          </div>
-          <p v-if="contactSaved" class="admin-success-msg">
-            {{ $t("admin.contactInfoSaved") }}
-          </p>
-          <div class="admin-modal-actions">
-            <button
-              type="button"
-              class="admin-btn-secondary"
-              @click="showContactInfo = false"
-            >
-              {{ $t("admin.cancel") }}
-            </button>
-            <button
-              type="button"
-              class="admin-btn-primary"
-              :disabled="savingContact"
-              @click="saveContact"
-            >
-              {{ savingContact ? "..." : $t("admin.save") }}
-            </button>
-          </div>
-        </div>
-      </div>
-    </Teleport>
   </div>
 </template>
 
@@ -239,10 +190,6 @@ const { show: showToast } = useToast();
 
 const currentUser = ref(null);
 const showChangePassword = ref(false);
-const showContactInfo = ref(false);
-const contactInfo = ref("");
-const savingContact = ref(false);
-const contactSaved = ref(false);
 const pwForm = reactive({
   oldPassword: "",
   newPassword: "",

@@ -277,15 +277,6 @@
                     {{ imagesCount }} {{ $t("admin.images") || "ảnh" }}
                   </p>
                 </div>
-                <div class="form-row">
-                  <label>{{ $t("admin.productSupportContact") || "Thông tin liên hệ hỗ trợ cho sản phẩm" }}</label>
-                  <textarea
-                    v-model="form.support_contact"
-                    class="input input--textarea"
-                    rows="4"
-                    :placeholder="$t('admin.productSupportContactPlaceholder')"
-                  />
-                </div>
               </section>
               <section class="modal-section preview-section">
                 <h4 class="modal-section-title">
@@ -339,7 +330,6 @@ const form = reactive({
   name: "",
   description: "",
   long_description: "",
-  support_contact: "",
   download_url: "",
   thumbnail_url: "",
   images_text: "",
@@ -529,7 +519,6 @@ function openModal(item = null) {
   form.name = item?.name ?? "";
   form.description = item?.description ?? "";
   form.long_description = item?.long_description ?? "";
-  form.support_contact = item?.support_contact ?? "";
   form.download_url = item?.download_url ?? "";
   form.thumbnail_url = item?.thumbnail_url ?? "";
   form.images_text = "";
@@ -566,7 +555,6 @@ async function save() {
       name: form.name?.trim(),
       description: form.description?.trim(),
       long_description: form.long_description?.trim(),
-      support_contact: form.support_contact?.trim(),
       download_url: form.download_url?.trim(),
       thumbnail_url: form.thumbnail_url?.trim(),
       images,

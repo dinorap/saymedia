@@ -1,0 +1,83 @@
+import pool from "../../../utils/db";
+import { ensureSupportChatSchema } from "../../../utils/supportChat";
+import jwt from "jsonwebtoken";
+
+const JWT_SECRET =
+  process.env.JWT_SECRET || "chuoi_bi_mat_jwt_ngau_nhien_cua_sep_123456";
+
+export default defineEventHandler(async (event) => {
+  const idParam = getRouterParam(event, "id");
+  const threadId = Number(idParam);
+  if (!threadId || Number.isNaN(threadId)) {
+    throw createError({ statusCode: 400, statusMessage: "Thread không hợp lệ" });
+  }
+
+  await ensureSupportChatSchema();
+
+  // Lấy thông tin người gọi (user hoặc admin)
+  const token = getCookie(event, "auth_token");
+  if (!token) {
+    throw createError({ statusCode: 401, statusMessage: "Chưa đăng nhập" });
+  }
+
+  let decoded: { id: number; role: string };
+  try {
+    decoded = jwt.verify(token, JWT_SECRET) as { id: number; role: string };
+  } catch {
+    throw createError({
+      statusCode: 401,
+      statusMessage: "Phiên đăng nhập hết hạn",
+    });
+  }
+
+  const [[thread]]: any = await pool.query(
+    `
+      SELECT st.*, u.username AS user_username, a.username AS admin_username, p.name AS product_name
+      FROM support_threads st
+      LEFT JOIN users u ON st.user_id = u.id
+      LEFT JOIN admins a ON st.admin_id = a.id
+      LEFT JOIN products p ON st.product_id = p.id
+      WHERE st.id = ?
+      LIMIT 1
+    `,
+    [threadId],
+  );
+
+  if (!thread) {
+    throw createError({ statusCode: 404, statusMessage: "Không tìm thấy phiên chat" });
+  }
+
+  // Kiểm tra quyền truy cập
+  if (decoded.role === "user" && thread.user_id !== decoded.id) {
+    throw createError({
+      statusCode: 403,
+      statusMessage: "Không có quyền xem phiên chat này",
+    });
+  }
+  if (
+    (decoded.role === "admin_1" || decoded.role === "admin_2") &&
+    thread.admin_id !== decoded.id
+  ) {
+    throw createError({
+      statusCode: 403,
+      statusMessage: "Không có quyền xem phiên chat này",
+    });
+  }
+
+  const [messages]: any = await pool.query(
+    `
+      SELECT id, thread_id, sender_type, sender_id, content, created_at
+      FROM support_messages
+      WHERE thread_id = ?
+      ORDER BY created_at ASC, id ASC
+    `,
+    [threadId],
+  );
+
+  return {
+    success: true,
+    thread,
+    messages: messages || [],
+  };
+});
+

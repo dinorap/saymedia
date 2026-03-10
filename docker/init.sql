@@ -2,7 +2,7 @@ CREATE TABLE admins (
     id INT AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(50) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
-    role ENUM('admin_0', 'admin_1') NOT NULL,
+    role ENUM('admin_0', 'admin_1', 'admin_2') NOT NULL,
     ref_code VARCHAR(12) UNIQUE NOT NULL,
     is_active TINYINT(1) DEFAULT 1,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -43,6 +43,21 @@ CREATE TABLE payment_transactions (
 CREATE INDEX idx_payment_user_id ON payment_transactions(user_id);
 CREATE INDEX idx_payment_status ON payment_transactions(status);
 CREATE INDEX idx_payment_created_at ON payment_transactions(created_at);
+
+-- Mã khuyến mại cho nạp tiền
+CREATE TABLE IF NOT EXISTS deposit_promotions (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    code VARCHAR(32) NOT NULL UNIQUE,
+    bonus_percent INT NULL,
+    bonus_credit BIGINT NULL,
+    max_total_uses INT NULL,
+    max_uses_per_user INT NULL,
+    min_amount BIGINT NULL,
+    starts_at TIMESTAMP NULL,
+    ends_at TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX idx_deposit_promotions_code ON deposit_promotions(code);
 
 CREATE TABLE services (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -144,6 +159,36 @@ CREATE TABLE IF NOT EXISTS credit_ledger (
 CREATE INDEX idx_credit_ledger_user_id ON credit_ledger(user_id);
 CREATE INDEX idx_credit_ledger_created_at ON credit_ledger(created_at);
 CREATE INDEX idx_credit_ledger_reference ON credit_ledger(reference_type, reference_id);
+
+-- Hỗ trợ chat 1-1 giữa user và admin
+CREATE TABLE IF NOT EXISTS support_threads (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    admin_id INT NOT NULL,
+    product_id INT NULL,
+    topic ENUM('account', 'product') NOT NULL DEFAULT 'account',
+    status ENUM('open', 'closed') NOT NULL DEFAULT 'open',
+    last_message_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (admin_id) REFERENCES admins(id) ON DELETE CASCADE,
+    FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE SET NULL
+);
+CREATE INDEX idx_support_threads_admin_id ON support_threads(admin_id);
+CREATE INDEX idx_support_threads_user_id ON support_threads(user_id);
+CREATE INDEX idx_support_threads_last_msg ON support_threads(last_message_at);
+
+CREATE TABLE IF NOT EXISTS support_messages (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    thread_id BIGINT NOT NULL,
+    sender_type ENUM('user', 'admin') NOT NULL,
+    sender_id INT NOT NULL,
+    content TEXT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (thread_id) REFERENCES support_threads(id) ON DELETE CASCADE
+);
+CREATE INDEX idx_support_messages_thread_id ON support_messages(thread_id);
+CREATE INDEX idx_support_messages_created_at ON support_messages(created_at);
 
 -- Dev only: superadmin / 123456. Production: tạo admin qua tool, không hardcode mật khẩu trong SQL.
 INSERT INTO admins (username, password_hash, role, ref_code)

@@ -89,6 +89,7 @@
         <div class="landing-social-proof-wrap">
           <SocialProof />
         </div>
+        <CommunityChat />
       </section>
 
       <section class="landing-section landing-section--how">
@@ -131,6 +132,7 @@
 <script setup>
 import SocialProof from "~/components/SocialProof.vue";
 import SiteHeader from "~/components/SiteHeader.vue";
+import CommunityChat from "~/components/CommunityChat.vue";
 
 const roleCookie = useCookie("user_role", { path: "/" });
 const isLoggedIn = computed(() => roleCookie.value === "user");

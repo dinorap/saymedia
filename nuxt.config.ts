@@ -7,6 +7,20 @@ export default defineNuxtConfig({
     port: 9000
   },
 
+  nitro: {
+    experimental: {
+      websocket: true,
+    },
+  },
+
+  vite: {
+    server: {
+      // Cho phép truy cập dev server qua tunnel như ngrok/localhost.run
+      allowedHosts: ['.ngrok-free.dev', '.localhost.run'],
+      // host: true, // không còn thuộc tính host trong kiểu ServerOptions mới
+    },
+  },
+
   routeRules: {
     '/products': { swr: 60 },
     '/products/**': { swr: 60 },

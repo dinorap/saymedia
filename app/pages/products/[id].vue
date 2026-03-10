@@ -44,7 +44,11 @@
                 @click="setActiveImage(img)"
                 :aria-label="`thumb-${idx + 1}`"
               >
-                <NuxtImg :src="img" :alt="product.name + ' thumb ' + (idx + 1)" loading="lazy" />
+                <NuxtImg
+                  :src="img"
+                  :alt="product.name + ' thumb ' + (idx + 1)"
+                  loading="lazy"
+                />
               </button>
             </div>
           </div>
@@ -336,15 +340,21 @@
                 <div class="hl-k">{{ $t("product.deliveryLabel") }}</div>
                 <div class="hl-v">{{ $t("product.deliveryValue") }}</div>
               </div>
-              <div v-if="product.support_contact" class="hl hl--contact">
+              <div class="hl hl--contact">
                 <div class="hl-k">{{ $t("product.supportContact") }}</div>
                 <div class="hl-v">
                   <button
                     type="button"
                     class="support-show-btn"
-                    @click="showContactPopup = true"
+                    @click="openProductChat"
                   >
                     {{ $t("product.viewContact") }}
+                    <span
+                      v-if="productChatHasUnread > 0"
+                      class="support-unread-badge"
+                    >
+                      {{ productChatHasUnread }}
+                    </span>
                   </button>
                 </div>
               </div>
@@ -361,30 +371,79 @@
       @confirm="doPurchase"
     />
 
-    <!-- Modal xem thông tin liên hệ hỗ trợ sản phẩm -->
+    <!-- Chat hỗ trợ sản phẩm: tái sử dụng layout mini giống ContactBubble -->
     <Teleport to="body">
       <div
-        v-if="showContactPopup && product?.support_contact"
+        v-if="product && productChatThreadId"
         class="detail-contact-overlay"
-        @click.self="showContactPopup = false"
+        v-show="productChatOpen"
+        @click.self="productChatOpen = false"
       >
-        <div class="detail-contact-modal">
-          <h3 class="detail-contact-title">
-            {{ $t("profile.adminContactTitle") }}
-          </h3>
-
-          <pre class="detail-contact-text"
-            >{{ product.support_contact }}
-</pre
-          >
-          <div class="detail-contact-actions">
+        <div class="detail-contact-modal detail-contact-modal--chat">
+          <header class="detail-contact-header">
+            <div class="detail-contact-header-main">
+              <h3 class="detail-contact-title">
+                {{
+                  $t("product.supportChatTitle") || $t("product.supportContact")
+                }}
+                – {{ product.name }}
+              </h3>
+              <p class="detail-contact-sub">
+                {{
+                  $t("product.supportChatSubtitle") ||
+                  "Trao đổi trực tiếp với admin phụ trách sản phẩm này."
+                }}
+              </p>
+            </div>
             <button
               type="button"
-              class="btn-primary"
-              @click="showContactPopup = false"
+              class="detail-contact-close"
+              @click="productChatOpen = false"
             >
-              OK
+              ×
             </button>
+          </header>
+          <div class="detail-contact-chat">
+            <div ref="productChatMessagesEl" class="detail-contact-messages">
+              <div
+                v-for="m in productChatMessages"
+                :key="m.id"
+                class="detail-contact-message"
+                :class="{
+                  'detail-contact-message--mine': m.sender_type === 'user',
+                }"
+              >
+                <div class="detail-contact-message-content">
+                  {{ m.content }}
+                </div>
+              </div>
+              <div
+                v-if="!productChatMessages.length"
+                class="detail-contact-empty"
+              >
+                {{ $t("profile.adminContactEmpty") }}
+              </div>
+            </div>
+            <div class="detail-contact-input-row">
+              <input
+                v-model="productChatDraft"
+                type="text"
+                class="detail-contact-input"
+                :placeholder="
+                  $t('product.supportChatPlaceholder') ||
+                  'Nhập nội dung cần hỗ trợ...'
+                "
+                @keyup.enter="sendProductChat"
+              />
+              <button
+                type="button"
+                class="detail-contact-send-btn"
+                :disabled="productChatSending || !productChatDraft.trim()"
+                @click="sendProductChat"
+              >
+                ➤
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -405,10 +464,11 @@
 </template>
 
 <script setup>
+import { nextTick, watch } from "vue";
 import { defineAsyncComponent } from "vue";
 import SiteHeader from "~/components/SiteHeader.vue";
 const ConfirmPurchaseModal = defineAsyncComponent(
-  () => import("~/components/product/ConfirmPurchaseModal.vue")
+  () => import("~/components/product/ConfirmPurchaseModal.vue"),
 );
 
 const route = useRoute();
@@ -423,6 +483,20 @@ const error = ref("");
 const currentUser = ref(null);
 const showConfirm = ref(false);
 const buying = ref(false);
+
+// Chat hỗ trợ sản phẩm
+const productChatOpen = ref(false);
+const productChatThreadId = ref(null);
+const productChatMessages = ref([]);
+const productChatDraft = ref("");
+const productChatSending = ref(false);
+const productChatMessagesEl = ref(null);
+const productChatLastSeen = ref(0);
+const productChatHasUnread = ref(0);
+
+let productChatWs = null;
+let productChatWsReconnectTimer = null;
+let productChatWsManuallyClosed = false;
 
 const reviewsLoading = ref(false);
 const reviews = ref([]);
@@ -440,6 +514,218 @@ const similarLoading = ref(false);
 const similarProducts = ref([]);
 const adminContact = ref(null);
 const showContactPopup = ref(false);
+
+async function loadProductChatMessages() {
+  if (!productChatThreadId.value) return;
+  try {
+    const res = await $fetch(
+      `/api/support/threads/${productChatThreadId.value}`,
+    );
+    if (res?.success && Array.isArray(res.messages)) {
+      productChatMessages.value = res.messages;
+      if (productChatMessagesEl.value) {
+        await nextTick();
+        productChatMessagesEl.value.scrollTop =
+          productChatMessagesEl.value.scrollHeight || 0;
+        setTimeout(() => {
+          if (!productChatMessagesEl.value) return;
+          productChatMessagesEl.value.scrollTop =
+            productChatMessagesEl.value.scrollHeight || 0;
+        }, 50);
+      }
+      // cập nhật trạng thái đã đọc khi đang mở
+      if (res.messages.length) {
+        const last = res.messages[res.messages.length - 1];
+        const lastAt = new Date(last.created_at || last.createdAt).getTime();
+        if (productChatOpen.value) {
+          productChatLastSeen.value = lastAt;
+          productChatHasUnread.value = 0;
+        }
+      } else {
+        productChatHasUnread.value = 0;
+      }
+    }
+  } catch {
+    // ignore
+  }
+}
+
+async function openProductChat() {
+  if (!product.value?.id) return;
+  try {
+    const res = await $fetch("/api/support/thread", {
+      method: "POST",
+      body: { topic: "product", product_id: product.value.id },
+    });
+    if (res?.success && res.threadId) {
+      productChatThreadId.value = res.threadId;
+      await loadProductChatMessages();
+      productChatOpen.value = true;
+      if (productChatMessagesEl.value) {
+        await nextTick();
+        productChatMessagesEl.value.scrollTop =
+          productChatMessagesEl.value.scrollHeight || 0;
+      }
+      // sau khi mở lần đầu, coi như đã đọc tới tin mới nhất
+      if (productChatMessages.value.length) {
+        const last = productChatMessages.value[productChatMessages.value.length - 1];
+        const lastAt = new Date(last.created_at || last.createdAt).getTime();
+        productChatLastSeen.value = lastAt;
+        productChatHasUnread.value = 0;
+      }
+      setupProductChatWebSocket();
+    }
+  } catch (e) {
+    showToast(
+      t("auth.unauthorized") || "Vui lòng đăng nhập để chat với hỗ trợ",
+      "error",
+    );
+    const route = useRoute();
+    navigateTo(`/login?next=${route.fullPath || `/products/${route.params.id}`}`);
+  }
+}
+
+async function sendProductChat() {
+  if (
+    !productChatThreadId.value ||
+    !productChatDraft.value.trim() ||
+    productChatSending.value
+  ) {
+    return;
+  }
+  const text = productChatDraft.value.trim();
+  productChatSending.value = true;
+  try {
+    await $fetch("/api/support/messages", {
+      method: "POST",
+      body: { thread_id: productChatThreadId.value, content: text },
+    });
+    productChatDraft.value = "";
+  } catch {
+    // ignore
+  } finally {
+    productChatSending.value = false;
+  }
+}
+
+function setupProductChatWebSocket() {
+  if (typeof window === "undefined") return;
+  if (!productChatThreadId.value) return;
+
+  if (
+    productChatWs &&
+    (productChatWs.readyState === WebSocket.OPEN ||
+      productChatWs.readyState === WebSocket.CONNECTING)
+  ) {
+    return;
+  }
+
+  productChatWsManuallyClosed = false;
+
+  const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+  const url = `${protocol}://${window.location.host}/ws/support`;
+
+  productChatWs = new WebSocket(url);
+
+  productChatWs.addEventListener("open", () => {
+    if (productChatWsReconnectTimer) {
+      clearTimeout(productChatWsReconnectTimer);
+      productChatWsReconnectTimer = null;
+    }
+    if (productChatThreadId.value && productChatWs) {
+      productChatWs.send(
+        JSON.stringify({
+          type: "subscribe",
+          threadId: productChatThreadId.value,
+        }),
+      );
+    }
+  });
+
+  productChatWs.addEventListener("message", async (event) => {
+    try {
+      const data = JSON.parse(event.data);
+      if (
+        data.type === "support_message" &&
+        data.threadId === productChatThreadId.value &&
+        data.message
+      ) {
+        productChatMessages.value.push(data.message);
+        if (productChatMessagesEl.value) {
+          await nextTick();
+          productChatMessagesEl.value.scrollTop =
+            productChatMessagesEl.value.scrollHeight || 0;
+        }
+        const lastAt = new Date(
+          data.message.created_at || data.message.createdAt,
+        ).getTime();
+        if (productChatOpen.value) {
+          productChatLastSeen.value = lastAt;
+          productChatHasUnread.value = 0;
+        } else if (lastAt > productChatLastSeen.value) {
+          productChatHasUnread.value += 1;
+        }
+      }
+    } catch {
+      // ignore
+    }
+  });
+
+  productChatWs.addEventListener("close", () => {
+    productChatWs = null;
+    if (!productChatWsManuallyClosed) {
+      productChatWsReconnectTimer = setTimeout(() => {
+        setupProductChatWebSocket();
+      }, 5000);
+    }
+  });
+
+  productChatWs.addEventListener("error", () => {
+    try {
+      productChatWs && productChatWs.close();
+    } catch {
+      // ignore
+    }
+  });
+}
+
+watch(
+  () => productChatOpen.value,
+  async (val) => {
+    if (val && productChatMessagesEl.value) {
+      await nextTick();
+      productChatMessagesEl.value.scrollTop =
+        productChatMessagesEl.value.scrollHeight || 0;
+    }
+  },
+);
+
+watch(
+  () => productChatMessages.value.length,
+  async () => {
+    if (productChatOpen.value && productChatMessagesEl.value) {
+      await nextTick();
+      productChatMessagesEl.value.scrollTop =
+        productChatMessagesEl.value.scrollHeight || 0;
+    }
+  },
+);
+
+onUnmounted(() => {
+  productChatWsManuallyClosed = true;
+  if (productChatWsReconnectTimer) {
+    clearTimeout(productChatWsReconnectTimer);
+    productChatWsReconnectTimer = null;
+  }
+  if (productChatWs) {
+    try {
+      productChatWs.close();
+    } catch {
+      // ignore
+    }
+    productChatWs = null;
+  }
+});
 
 function formatVnd(v) {
   return (Number(v) || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
@@ -1392,11 +1678,32 @@ watch(
 .detail-contact-modal {
   width: 100%;
   max-width: 420px;
-  background: var(--bg-card);
+  background:
+    radial-gradient(
+      circle at top left,
+      rgba(56, 189, 248, 0.18),
+      transparent 55%
+    ),
+    radial-gradient(
+      circle at bottom right,
+      rgba(37, 99, 235, 0.22),
+      var(--bg-card)
+    );
   border-radius: 1rem;
   padding: 1.5rem 1.75rem;
   box-shadow: var(--neon-shadow);
   border: 1px solid rgba(1, 123, 251, 0.45);
+}
+
+.detail-contact-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.detail-contact-header-main {
+  flex: 1;
 }
 
 .detail-contact-title {
@@ -1418,10 +1725,138 @@ watch(
   white-space: pre-wrap;
 }
 
+.detail-contact-close {
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 1.3rem;
+  cursor: pointer;
+}
+
 .detail-contact-actions {
   display: flex;
   justify-content: flex-end;
   margin-top: 0.5rem;
+}
+
+/* Chat hỗ trợ sản phẩm */
+.detail-contact-chat {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 0.35rem;
+}
+
+.detail-contact-messages {
+  height: 280px;
+  padding: 6px 6px 6px 4px;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.96);
+  border: 1px solid rgba(30, 64, 175, 0.7);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.9);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.detail-contact-messages::-webkit-scrollbar {
+  width: 3px;
+}
+
+.detail-contact-messages::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.detail-contact-messages::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.6);
+  border-radius: 999px;
+}
+
+.detail-contact-messages::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.9);
+}
+
+.detail-contact-message {
+  max-width: 88%;
+  align-self: flex-start;
+}
+
+.detail-contact-message--mine {
+  align-self: flex-end;
+}
+
+.detail-contact-message-content {
+  padding: 6px 9px;
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid rgba(51, 65, 85, 0.9);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.detail-contact-message--mine .detail-contact-message-content {
+  background: linear-gradient(
+    135deg,
+    rgba(37, 99, 235, 0.95),
+    rgba(56, 189, 248, 0.95)
+  );
+  border-color: rgba(59, 130, 246, 0.9);
+  color: #e5f3ff;
+}
+
+.detail-contact-empty {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.detail-contact-input-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.detail-contact-input {
+  flex: 1;
+  border-radius: 999px;
+  border: 1px solid rgba(51, 65, 85, 0.9);
+  background: rgba(15, 23, 42, 0.98);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  padding: 6px 10px;
+}
+
+.detail-contact-send-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  border: none;
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: #fff;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.detail-contact-send-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.support-unread-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 6px;
+  min-width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
 }
 
 @media (max-width: 1024px) {

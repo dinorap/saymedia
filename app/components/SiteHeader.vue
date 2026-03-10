@@ -119,7 +119,9 @@ function cancelClose() {
 
 onMounted(async () => {
   const role = useCookie("user_role", { path: "/" }).value;
-  if (role === "user") {
+  // Hiển thị tên + menu tài khoản cho mọi role không phải admin dashboard
+  // (user thường + admin_2 dùng giao diện khách)
+  if (role && role !== "admin_0" && role !== "admin_1") {
     try {
       const data = await $fetch("/api/auth/me");
       if (data?.user) currentUser.value = data.user;

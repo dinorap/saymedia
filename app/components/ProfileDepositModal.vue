@@ -32,6 +32,17 @@
               <button @click="pickAmount(500000)">500.000</button>
             </div>
 
+            <div class="promo-box">
+              <label>Mã khuyến mại (nếu có)</label>
+              <input
+                v-model="promoCode"
+                class="promo-input"
+                type="text"
+                autocomplete="off"
+                placeholder="Nhập mã khuyến mại..."
+              />
+            </div>
+
             <div class="memo-box">
               <div class="memo-label">Nội dung chuyển khoản (bắt buộc):</div>
               <div class="memo-row">
@@ -75,6 +86,7 @@ const amount = ref(100000)
 const amountDisplay = ref('100.000')
 const qrData = ref<any>(null)
 const qrRemaining = ref(0)
+const promoCode = ref('')
 const loading = ref(false)
 const testing = ref(false)
 const error = ref('')
@@ -93,6 +105,7 @@ function resetForm() {
   amountDisplay.value = '100.000'
   qrData.value = null
   qrRemaining.value = 0
+  promoCode.value = ''
   loading.value = false
   testing.value = false
   error.value = ''
@@ -156,7 +169,7 @@ async function createQr() {
   try {
     const res: any = await $fetch('/api/payment/qr', {
       method: 'POST',
-      body: { amount: amount.value }
+      body: { amount: amount.value, promo_code: promoCode.value || null }
     })
     qrData.value = res
     startCountdown(res.expires_in_seconds || 300)
@@ -251,6 +264,8 @@ watch(
 .amount-input { width: 100%; padding: .65rem .8rem; border-radius: 8px; border: 1px solid var(--input-border); background: var(--input-bg); color: var(--text-primary); }
 .quick { margin-top: .6rem; display: grid; grid-template-columns: repeat(4, 1fr); gap: .4rem; }
 .quick button { padding: .45rem; border-radius: 8px; border: 1px solid rgba(255,255,255,.18); background: rgba(255,255,255,.04); color: var(--text-secondary); cursor: pointer; }
+.promo-box { margin-top: .8rem; }
+.promo-input { width: 100%; padding: .5rem .7rem; border-radius: 8px; border: 1px solid var(--input-border); background: var(--input-bg); color: var(--text-primary); font-size: .9rem; }
 .memo-box { margin-top: .8rem; padding: .65rem; border: 1px solid rgba(255,255,255,.12); border-radius: 8px; background: rgba(255,255,255,.03); }
 .memo-label { font-size: .85rem; color: var(--text-secondary); margin-bottom: .35rem; }
 .memo-row { display: flex; align-items: center; gap: .5rem; }

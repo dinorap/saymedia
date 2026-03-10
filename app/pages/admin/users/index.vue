@@ -30,6 +30,7 @@
               <option value="">{{ $t("admin.all") }}</option>
               <option value="admin_0">admin_0</option>
               <option value="admin_1">admin_1</option>
+              <option value="admin_2">admin_2</option>
             </select>
           </div>
           <div class="search-group">
@@ -76,15 +77,9 @@
               <td>
                 <span
                   class="badge"
-                  :class="
-                    a.role === 'admin_0' ? 'badge--primary' : 'badge--secondary'
-                  "
+                  :class="roleBadgeClass(a.role)"
                 >
-                  {{
-                    a.role === "admin_0"
-                      ? $t("admin.admin0")
-                      : $t("admin.admin1")
-                  }}
+                  {{ roleLabel(a.role) }}
                 </span>
               </td>
               <td>
@@ -340,6 +335,7 @@
               <select v-model="adminForm.role" class="input">
                 <option value="admin_0">{{ $t("admin.admin0") }}</option>
                 <option value="admin_1">{{ $t("admin.admin1") }}</option>
+                <option value="admin_2">admin_2 (chat cộng đồng)</option>
               </select>
             </div>
             <div v-if="editingAdmin" class="form-row">
@@ -661,6 +657,20 @@ function openAdminModal(admin = null) {
   adminForm.is_active = admin ? !!admin.is_active : true;
   adminError.value = "";
   adminModalOpen.value = true;
+}
+
+function roleBadgeClass(role) {
+  if (role === "admin_0") return "badge--primary";
+  if (role === "admin_1") return "badge--secondary";
+  if (role === "admin_2") return "badge--danger";
+  return "badge--secondary";
+}
+
+function roleLabel(role) {
+  if (role === "admin_0") return t("admin.admin0");
+  if (role === "admin_1") return t("admin.admin1");
+  if (role === "admin_2") return "admin_2 (community)";
+  return role || "-";
 }
 
 async function saveAdmin() {
@@ -1065,6 +1075,11 @@ onMounted(() => {
 .badge--muted {
   background: rgba(255, 255, 255, 0.06);
   color: var(--text-muted);
+}
+
+.badge--danger {
+  background: rgba(248, 113, 113, 0.18);
+  color: #f97373;
 }
 
 /* Modal */

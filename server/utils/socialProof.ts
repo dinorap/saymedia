@@ -15,6 +15,23 @@ export async function ensureSocialProofSchema() {
     )
   `)
 
+  // Bổ sung cột phân loại và số tiền (nếu chưa có)
+  try {
+    await pool.query(
+      "ALTER TABLE recent_orders_feed ADD COLUMN kind VARCHAR(20) NOT NULL DEFAULT 'order'",
+    )
+  } catch {
+    // cột có thể đã tồn tại
+  }
+
+  try {
+    await pool.query(
+      'ALTER TABLE recent_orders_feed ADD COLUMN amount BIGINT NULL',
+    )
+  } catch {
+    // cột có thể đã tồn tại
+  }
+
   schemaReady = true
 }
 
@@ -31,6 +48,40 @@ export async function addSocialProofItem(
       VALUES (?, ?, ?)
     `,
     [displayName, itemName, isFake ? 1 : 0],
+  )
+
+  // Giữ tối đa 20 bản ghi mới nhất
+  await pool.query(
+    `
+      DELETE FROM recent_orders_feed
+      WHERE id NOT IN (
+        SELECT id FROM (
+          SELECT id
+          FROM recent_orders_feed
+          ORDER BY created_at DESC
+          LIMIT 20
+        ) AS t
+      )
+    `,
+  )
+}
+
+export async function addDepositSocialProofItem(
+  displayName: string,
+  amountVnd: number,
+  isFake: boolean,
+) {
+  await ensureSocialProofSchema()
+
+  const amount = Math.max(0, Math.round(Number(amountVnd) || 0))
+  const label = `Nạp ${amount.toLocaleString('vi-VN')}đ`
+
+  await pool.query(
+    `
+      INSERT INTO recent_orders_feed (display_name, item_name, is_fake, kind, amount)
+      VALUES (?, ?, ?, 'deposit', ?)
+    `,
+    [displayName, label, isFake ? 1 : 0, amount || null],
   )
 
   // Giữ tối đa 20 bản ghi mới nhất
@@ -170,27 +221,43 @@ export function startSocialProofFakeLoop() {
       try {
         const { name } = generateFakeItemText()
 
-        let itemName = ''
-        try {
-          const [rows]: any = await pool.query(
-            `
-              SELECT name
-              FROM products
-              WHERE is_active = 1
-              ORDER BY RAND()
-              LIMIT 1
-            `,
-          )
-          itemName = rows?.[0]?.name || ''
-        } catch {
-          itemName = ''
-        }
+        // Ngẫu nhiên: đôi khi tạo đơn hàng ảo, đôi khi tạo fake nạp tiền
+        const roll = Math.random()
 
-        if (!itemName) {
-          itemName = randomItem(PRODUCT_NAMES)
-        }
+        if (roll < 0.5) {
+          // Fake đơn hàng mua sản phẩm
+          let itemName = ''
+          try {
+            const [rows]: any = await pool.query(
+              `
+                SELECT name
+                FROM products
+                WHERE is_active = 1
+                ORDER BY RAND()
+                LIMIT 1
+              `,
+            )
+            itemName = rows?.[0]?.name || ''
+          } catch {
+            itemName = ''
+          }
 
-        await addSocialProofItem(name, itemName, true)
+          if (!itemName) {
+            itemName = randomItem(PRODUCT_NAMES)
+          }
+
+          await addSocialProofItem(name, itemName, true)
+        } else {
+          // Fake nạp tiền (10k–500k, bội số của 10k)
+          const MIN_VND = 10000
+          const MAX_VND = 500000
+          const STEP = 10000
+          const steps = Math.floor((MAX_VND - MIN_VND) / STEP) + 1
+          const idx = Math.floor(Math.random() * steps)
+          const amount = MIN_VND + idx * STEP
+
+          await addDepositSocialProofItem(name, amount, true)
+        }
       } catch (e) {
         console.error('[social-proof] failed to add fake item', e)
       }

@@ -29,6 +29,8 @@ export default defineEventHandler(async (event) => {
 
   const body = parseBodyOrThrow(await readBody(event), paymentQrSchema)
   const amount = body.amount
+  const rawPromoCode = (body as any).promo_code as string | null | undefined
+  const promoCode = rawPromoCode ? String(rawPromoCode).trim().toUpperCase() : null
   const converted = convertVndToCredit(amount)
   if (converted.credit <= 0) {
     throw createError({
@@ -44,9 +46,9 @@ export default defineEventHandler(async (event) => {
   const qrUrl = buildQrUrl(amount, memo)
 
   await pool.query(
-    `INSERT INTO payment_transactions (trans_id, user_id, amount, status, memo)
-     VALUES (?, ?, ?, 'pending', ?)`,
-    [transId, decoded.id, amount, memo]
+    `INSERT INTO payment_transactions (trans_id, user_id, amount, status, memo, promo_code)
+     VALUES (?, ?, ?, 'pending', ?, ?)`,
+    [transId, decoded.id, amount, memo, promoCode]
   )
 
   return {

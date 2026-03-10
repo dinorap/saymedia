@@ -23,6 +23,12 @@ export const paymentQrSchema = z.object({
     .number()
     .int()
     .min(10000, "Số tiền tối thiểu là 10.000 VND"),
+  promo_code: z
+    .string()
+    .trim()
+    .max(32, "Mã khuyến mại quá dài")
+    .optional()
+    .nullable(),
 });
 
 export type PaymentQrBody = z.infer<typeof paymentQrSchema>;
@@ -36,9 +42,11 @@ export function parseBodySafe<T>(
 ): { success: true; data: T } | { success: false; message: string } {
   const result = schema.safeParse(body);
   if (result.success) return { success: true, data: result.data };
+  // ZodError type in this version không có thuộc tính 'errors' public,
+  // nên fallback dùng toString/message chung.
   const msg =
-    result.error.errors?.[0]?.message ||
-    result.error.message ||
+    (result.error as any)?.errors?.[0]?.message ||
+    result.error?.message ||
     "Dữ liệu không hợp lệ";
   return { success: false, message: msg };
 }

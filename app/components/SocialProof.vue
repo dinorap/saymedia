@@ -38,6 +38,12 @@ function formatTimeFromMs(diffMs) {
   return t("socialProof.minutesAgo", { n: minutes });
 }
 
+function formatVnd(amount) {
+  const n = Number(amount || 0);
+  if (!Number.isFinite(n) || !n) return "0đ";
+  return `${n.toLocaleString("vi-VN")}đ`;
+}
+
 const displayWithTime = computed(() => {
   // tạo phụ thuộc vào timeTick để update "X giây/phút trước"
   // eslint-disable-next-line no-unused-expressions
@@ -54,9 +60,20 @@ const displayWithTime = computed(() => {
       }
     }
     const diffMs = Math.max(1000, now - createdAtMs);
+
+    const kind = item.kind || "order";
+    let textMid = t("socialProof.bought") + " ";
+    let productText = item.product;
+
+    if (kind === "deposit") {
+      textMid = t("socialProof.deposited") + " ";
+      productText = formatVnd(item.amount || 0);
+    }
+
     return {
       ...item,
-      textMid: t("socialProof.bought") + " ",
+      product: productText,
+      textMid,
       time: formatTimeFromMs(diffMs),
     };
   });
@@ -82,7 +99,7 @@ onMounted(async () => {
   // poll nhẹ để cập nhật item mới server sinh ra
   pollId = setInterval(() => {
     loadFeed();
-  }, 30000);
+  }, 5000);
 });
 
 onUnmounted(() => {

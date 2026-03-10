@@ -241,6 +241,7 @@
   "socialProof": {
     "title": "Recent orders",
     "bought": "just bought",
+    "deposited": "just deposited",
     "secondsAgo": "{n} seconds ago",
     "minutesAgo": "{n} min ago",
     "hoursAgo": "{n} hours ago"
@@ -290,9 +291,11 @@
     "openLink": "Open download link"
   },
   "profile": {
-    "adminContactTitle": "Support contact",
-    "adminContactLabel": "Your contact person",
-    "adminContactEmpty": "Your admin has not provided contact information yet."
+  "adminContactTitle": "Account support",
+  "adminContactLabel": "Assigned admin",
+  "adminContactEmpty": "Your admin has not replied yet. Leave a message to get support as soon as possible.",
+  "adminContactHint": "Chat directly with the admin in charge of your account about deposits, orders and other issues.",
+  "adminChatPlaceholder": "Type what you need help with..."
   },
   "product": {
     "viewDetail": "View detail",
@@ -326,8 +329,11 @@
     "supportValue": "Fast response",
     "deliveryLabel": "Delivery",
     "deliveryValue": "After confirmation",
-    "supportContact": "Support contact",
-    "viewContact": "View details",
+  "supportContact": "Product support",
+  "viewContact": "Open chat",
+  "supportChatTitle": "Product support chat",
+  "supportChatSubtitle": "Chat directly with the admin responsible for this product.",
+  "supportChatPlaceholder": "Type what you need help with (errors, usage, warranty, ...)",
     "confirmTitle": "Confirm purchase",
     "confirmText": "Are you sure you want to buy",
     "confirmWithPrice": "for",

@@ -3,6 +3,7 @@ import pool from '../../../utils/db'
 import { ensurePaymentSchema, PAYMENT_EXPIRE_MINUTES, convertVndToCredit } from '../../../utils/payment'
 import { addAuditLog } from '../../../utils/audit'
 import { applyCreditChange, ensureCreditLedgerSchema } from '../../../utils/creditLedger'
+import { addDepositSocialProofItem } from '../../../utils/socialProof'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'chuoi_bi_mat_jwt_ngau_nhien_cua_sep_123456'
 
@@ -34,12 +35,13 @@ export default defineEventHandler(async (event) => {
   const conn = await pool.getConnection()
   let tx: any = null
   let credited = 0
+  let bonusCredit = 0
   let newCredit = 0
   try {
     await conn.beginTransaction()
     const [rows]: any = await conn.query(
       `
-        SELECT trans_id, user_id, amount, status, created_at,
+        SELECT trans_id, user_id, amount, status, created_at, promo_code,
                TIMESTAMPDIFF(SECOND, created_at, NOW()) AS age_seconds
         FROM payment_transactions
         WHERE trans_id = ?
@@ -68,13 +70,66 @@ export default defineEventHandler(async (event) => {
       })
     }
 
+    const promoCode: string | null = tx.promo_code || null
+    if (promoCode && credited > 0) {
+      const [[promo]]: any = await conn.query(
+        `
+          SELECT *
+          FROM deposit_promotions
+          WHERE code = ?
+            AND (starts_at IS NULL OR starts_at <= NOW())
+            AND (ends_at IS NULL OR ends_at >= NOW())
+          LIMIT 1
+        `,
+        [promoCode],
+      )
+
+      if (promo) {
+        const minAmountOk =
+          !promo.min_amount || Number(tx.amount) >= Number(promo.min_amount || 0)
+
+        if (minAmountOk) {
+          const [[usageRow]]: any = await conn.query(
+            `
+              SELECT
+                SUM(CASE WHEN user_id = ? THEN 1 ELSE 0 END) AS user_uses,
+                COUNT(*) AS total_uses
+              FROM payment_transactions
+              WHERE promo_code = ?
+                AND status = 'success'
+            `,
+            [decoded.id, promoCode],
+          )
+
+          const userUses = Number(usageRow?.user_uses || 0)
+          const totalUses = Number(usageRow?.total_uses || 0)
+          const underUserLimit =
+            !promo.max_uses_per_user || userUses < Number(promo.max_uses_per_user || 0)
+          const underTotalLimit =
+            !promo.max_total_uses || totalUses < Number(promo.max_total_uses || 0)
+
+          if (underUserLimit && underTotalLimit) {
+            const percent = Number(promo.bonus_percent || 0)
+            const fixedBonus = Number(promo.bonus_credit || 0)
+            const percentBonus = percent > 0 ? Math.floor((credited * percent) / 100) : 0
+            bonusCredit = percentBonus + (fixedBonus > 0 ? fixedBonus : 0)
+            if (bonusCredit < 0) bonusCredit = 0
+            credited += bonusCredit
+          }
+        }
+      }
+    }
+
     await conn.query(
       `
         UPDATE payment_transactions
-        SET status = 'success', actual_amount = ?, credit_amount = ?
+        SET status = 'success',
+            actual_amount = ?,
+            credit_amount = ?,
+            promo_bonus_credit = ?
         WHERE trans_id = ?
       `,
-      [tx.amount, credited, transId],
+      [tx.amount, credited, bonusCredit || null, transId],
     )
 
     const creditResult = await applyCreditChange(conn, {
@@ -104,8 +159,36 @@ export default defineEventHandler(async (event) => {
     action: 'payment_success_test',
     targetType: 'payment_transaction',
     targetId: transId,
-    metadata: { amount: tx.amount, credited, source: 'simulate-payment' },
+    metadata: { amount: tx.amount, credited, bonus_credit: bonusCredit, source: 'simulate-payment' },
   })
+
+  // Thêm vào feed "Đơn hàng gần đây" cho nạp tiền test
+  try {
+    const [[user]]: any = await pool.query(
+      `
+        SELECT username
+        FROM users
+        WHERE id = ?
+        LIMIT 1
+      `,
+      [decoded.id],
+    )
+
+    const rawName = String(user?.username || '').trim()
+    let displayName = 'Khách hàng'
+    if (rawName) {
+      if (rawName.length <= 3) {
+        displayName = `${rawName[0]}***`
+      } else {
+        displayName = `${rawName[0]}***${rawName[rawName.length - 1]}`
+      }
+    }
+
+    await addDepositSocialProofItem(displayName, Number(tx.amount || 0), false)
+  } catch {
+    // không làm hỏng simulate nếu feed lỗi
+  }
+
   return {
     success: true,
     transfer_amount: tx.amount,

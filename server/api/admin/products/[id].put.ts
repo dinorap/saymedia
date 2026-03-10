@@ -3,7 +3,6 @@ import pool from "../../../utils/db";
 const ALLOWED_TYPES = new Set(["tool", "account", "service", "other"]);
 const MAX_NAME = 200;
 const MAX_DESCRIPTION = 2000;
-const MAX_SUPPORT_CONTACT = 4000;
 const MAX_DOWNLOAD_URL = 2000;
 const MAX_THUMBNAIL_URL = 512;
 const MAX_LONG_DESCRIPTION = 8000;
@@ -36,8 +35,6 @@ export default defineEventHandler(async (event) => {
   const body = await readBody(event);
   const name = String(body?.name || "").trim().slice(0, MAX_NAME);
   const description = (String(body?.description || "").trim() || null)?.slice(0, MAX_DESCRIPTION) || null;
-  const supportContact =
-    (String(body?.support_contact || "").trim() || null)?.slice(0, MAX_SUPPORT_CONTACT) || null;
   const downloadUrl = (String(body?.download_url || "").trim() || null)?.slice(0, MAX_DOWNLOAD_URL) || null;
   const thumbnailUrl = (String(body?.thumbnail_url || "").trim() || null)?.slice(0, MAX_THUMBNAIL_URL) || null;
   const longDescription =
@@ -73,7 +70,6 @@ export default defineEventHandler(async (event) => {
       SET
         name = ?,
         description = ?,
-        support_contact = ?,
         long_description = ?,
         download_url = ?,
         thumbnail_url = ?,
@@ -86,7 +82,6 @@ export default defineEventHandler(async (event) => {
     [
       name,
       description || null,
-      supportContact || null,
       longDescription || null,
       downloadUrl || null,
       thumbnailUrl || null,

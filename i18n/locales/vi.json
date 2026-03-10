@@ -241,6 +241,7 @@
   "socialProof": {
     "title": "Đơn hàng gần đây",
     "bought": "vừa mua",
+    "deposited": "vừa nạp",
     "secondsAgo": "{n} giây trước",
     "minutesAgo": "{n} phút trước",
     "hoursAgo": "{n} giờ trước"
@@ -290,9 +291,11 @@
     "openLink": "Mở link tải"
   },
   "profile": {
-    "adminContactTitle": "Liên hệ hỗ trợ",
-    "adminContactLabel": "Người phụ trách",
-    "adminContactEmpty": "Admin của bạn chưa cập nhật thông tin liên hệ."
+  "adminContactTitle": "Hỗ trợ tài khoản",
+  "adminContactLabel": "Admin phụ trách",
+  "adminContactEmpty": "Admin của bạn chưa trả lời, hãy để lại tin nhắn để được hỗ trợ sớm nhất.",
+  "adminContactHint": "Chat trực tiếp với admin phụ trách tài khoản về nạp tiền, đơn hàng và các vấn đề khác.",
+  "adminChatPlaceholder": "Nhập nội dung cần hỗ trợ..."
   },
   "product": {
     "viewDetail": "Xem chi tiết",
@@ -326,8 +329,11 @@
     "supportValue": "Nhanh chóng",
     "deliveryLabel": "Giao hàng",
     "deliveryValue": "Sau xác nhận",
-    "supportContact": "Liên hệ hỗ trợ",
-    "viewContact": "Xem thông tin",
+  "supportContact": "Hỗ trợ sản phẩm",
+  "viewContact": "Mở chat",
+  "supportChatTitle": "Chat hỗ trợ sản phẩm",
+  "supportChatSubtitle": "Trao đổi trực tiếp với admin phụ trách sản phẩm này.",
+  "supportChatPlaceholder": "Nhập nội dung bạn cần hỗ trợ (lỗi sản phẩm, hướng dẫn sử dụng, bảo hành...)",
     "confirmTitle": "Xác nhận mua",
     "confirmText": "Bạn có chắc mua",
     "confirmWithPrice": "với giá",
