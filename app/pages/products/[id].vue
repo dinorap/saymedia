@@ -568,7 +568,8 @@ async function openProductChat() {
       }
       // sau khi mở lần đầu, coi như đã đọc tới tin mới nhất
       if (productChatMessages.value.length) {
-        const last = productChatMessages.value[productChatMessages.value.length - 1];
+        const last =
+          productChatMessages.value[productChatMessages.value.length - 1];
         const lastAt = new Date(last.created_at || last.createdAt).getTime();
         productChatLastSeen.value = lastAt;
         productChatHasUnread.value = 0;
@@ -581,7 +582,9 @@ async function openProductChat() {
       "error",
     );
     const route = useRoute();
-    navigateTo(`/login?next=${route.fullPath || `/products/${route.params.id}`}`);
+    navigateTo(
+      `/login?next=${route.fullPath || `/products/${route.params.id}`}`,
+    );
   }
 }
 
@@ -1677,7 +1680,7 @@ watch(
 
 .detail-contact-modal {
   width: 100%;
-  max-width: 420px;
+  max-width: 550px;
   background:
     radial-gradient(
       circle at top left,
@@ -1748,7 +1751,7 @@ watch(
 }
 
 .detail-contact-messages {
-  height: 280px;
+  height: 380px;
   padding: 6px 6px 6px 4px;
   border-radius: 12px;
   background: rgba(15, 23, 42, 0.96);
