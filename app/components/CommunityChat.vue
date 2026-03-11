@@ -255,6 +255,12 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  border-radius: 16px;
+  border: 1px solid rgba(1, 123, 251, 0.35);
+  box-shadow:
+    0 0 25px rgba(1, 123, 251, 0.45),
+    0 12px 40px rgba(15, 23, 42, 0.9);
+  backdrop-filter: blur(16px);
 }
 
 .chat-messages {

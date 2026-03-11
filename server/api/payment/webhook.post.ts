@@ -44,19 +44,38 @@ export default defineEventHandler(async (event) => {
   }
 
   if (!tx) {
-    const [rows]: any = await pool.query(
-      `SELECT trans_id, user_id, amount, status, created_at, promo_code,
-              TIMESTAMPDIFF(SECOND, created_at, NOW()) AS age_seconds
-       FROM payment_transactions
-       WHERE status = 'pending' AND amount = ?
-       ORDER BY created_at ASC LIMIT 1`,
-      [transferAmount]
-    )
-    tx = rows?.[0]
+    // Fallback match by amount is risky; disable in production by default.
+    // Only allow if explicitly enabled (useful for dev/testing environments).
+    const allowAmountFallback =
+      process.env.NODE_ENV !== 'production' ||
+      process.env.SEPAY_ALLOW_AMOUNT_FALLBACK === 'true'
+
+    if (allowAmountFallback) {
+      const [rows]: any = await pool.query(
+        `SELECT trans_id, user_id, amount, status, created_at, promo_code,
+                TIMESTAMPDIFF(SECOND, created_at, NOW()) AS age_seconds
+         FROM payment_transactions
+         WHERE status = 'pending' AND amount = ?
+         ORDER BY created_at ASC LIMIT 1`,
+        [transferAmount]
+      )
+      tx = rows?.[0]
+    }
   }
 
   if (!tx) return { success: true, matched: false }
   if (tx.status !== 'pending') return { success: true, matched: true, status: tx.status }
+  // If we matched by trans_id, require amount to match exactly to prevent tampering.
+  if (extracted && Number(tx.amount) !== Number(transferAmount)) {
+    await addAuditLog({
+      actorType: 'system',
+      action: 'payment_amount_mismatch',
+      targetType: 'payment_transaction',
+      targetId: tx.trans_id,
+      metadata: { extracted_trans_id: extracted, expected_amount: tx.amount, transferAmount },
+    })
+    return { success: true, matched: true, status: 'amount_mismatch', trans_id: tx.trans_id }
+  }
   if (Number(tx.age_seconds || 0) > PAYMENT_EXPIRE_MINUTES * 60) {
     await pool.query(`UPDATE payment_transactions SET status = 'cancelled' WHERE trans_id = ?`, [tx.trans_id])
     await addAuditLog({

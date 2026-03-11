@@ -171,7 +171,7 @@ const isLoggedIn = computed(() => roleCookie.value === "user");
 .landing-two-col {
   display: flex;
   gap: 2rem;
-  padding: 0 150px 80px;
+  padding: 0 150px 40px;
   align-items: flex-start;
 }
 
@@ -301,6 +301,7 @@ const isLoggedIn = computed(() => roleCookie.value === "user");
   display: flex;
   flex-direction: column;
   gap: 14px;
+  margin-top: 12px;
 }
 
 .how-step {

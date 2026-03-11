@@ -49,6 +49,7 @@
           <tr>
             <th>{{ $t("admin.id") }}</th>
             <th>{{ $t("admin.username") }}</th>
+            <th>Hình thức</th>
             <th>Số tiền (VND)</th>
             <th>Tín chỉ (dự kiến)</th>
             <th>Tín chỉ đã cộng</th>
@@ -62,6 +63,11 @@
               {{ (pagination.page - 1) * pagination.limit + idx + 1 }}
             </td>
             <td>{{ tx.user_username }}</td>
+            <td>
+              <span class="provider-pill" :class="`provider-pill--${tx.provider || 'sepay'}`">
+                {{ providerLabel(tx.provider) }}
+              </span>
+            </td>
             <td>{{ formatVnd(tx.amount) }}</td>
             <td>{{ formatCredit(tx.expected_credit) }}</td>
             <td>{{ formatCredit(tx.credit_amount) }}</td>
@@ -197,6 +203,12 @@ function formatCredit(v) {
 function formatVnd(v) {
   const n = Number(v) || 0;
   return n ? n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".") : "0";
+}
+
+function providerLabel(p) {
+  if (p === "paypal") return "PayPal";
+  if (p === "sepay") return "Chuyển khoản QR";
+  return p || "Khác";
 }
 
 function formatDate(val) {
@@ -353,6 +365,29 @@ onMounted(async () => {
 .badge--muted {
   background: rgba(255, 255, 255, 0.06);
   color: var(--text-muted);
+}
+
+.provider-pill {
+  display: inline-block;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  background: rgba(15, 23, 42, 0.9);
+  color: var(--text-secondary);
+}
+
+.provider-pill--sepay {
+  border-color: rgba(56, 189, 248, 0.7);
+  background: rgba(8, 47, 73, 0.7);
+  color: #7dd3fc;
+}
+
+.provider-pill--paypal {
+  border-color: rgba(59, 130, 246, 0.9);
+  background: rgba(30, 64, 175, 0.8);
+  color: #bfdbfe;
 }
 
 .pagination {

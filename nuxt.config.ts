@@ -3,6 +3,15 @@ export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
 
+  runtimeConfig: {
+    depositVndPerCredit: Number(process.env.DEPOSIT_VND_PER_CREDIT || 1000),
+    public: {
+      paypalClientId: process.env.PAYPAL_CLIENT_ID || '',
+      paypalCurrency: process.env.PAYPAL_CURRENCY || 'USD',
+      depositVndPerCredit: Number(process.env.DEPOSIT_VND_PER_CREDIT || 1000),
+    },
+  },
+
   devServer: {
     port: 9000
   },

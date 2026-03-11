@@ -8,7 +8,8 @@ import { addDepositSocialProofItem } from '../../../utils/socialProof'
 const JWT_SECRET = process.env.JWT_SECRET || 'chuoi_bi_mat_jwt_ngau_nhien_cua_sep_123456'
 
 export default defineEventHandler(async (event) => {
-  if (process.env.NODE_ENV === 'production' && process.env.PAYMENT_TEST_ENABLED !== 'true') {
+  // Hard-disable test crediting in production
+  if (process.env.NODE_ENV === 'production') {
     throw createError({ statusCode: 404, statusMessage: 'Not found' })
   }
 

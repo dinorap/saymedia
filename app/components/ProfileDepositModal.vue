@@ -58,7 +58,7 @@
                 {{ loading ? "Đang tạo..." : "Tạo QR" }}
               </button>
               <button
-                v-if="qrData?.trans_id && qrRemaining > 0"
+                v-if="isDev && qrData?.trans_id && qrRemaining > 0"
                 class="secondary"
                 :disabled="testing"
                 @click="simulatePayment"
@@ -75,6 +75,7 @@
 
 <script setup lang="ts">
 const props = defineProps<{ open: boolean }>()
+const isDev = import.meta.env.DEV
 const emit = defineEmits<{
   (e: 'update:open', value: boolean): void
   (e: 'success', payload: { amount: number; newCredit: number }): void

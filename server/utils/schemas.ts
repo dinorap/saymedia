@@ -33,6 +33,22 @@ export const paymentQrSchema = z.object({
 
 export type PaymentQrBody = z.infer<typeof paymentQrSchema>;
 
+/** Nạp tiền qua PayPal */
+export const paymentPaypalSchema = z.object({
+  amount: z.coerce
+    .number()
+    .int()
+    .min(10000, "Số tiền tối thiểu là 10.000 VND"),
+  promo_code: z
+    .string()
+    .trim()
+    .max(32, "Mã khuyến mại quá dài")
+    .optional()
+    .nullable(),
+});
+
+export type PaymentPaypalBody = z.infer<typeof paymentPaypalSchema>;
+
 /**
  * Parse body với schema Zod, ném createError 400 nếu invalid.
  */

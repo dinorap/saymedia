@@ -58,6 +58,18 @@ export async function ensurePaymentSchema() {
     // Column may already exist.
   }
 
+  try {
+    await pool.query("ALTER TABLE payment_transactions ADD COLUMN provider_payment_id VARCHAR(64) NULL")
+  } catch {
+    // Column may already exist.
+  }
+
+  try {
+    await pool.query("ALTER TABLE payment_transactions ADD COLUMN currency VARCHAR(10) NOT NULL DEFAULT 'VND'")
+  } catch {
+    // Column may already exist.
+  }
+
   await pool.query(`
     CREATE TABLE IF NOT EXISTS deposit_promotions (
       id INT AUTO_INCREMENT PRIMARY KEY,
@@ -136,8 +148,23 @@ export function buildTransferMemo(transId: string, amount: number) {
 }
 
 export function buildQrUrl(amount: number, memo: string) {
-  const bankId = process.env.SEPAY_BANK_ID || process.env.BANK_ID || 'ACB'
-  const accountNo = process.env.SEPAY_ACCOUNT_NO || process.env.ACCOUNT_NO || '23766621'
+  const envBankId = process.env.SEPAY_BANK_ID || process.env.BANK_ID
+  const envAccountNo = process.env.SEPAY_ACCOUNT_NO || process.env.ACCOUNT_NO
+
+  if (!envBankId || !envAccountNo) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error(
+        '[payment] Thiếu SEPAY_BANK_ID/SEPAY_ACCOUNT_NO (hoặc BANK_ID/ACCOUNT_NO) trong production. Hãy cấu hình đúng tài khoản nhận tiền.',
+      )
+    }
+    // Dev fallback để dễ dùng local, nhưng log cảnh báo rõ ràng.
+    console.warn(
+      '[payment] SEPAY_BANK_ID/SEPAY_ACCOUNT_NO chưa được cấu hình. Đang dùng fallback ACB/23766621 cho môi trường dev.',
+    )
+  }
+
+  const bankId = envBankId || 'ACB'
+  const accountNo = envAccountNo || '23766621'
   const template = process.env.SEPAY_TEMPLATE || process.env.TEMPLATE || 'compact2'
   return `https://img.vietqr.io/image/${bankId}-${accountNo}-${template}.png?amount=${amount}&addInfo=${encodeURIComponent(memo)}`
 }

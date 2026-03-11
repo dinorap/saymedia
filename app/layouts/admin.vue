@@ -54,6 +54,10 @@
           <span class="sidebar-item-icon" aria-hidden="true">💬</span>
           <span class="sidebar-item-label">Chat hỗ trợ</span>
         </NuxtLink>
+        <NuxtLink to="/admin/announcements" class="sidebar-item">
+          <span class="sidebar-item-icon" aria-hidden="true">📢</span>
+          <span class="sidebar-item-label">Thông báo</span>
+        </NuxtLink>
       </nav>
       <div class="sidebar-footer">
         <button

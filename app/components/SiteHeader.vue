@@ -8,6 +8,7 @@
       <NuxtLink to="/products">{{ $t("nav.services") }}</NuxtLink>
       <NuxtLink to="/pricing">{{ $t("nav.pricing") }}</NuxtLink>
       <NuxtLink to="/contact">{{ $t("nav.contact") }}</NuxtLink>
+      <NuxtLink to="/announcements">Thông báo</NuxtLink>
     </nav>
     <div class="site-auth-buttons">
       <div class="site-lang-switcher">
@@ -56,7 +57,10 @@
       <template v-if="currentUser">
         <div
           class="site-user-dropdown"
-          @mouseenter="cancelClose(); openDropdown()"
+          @mouseenter="
+            cancelClose();
+            openDropdown();
+          "
           @mouseleave="scheduleClose()"
         >
           <button
@@ -68,10 +72,18 @@
           </button>
           <div v-show="showDropdown" class="site-user-dropdown-menu">
             <div class="site-user-dropdown-menu-inner">
-              <button type="button" class="site-dropdown-item" @click="goProfile">
+              <button
+                type="button"
+                class="site-dropdown-item"
+                @click="goProfile"
+              >
                 {{ $t("auth.profile") }}
               </button>
-              <button type="button" class="site-dropdown-item" @click="doLogout">
+              <button
+                type="button"
+                class="site-dropdown-item"
+                @click="doLogout"
+              >
                 {{ $t("auth.logout") }}
               </button>
             </div>
@@ -155,7 +167,7 @@ function goProfile() {
   top: 0;
   left: 0;
   right: 0;
-  z-index: 1000;
+  z-index: 999;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -205,7 +217,9 @@ function goProfile() {
 .site-nav-links a:hover {
   color: var(--blue-bright);
   background: rgba(1, 123, 251, 0.1);
-  text-shadow: 0 0 15px var(--blue-glow), 0 0 30px rgba(1, 123, 251, 0.4);
+  text-shadow:
+    0 0 15px var(--blue-glow),
+    0 0 30px rgba(1, 123, 251, 0.4);
 }
 
 .site-auth-buttons {
@@ -285,7 +299,9 @@ function goProfile() {
 
 .site-lang-btn.active {
   color: var(--blue-bright);
-  text-shadow: 0 0 12px var(--blue-glow), 0 0 25px rgba(1, 123, 251, 0.5);
+  text-shadow:
+    0 0 12px var(--blue-glow),
+    0 0 25px rgba(1, 123, 251, 0.5);
 }
 
 .site-lang-sep {
@@ -315,7 +331,9 @@ function goProfile() {
   border-color: var(--blue-bright);
   background: var(--blue-soft);
   color: var(--blue-bright);
-  box-shadow: 0 0 25px var(--blue-glow), 0 0 50px rgba(1, 123, 251, 0.25);
+  box-shadow:
+    0 0 25px var(--blue-glow),
+    0 0 50px rgba(1, 123, 251, 0.25);
 }
 
 .site-user-dropdown {
@@ -363,7 +381,9 @@ function goProfile() {
   background: var(--bg-nav);
   border: 1px solid rgba(1, 123, 251, 0.5);
   border-radius: 10px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.45), 0 0 20px rgba(1, 123, 251, 0.08);
+  box-shadow:
+    0 10px 40px rgba(0, 0, 0, 0.45),
+    0 0 20px rgba(1, 123, 251, 0.08);
   overflow: hidden;
 }
 
@@ -399,4 +419,3 @@ function goProfile() {
   }
 }
 </style>
-

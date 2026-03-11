@@ -1,7 +1,13 @@
 <template>
   <Teleport to="body">
     <div v-if="modelValue" class="modal-overlay" @click="handleClose">
-      <div class="modal-content payment-modal-content" @click.stop>
+      <div
+        class="modal-content payment-modal-content"
+        :class="{
+          'payment-modal-content--paypal': activePaymentTab === 'paypal',
+        }"
+        @click.stop
+      >
         <div class="modal-header">
           <!-- Tabs -->
           <div class="payment-tabs">
@@ -28,7 +34,7 @@
               {{ formatTimeRemaining(qrTimeRemaining) }}
             </div>
             <button
-              v-if="qrData && qrTimeRemaining > 0"
+              v-if="isDev && qrData && qrTimeRemaining > 0"
               type="button"
               class="test-payment-btn-header"
               @click="testPayment"
@@ -87,6 +93,21 @@
                     {{ $t("payment.deposit.scanQR") }}
                   </p>
                 </div>
+
+                <div class="payment-actions payment-actions--left">
+                  <button
+                    type="button"
+                    class="confirm-payment-btn"
+                    @click="createQR"
+                    :disabled="
+                      loading || !depositAmount || depositAmount < 10000
+                    "
+                  >
+                    <i class="fas fa-check"></i>
+                    <span v-if="loading">Đang tạo...</span>
+                    <span v-else>Tạo QR Code</span>
+                  </button>
+                </div>
               </div>
 
               <!-- Right: Form -->
@@ -140,13 +161,27 @@
 
                 <div class="promo-row">
                   <label class="promo-label">Mã khuyến mại (nếu có)</label>
-                  <input
-                    v-model="promoCode"
-                    type="text"
-                    class="promo-input"
-                    autocomplete="off"
-                    placeholder="Nhập mã khuyến mại..."
-                  />
+                  <div class="promo-inline">
+                    <input
+                      v-model="promoCode"
+                      type="text"
+                      class="promo-input"
+                      autocomplete="off"
+                      placeholder="Nhập mã khuyến mại..."
+                    />
+                    <button
+                      type="button"
+                      class="promo-apply-btn"
+                      @click="applyPromo"
+                    >
+                      Áp dụng
+                    </button>
+                  </div>
+                </div>
+
+                <div class="expected-credit-row">
+                  <span class="expected-label">Tín chỉ dự kiến:</span>
+                  <span class="expected-value">{{ totalExpectedCredit }}</span>
                 </div>
 
                 <div class="account-details">
@@ -222,21 +257,6 @@
                 >
                   {{ error }}
                 </div>
-
-                <div class="payment-actions">
-                  <button
-                    type="button"
-                    class="confirm-payment-btn"
-                    @click="createQR"
-                    :disabled="
-                      loading || !depositAmount || depositAmount < 10000
-                    "
-                  >
-                    <i class="fas fa-check"></i>
-                    <span v-if="loading">Đang tạo...</span>
-                    <span v-else>Tạo QR Code</span>
-                  </button>
-                </div>
               </div>
             </div>
           </div>
@@ -247,10 +267,112 @@
             class="payment-tab-content"
             :class="{ active: activePaymentTab === 'paypal' }"
           >
-            <div class="paypal-info">
-              <p style="text-align: center; padding: 40px 20px">
-                {{ $t("payment.deposit.paypalDeveloping") }}
-              </p>
+            <div class="paypal-column">
+              <div class="paypal-heading">
+                <h2>Nạp tiền qua PayPal</h2>
+                <p>
+                  Số tiền sẽ được quy đổi sang tín chỉ sau khi PayPal xác nhận
+                  thanh toán thành công.
+                </p>
+              </div>
+
+              <div class="payment-form-section">
+                <div class="form-group">
+                  <label for="paypal-amount-input">Số tiền nạp (VND)</label>
+                  <input
+                    id="paypal-amount-input"
+                    type="text"
+                    :value="depositAmountDisplay || '100.000'"
+                    inputmode="numeric"
+                    autocomplete="off"
+                    :placeholder="$t('placeholder.amount')"
+                    @input="handleAmountInput"
+                    @blur="formatAmount"
+                    required
+                  />
+                </div>
+
+                <div class="quick-amount-buttons">
+                  <button
+                    class="quick-amount-btn"
+                    :class="{ active: depositAmount === 50000 }"
+                    @click="selectQuickAmount(50000)"
+                  >
+                    50.000₫
+                  </button>
+                  <button
+                    class="quick-amount-btn"
+                    :class="{ active: depositAmount === 100000 }"
+                    @click="selectQuickAmount(100000)"
+                  >
+                    100.000₫
+                  </button>
+                  <button
+                    class="quick-amount-btn"
+                    :class="{ active: depositAmount === 500000 }"
+                    @click="selectQuickAmount(500000)"
+                  >
+                    500.000₫
+                  </button>
+                  <button
+                    class="quick-amount-btn"
+                    :class="{ active: depositAmount === 1000000 }"
+                    @click="selectQuickAmount(1000000)"
+                  >
+                    1.000.000₫
+                  </button>
+                </div>
+
+                <div class="promo-row">
+                  <label class="promo-label">Mã khuyến mại (nếu có)</label>
+                  <div class="promo-inline">
+                    <input
+                      v-model="promoCode"
+                      type="text"
+                      class="promo-input"
+                      autocomplete="off"
+                      placeholder="Nhập mã khuyến mại..."
+                    />
+                    <button
+                      type="button"
+                      class="promo-apply-btn"
+                      @click="applyPromo"
+                    >
+                      Áp dụng
+                    </button>
+                  </div>
+                </div>
+
+                <div class="expected-credit-row">
+                  <span class="expected-label">Tín chỉ dự kiến:</span>
+                  <span class="expected-value">{{ totalExpectedCredit }}</span>
+                </div>
+
+                <p class="paypal-amount-hint">
+                  Tối thiểu 10.000đ. Sử dụng PayPal sandbox trước khi chuyển
+                  sang live.
+                </p>
+
+                <div class="paypal-actions">
+                  <div
+                    id="paypal-buttons-container"
+                    class="paypal-buttons-container"
+                  ></div>
+
+                  <p class="paypal-note">
+                    Không tự làm mới trang khi đang thanh toán PayPal. Nếu gặp
+                    lỗi hoặc hết hạn, hãy tạo đơn nạp mới.
+                  </p>
+
+                  <div
+                    v-if="paypalError"
+                    class="message error"
+                    style="margin-top: 0.75rem"
+                  >
+                    {{ paypalError }}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -260,7 +382,7 @@
 </template>
 
 <script setup>
-import { ref, onBeforeUnmount } from "vue";
+import { ref, onBeforeUnmount, nextTick, watch } from "vue";
 
 const { show: showToast } = useToast();
 
@@ -286,6 +408,166 @@ const error = ref("");
 const testingPayment = ref(false);
 const activePaymentTab = ref("bank");
 const promoCode = ref("");
+
+const runtimeConfig = useRuntimeConfig();
+const paypalClientId = runtimeConfig.public.paypalClientId;
+const paypalCurrency =
+  runtimeConfig.public.paypalCurrency ||
+  runtimeConfig.public.PAYPAL_CURRENCY ||
+  "USD";
+
+const vndPerCredit =
+  Number(runtimeConfig.public.depositVndPerCredit || 1000) || 1000;
+
+const baseExpectedCredit = computed(() =>
+  depositAmount.value && depositAmount.value > 0
+    ? Math.floor(depositAmount.value / vndPerCredit)
+    : 0,
+);
+
+const bonusExpectedCredit = ref(0);
+const totalExpectedCredit = computed(
+  () => baseExpectedCredit.value + bonusExpectedCredit.value,
+);
+
+// PayPal
+const paypalError = ref("");
+const paypalLoaded = ref(false);
+
+const loadPayPalScript = () => {
+  return new Promise((resolve, reject) => {
+    if (paypalLoaded.value) return resolve();
+
+    if (!paypalClientId) {
+      paypalError.value = "Chưa cấu hình PAYPAL_CLIENT_ID trên server.";
+      return reject(new Error("Missing PAYPAL_CLIENT_ID"));
+    }
+
+    const existing = document.querySelector('script[data-paypal-sdk="true"]');
+
+    if (existing) {
+      paypalLoaded.value = true;
+      return resolve();
+    }
+
+    const script = document.createElement("script");
+    script.src = `https://www.paypal.com/sdk/js?client-id=${encodeURIComponent(
+      paypalClientId,
+    )}&currency=${encodeURIComponent(
+      paypalCurrency,
+    )}&components=buttons&disable-funding=card,credit`;
+    script.async = true;
+    script.dataset.paypalSdk = "true";
+    script.onload = () => {
+      paypalLoaded.value = true;
+      resolve();
+    };
+    script.onerror = () => {
+      paypalError.value = "Không tải được PayPal SDK. Vui lòng thử lại sau.";
+      reject(new Error("Failed to load PayPal SDK"));
+    };
+    document.body.appendChild(script);
+  });
+};
+
+const initPayPalButtons = async () => {
+  try {
+    await loadPayPalScript();
+
+    // @ts-ignore
+    const paypal = window.paypal;
+    if (!paypal) {
+      paypalError.value = "PayPal SDK chưa sẵn sàng.";
+      return;
+    }
+
+    const container = document.getElementById("paypal-buttons-container");
+    if (!container) return;
+    container.innerHTML = "";
+
+    paypal
+      .Buttons({
+        style: {
+          layout: "vertical",
+          height: 45,
+          color: "gold",
+          shape: "rect",
+          label: "paypal",
+        },
+        createOrder: async () => {
+          paypalError.value = "";
+
+          if (!depositAmount.value || depositAmount.value < 10000) {
+            paypalError.value =
+              t("payment.deposit.errors.minAmount") ||
+              "Số tiền tối thiểu là 10.000 VND";
+            throw new Error("Amount too low");
+          }
+
+          const res = await $fetch("/api/payment/paypal/create-order", {
+            method: "POST",
+            body: {
+              amount: depositAmount.value,
+              promo_code: promoCode.value || null,
+            },
+          });
+
+          if (!res || !res.success || !res.order_id) {
+            paypalError.value = "Không tạo được đơn PayPal.";
+            throw new Error("Create order failed");
+          }
+
+          return res.order_id;
+        },
+        onApprove: async (data) => {
+          try {
+            const res = await $fetch("/api/payment/paypal/capture-order", {
+              method: "POST",
+              body: {
+                order_id: data.orderID,
+              },
+            });
+
+            if (res && res.success) {
+              handleClose();
+              emit("success", {
+                amount: res.amount,
+                newCredit: null,
+              });
+              showToast("Nạp tiền qua PayPal thành công!", "success");
+            } else {
+              paypalError.value = "Thanh toán PayPal chưa hoàn tất.";
+            }
+          } catch (err) {
+            paypalError.value =
+              "Có lỗi khi xác nhận thanh toán PayPal. Vui lòng thử lại.";
+          }
+        },
+        onError: (err) => {
+          console.error("PayPal error", err);
+          paypalError.value =
+            "Có lỗi xảy ra với PayPal. Nếu lỗi lặp lại, hãy thử lại sau ít phút.";
+        },
+      })
+      .render("#paypal-buttons-container");
+  } catch (err) {
+    if (!paypalError.value) {
+      paypalError.value =
+        "Không khởi tạo được PayPal. Vui lòng thử lại sau vài phút.";
+    }
+  }
+};
+
+watch(
+  () => activePaymentTab.value,
+  (tab) => {
+    if (tab === "paypal") {
+      nextTick(() => {
+        initPayPalButtons();
+      });
+    }
+  },
+);
 
 const formatTimeRemaining = (seconds) => {
   if (seconds <= 0) return "00:00";
@@ -411,6 +693,80 @@ const copyTransferContent = async () => {
   }
 };
 
+let promoPreviewTimer = null;
+
+const updatePromoPreview = (silent = false) => {
+  if (!promoCode.value || !promoCode.value.trim()) {
+    bonusExpectedCredit.value = 0;
+    return;
+  }
+  promoCode.value = promoCode.value.trim().toUpperCase();
+
+  if (!depositAmount.value || depositAmount.value < 10000) {
+    bonusExpectedCredit.value = 0;
+    if (!silent) {
+      showToast(
+        "Số tiền phải từ 10.000đ trở lên để áp dụng khuyến mãi.",
+        "info",
+      );
+    }
+    return;
+  }
+
+  $fetch("/api/payment/promo-preview", {
+    method: "POST",
+    body: {
+      amount: depositAmount.value,
+      promo_code: promoCode.value,
+    },
+  })
+    .then((res) => {
+      if (res && res.success) {
+        bonusExpectedCredit.value = Number(res.bonus_credit || 0);
+        if (!silent) {
+          if (bonusExpectedCredit.value > 0) {
+            showToast(
+              `Áp dụng mã thành công. Bạn được cộng thêm ${bonusExpectedCredit.value} tín chỉ dự kiến.`,
+              "success",
+            );
+          } else {
+            showToast(
+              "Mã hợp lệ nhưng hiện không cộng thêm khuyến mãi (có thể do không đủ điều kiện về số tiền hoặc giới hạn lượt dùng).",
+              "info",
+            );
+          }
+        }
+      } else {
+        bonusExpectedCredit.value = 0;
+        if (!silent) {
+          showToast("Không áp dụng được mã khuyến mãi.", "error");
+        }
+      }
+    })
+    .catch(() => {
+      bonusExpectedCredit.value = 0;
+      if (!silent) {
+        showToast("Không áp dụng được mã khuyến mãi.", "error");
+      }
+    });
+};
+
+const applyPromo = () => {
+  updatePromoPreview(false);
+};
+
+watch(
+  () => depositAmount.value,
+  () => {
+    bonusExpectedCredit.value = 0;
+    if (!promoCode.value || !promoCode.value.trim()) return;
+    if (promoPreviewTimer) clearTimeout(promoPreviewTimer);
+    promoPreviewTimer = setTimeout(() => {
+      updatePromoPreview(true);
+    }, 300);
+  },
+);
+
 const createQR = async () => {
   if (!depositAmount.value || depositAmount.value < 10000) {
     error.value =
@@ -462,7 +818,12 @@ const handleClose = () => {
   depositAmountDisplay.value = "100.000";
   promoCode.value = "";
   error.value = "";
+  bonusExpectedCredit.value = 0;
+  paypalError.value = "";
+  activePaymentTab.value = "bank";
 };
+
+const isDev = import.meta.env.DEV
 
 const testPayment = async () => {
   if (!qrData.value || !qrData.value.trans_id) {
@@ -488,13 +849,13 @@ const testPayment = async () => {
 
     if (res.success) {
       stopQrCountdown();
-        qrData.value = null;
-        handleClose();
-        emit("success", {
+      qrData.value = null;
+      handleClose();
+      emit("success", {
         amount: res.actual_amount || res.amount,
         newCredit: res.new_credit,
       });
-        showToast("Nạp tiền test thành công!", "success");
+      showToast("Nạp tiền test thành công!", "success");
     }
   } catch (err) {
     if (err.data?.error) {
@@ -642,7 +1003,7 @@ onBeforeUnmount(() => {
   font-weight: 500;
   cursor: pointer;
   transition: all 0.3s ease;
-  display: inline-flex;
+
   align-items: center;
   gap: 0.5rem;
 }
@@ -828,6 +1189,51 @@ onBeforeUnmount(() => {
   font-size: 0.9rem;
 }
 
+.promo-inline {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.promo-apply-btn {
+  padding: 0.45rem 0.9rem;
+  border-radius: 8px;
+  border: 1px solid rgba(56, 189, 248, 0.7);
+  background: rgba(8, 47, 73, 0.9);
+  color: #e0f2fe;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.promo-apply-btn:hover {
+  background: rgba(8, 47, 73, 1);
+}
+
+.expected-credit-row {
+  margin-top: 0.6rem;
+  padding: 0.7rem 0.85rem;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: rgba(15, 23, 42, 0.96);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.9rem;
+}
+
+.expected-label {
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.expected-value {
+  font-weight: 600;
+  color: #4ade80;
+  font-size: 1rem;
+}
+
 .quick-amount-btn:hover {
   border-color: var(--blue-border);
   background: rgba(1, 123, 251, 0.1);
@@ -924,6 +1330,14 @@ onBeforeUnmount(() => {
 }
 
 /* Payment Actions */
+.payment-actions {
+  width: 100%;
+}
+
+.payment-actions--left {
+  margin-top: 0.75rem;
+}
+
 .confirm-payment-btn {
   width: 100%;
   padding: 0.95rem 1rem;
@@ -955,9 +1369,60 @@ onBeforeUnmount(() => {
 }
 
 /* PayPal Info */
-.paypal-info {
-  text-align: center;
-  padding: 2rem;
+.paypal-column {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.paypal-heading h2 {
+  margin: 0 0 0.4rem;
+  font-size: 1.2rem;
+  font-weight: 650;
+}
+
+.paypal-heading p {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.paypal-amount-box {
+  text-align: left;
+}
+
+.paypal-amount-box label {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.paypal-amount-box input {
+  width: 100%;
+  padding: 0.8rem 1rem;
+  border-radius: 10px;
+  border: 1px solid var(--input-border);
+  background: var(--input-bg);
+  color: var(--text-primary);
+  font-size: 1rem;
+}
+
+.paypal-amount-hint {
+  margin: 0.4rem 0 0;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.paypal-buttons-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 0.75rem;
+}
+
+.paypal-note {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
 }
 
 .message.error {
@@ -974,6 +1439,16 @@ onBeforeUnmount(() => {
   background: var(--bg-card);
   border: 1px solid rgba(1, 123, 251, 0.35);
   box-shadow: var(--neon-shadow);
+}
+
+.modal-content.payment-modal-content--paypal {
+  width: min(560px, 92vw);
+  height: auto;
+  max-height: 85vh;
+}
+
+.modal-content.payment-modal-content--paypal .modal-body {
+  height: auto;
 }
 
 .payment-tab:hover {
