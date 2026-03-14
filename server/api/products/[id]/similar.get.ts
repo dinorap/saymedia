@@ -32,7 +32,7 @@ export default defineEventHandler(async (event) => {
 
   const [sameTypeRows]: any = await pool.query(
     `
-      SELECT id, name, description, price, type, thumbnail_url
+      SELECT id, name, description, youtube_url, type, thumbnail_url
       FROM products
       WHERE is_active = 1 AND id <> ? AND type = ?
       ORDER BY created_at DESC
@@ -51,7 +51,7 @@ export default defineEventHandler(async (event) => {
     const remaining = limit - out.length;
     const [fallbackRows]: any = await pool.query(
       `
-        SELECT id, name, description, price, type, thumbnail_url
+        SELECT id, name, description, youtube_url, type, thumbnail_url
         FROM products
         WHERE is_active = 1 AND id <> ?
         ORDER BY created_at DESC

@@ -11,7 +11,11 @@
           placeholder="Tiêu đề, nội dung, người đăng..."
         />
       </div>
-      <button type="button" class="btn-add btn-add--right" @click="openModal()">
+      <button
+        type="button"
+        class="btn-add btn-add--right"
+        @click="openModal()"
+      >
         + Viết thông báo
       </button>
     </div>
@@ -29,6 +33,7 @@
             <th>Nội dung</th>
             <th>Người đăng</th>
             <th>Thời gian</th>
+            <th>Pop-up</th>
             <th class="th-actions">Thao tác</th>
           </tr>
         </thead>
@@ -45,11 +50,25 @@
             </td>
             <td>{{ a.authorName || "Admin" }}</td>
             <td>{{ formatDate(a.createdAt) }}</td>
+            <td>
+              <span
+                class="badge"
+                :class="a.isPopup ? 'badge--popup' : 'badge--muted'"
+              >
+                {{ a.isPopup ? "Bật" : "Tắt" }}
+              </span>
+            </td>
             <td class="td-actions">
-              <button type="button" class="btn-icon" @click="openModal(a)">
+              <button
+                v-if="isSuperAdmin"
+                type="button"
+                class="btn-icon"
+                @click="openModal(a)"
+              >
                 ✏️
               </button>
               <button
+                v-if="isSuperAdmin"
                 type="button"
                 class="btn-icon btn-icon--danger"
                 @click="deleteItem(a)"
@@ -132,6 +151,12 @@
                 required
               />
             </div>
+            <div v-if="isSuperAdmin" class="form-row form-row-inline">
+              <label class="checkbox-label">
+                <input v-model="form.is_popup" type="checkbox" />
+                Hiển thị dạng pop-up cho khách (tối đa 1 lần/ngày mỗi khách)
+              </label>
+            </div>
             <p v-if="error" class="error-msg">{{ error }}</p>
             <div class="modal-actions">
               <button
@@ -157,6 +182,8 @@ definePageMeta({ layout: "admin", middleware: ["admin"] });
 
 const { show: showToast } = useToast();
 const { confirm: askConfirm } = useConfirm();
+const roleCookie = useCookie("user_role", { path: "/" });
+const isSuperAdmin = computed(() => roleCookie.value === "admin_0");
 
 const items = ref([]);
 const loading = ref(false);
@@ -167,6 +194,7 @@ const form = reactive({
   id: null,
   title: "",
   content: "",
+  is_popup: false,
 });
 const error = ref("");
 const saving = ref(false);
@@ -225,6 +253,7 @@ function openModal(item = null) {
   form.id = item?.id ?? null;
   form.title = item?.title ?? "";
   form.content = item?.content ?? "";
+  form.is_popup = isSuperAdmin.value ? !!item?.isPopup : false;
   error.value = "";
   modalOpen.value = true;
 }
@@ -237,6 +266,7 @@ async function save() {
       id: form.id,
       title: form.title,
       content: form.content,
+      is_popup: isSuperAdmin.value ? !!form.is_popup : false,
     };
     await $fetch("/api/admin/announcements", {
       method: "POST",

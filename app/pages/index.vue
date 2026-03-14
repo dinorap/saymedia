@@ -27,31 +27,75 @@
 
     <section id="services" class="stats-container">
       <div class="stat-card">
-        <div class="stat-icon">📦</div>
-        <div class="stat-info">
-          <h3>50+</h3>
-          <p>{{ $t("stats.services") }}</p>
+        <div class="stat-card-inner">
+          <div class="stat-card-face stat-card-face--front">
+            <div class="stat-icon">📦</div>
+            <div class="stat-info">
+              <h3>50+</h3>
+              <p>{{ $t("stats.services") }}</p>
+            </div>
+          </div>
+          <div class="stat-card-face stat-card-face--back">
+            <div class="stat-icon">🔄</div>
+            <div class="stat-info">
+              <h3>24/7</h3>
+              <p>Hỗ trợ & cập nhật liên tục</p>
+            </div>
+          </div>
         </div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon">👥</div>
-        <div class="stat-info">
-          <h3>5,000+</h3>
-          <p>{{ $t("stats.customers") }}</p>
+        <div class="stat-card-inner">
+          <div class="stat-card-face stat-card-face--front">
+            <div class="stat-icon">👥</div>
+            <div class="stat-info">
+              <h3>5,000+</h3>
+              <p>{{ $t("stats.customers") }}</p>
+            </div>
+          </div>
+          <div class="stat-card-face stat-card-face--back">
+            <div class="stat-icon">🛡️</div>
+            <div class="stat-info">
+              <h3>100%</h3>
+              <p>Giao dịch an toàn, bảo mật</p>
+            </div>
+          </div>
         </div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon">✅</div>
-        <div class="stat-info">
-          <h3>10K+</h3>
-          <p>{{ $t("stats.orders") }}</p>
+        <div class="stat-card-inner">
+          <div class="stat-card-face stat-card-face--front">
+            <div class="stat-icon">✅</div>
+            <div class="stat-info">
+              <h3>10K+</h3>
+              <p>{{ $t("stats.orders") }}</p>
+            </div>
+          </div>
+          <div class="stat-card-face stat-card-face--back">
+            <div class="stat-icon">⚡</div>
+            <div class="stat-info">
+              <h3>Nhanh</h3>
+              <p>Xử lý trong vài phút</p>
+            </div>
+          </div>
         </div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon">⭐</div>
-        <div class="stat-info">
-          <h3>4.9</h3>
-          <p>{{ $t("stats.rating") }}</p>
+        <div class="stat-card-inner">
+          <div class="stat-card-face stat-card-face--front">
+            <div class="stat-icon">⭐</div>
+            <div class="stat-info">
+              <h3>4.9</h3>
+              <p>{{ $t("stats.rating") }}</p>
+            </div>
+          </div>
+          <div class="stat-card-face stat-card-face--back">
+            <div class="stat-icon">🎁</div>
+            <div class="stat-info">
+              <h3>Ưu đãi</h3>
+              <p>Khuyến mãi cho thành viên mới</p>
+            </div>
+          </div>
         </div>
       </div>
     </section>

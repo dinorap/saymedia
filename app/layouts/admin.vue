@@ -36,6 +36,10 @@
           <span class="sidebar-item-icon" aria-hidden="true">🛒</span>
           <span class="sidebar-item-label">{{ $t("admin.products") }}</span>
         </NuxtLink>
+        <NuxtLink to="/admin/product-keys" class="sidebar-item">
+          <span class="sidebar-item-icon" aria-hidden="true">🔑</span>
+          <span class="sidebar-item-label">Key sản phẩm</span>
+        </NuxtLink>
         <NuxtLink to="/admin/revenue" class="sidebar-item">
           <span class="sidebar-item-icon" aria-hidden="true">📈</span>
           <span class="sidebar-item-label">{{ $t("admin.revenue") }}</span>

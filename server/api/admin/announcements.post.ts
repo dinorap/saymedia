@@ -16,6 +16,10 @@ export default defineEventHandler(async (event) => {
   const id = body?.id ? Number(body.id) : null;
   const rawTitle = String(body?.title || "").trim();
   const rawContent = String(body?.content || "").trim();
+  const isPopupRequested =
+    body?.is_popup === true ||
+    body?.is_popup === 1 ||
+    body?.is_popup === "1";
 
   const title = rawTitle.slice(0, MAX_TITLE);
   const content = rawContent.slice(0, MAX_CONTENT);
@@ -29,14 +33,17 @@ export default defineEventHandler(async (event) => {
     });
   }
 
+  const allowPopup = currentUser.role === "admin_0";
+  const finalIsPopup = allowPopup && isPopupRequested;
+
   if (id && Number.isFinite(id) && id > 0) {
     await pool.query(
       `
         UPDATE announcements
-        SET title = ?, content = ?, author_name = ?
+        SET title = ?, content = ?, author_name = ?, is_popup = ?
         WHERE id = ?
       `,
-      [title, content, authorName, id],
+      [title, content, authorName, finalIsPopup ? 1 : 0, id],
     );
 
     return { success: true, id };
@@ -44,10 +51,10 @@ export default defineEventHandler(async (event) => {
 
   const [result]: any = await pool.query(
     `
-      INSERT INTO announcements (title, content, author_name)
-      VALUES (?, ?, ?)
+      INSERT INTO announcements (title, content, author_name, is_popup)
+      VALUES (?, ?, ?, ?)
     `,
-    [title, content, authorName],
+    [title, content, authorName, finalIsPopup ? 1 : 0],
   );
 
   return {

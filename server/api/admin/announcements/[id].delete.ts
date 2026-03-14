@@ -7,6 +7,13 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 401, statusMessage: "Chưa đăng nhập" });
   }
 
+  if (currentUser.role !== "admin_0") {
+    throw createError({
+      statusCode: 403,
+      statusMessage: "Chỉ super admin mới được xóa thông báo hệ thống",
+    });
+  }
+
   await ensureAnnouncementsSchema();
 
   const id = Number(event.context.params?.id);

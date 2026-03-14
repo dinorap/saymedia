@@ -12,6 +12,27 @@
         </header>
 
         <section class="history-body">
+          <div class="history-filters">
+            <div class="filter-group">
+              <label>Từ ngày</label>
+              <input v-model="fromDate" type="date" />
+            </div>
+            <div class="filter-group">
+              <label>Đến ngày</label>
+              <input v-model="toDate" type="date" />
+            </div>
+            <div class="history-filter-actions">
+              <button
+                type="button"
+                class="btn-export"
+                :disabled="exporting"
+                @click="exportCsv"
+              >
+                {{ exporting ? "Đang xuất..." : "Xuất CSV" }}
+              </button>
+            </div>
+          </div>
+
           <div v-if="loading" class="history-state">
             {{ $t("auth.loading") }}
           </div>
@@ -76,12 +97,21 @@ const { t } = useI18n();
 const items = ref([]);
 const loading = ref(false);
 const error = ref("");
+const fromDate = ref("");
+const toDate = ref("");
+const exporting = ref(false);
+let filterTimer = null;
 
 async function loadHistory() {
   loading.value = true;
   error.value = "";
   try {
-    const res = await $fetch("/api/payment/history");
+    const params = new URLSearchParams();
+    params.set("limit", "200");
+    if (fromDate.value) params.set("from", fromDate.value);
+    if (toDate.value) params.set("to", toDate.value + " 23:59:59");
+
+    const res = await $fetch(`/api/payment/history?${params.toString()}`);
     if (res?.success && Array.isArray(res.data)) {
       items.value = res.data;
     } else {
@@ -97,12 +127,54 @@ async function loadHistory() {
   }
 }
 
+function reload() {
+  loadHistory();
+}
+
+async function exportCsv() {
+  exporting.value = true;
+  try {
+    const params = new URLSearchParams();
+    params.set("limit", "500");
+    params.set("format", "csv");
+    if (fromDate.value) params.set("from", fromDate.value);
+    if (toDate.value) params.set("to", toDate.value + " 23:59:59");
+
+    const url = `/api/payment/history?${params.toString()}`;
+    const res = await fetch(url);
+    const text = await res.text();
+    const blob = new Blob([text], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "deposit-history.csv";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(link.href);
+  } catch {
+    // ignore export error
+  } finally {
+    exporting.value = false;
+  }
+}
+
 watch(
   () => props.modelValue,
   (val) => {
     if (val) {
       loadHistory();
     }
+  },
+);
+
+watch(
+  () => [fromDate.value, toDate.value],
+  () => {
+    if (!props.modelValue) return;
+    if (filterTimer) clearTimeout(filterTimer);
+    filterTimer = setTimeout(() => {
+      loadHistory();
+    }, 300);
   },
 );
 
@@ -182,6 +254,58 @@ function formatDate(val) {
   padding: 0.75rem 1.5rem 1rem;
   flex: 1;
   overflow: hidden;
+}
+
+.history-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+  align-items: flex-end;
+  margin-bottom: 0.5rem;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.filter-group input[type="date"] {
+  min-width: 150px;
+  padding: 0.35rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid var(--input-border);
+  background: var(--input-bg);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+}
+
+.history-filter-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+.btn-filter,
+.btn-export {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.4rem 0.9rem;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  background: rgba(15, 23, 42, 0.7);
+  color: var(--text-primary);
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.btn-export {
+  border-color: rgba(34, 197, 94, 0.6);
+  background: rgba(22, 163, 74, 0.15);
+  color: #bbf7d0;
 }
 
 .history-state {

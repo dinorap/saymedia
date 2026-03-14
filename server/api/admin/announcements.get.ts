@@ -23,7 +23,13 @@ export default defineEventHandler(async (event) => {
 
   const [rows]: any = await pool.query(
     `
-      SELECT id, title, content, author_name AS authorName, created_at AS createdAt
+      SELECT
+        id,
+        title,
+        content,
+        author_name AS authorName,
+        is_popup AS isPopup,
+        created_at AS createdAt
       FROM announcements
       ORDER BY created_at DESC
       LIMIT ? OFFSET ?

@@ -7,6 +7,7 @@ import {
 } from "../../utils/creditLedger";
 import { addSocialProofItem } from "../../utils/socialProof";
 import { orderCreateSchema, parseBodyOrThrow } from "../../utils/schemas";
+import { VALID_KEY_DURATIONS } from "../../utils/productKeys";
 
 const JWT_SECRET =
   process.env.JWT_SECRET || "chuoi_bi_mat_jwt_ngau_nhien_cua_sep_123456";
@@ -39,6 +40,11 @@ export default defineEventHandler(async (event) => {
 
   const body = parseBodyOrThrow(await readBody(event), orderCreateSchema);
   const productId = body.product_id;
+  const rawDuration =
+    typeof body.duration === "string" ? body.duration.trim() : "";
+  const duration = VALID_KEY_DURATIONS.includes(rawDuration as any)
+    ? rawDuration
+    : null;
 
   const conn = await pool.getConnection();
   try {
@@ -79,7 +85,7 @@ export default defineEventHandler(async (event) => {
     }
 
     const initialStatus = "pending";
-    const note = null;
+    const note = duration ? `duration=${duration}` : null;
 
     const [result]: any = await conn.query(
       `

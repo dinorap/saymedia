@@ -18,9 +18,8 @@ export default defineEventHandler(async (event) => {
         id,
         name,
         description,
-        support_contact,
         long_description,
-        price,
+        youtube_url,
         type,
         thumbnail_url,
         images_json

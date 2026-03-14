@@ -91,7 +91,7 @@ CREATE TABLE products (
     admin_id INT NULL,
     name VARCHAR(120) NOT NULL,
     description TEXT NULL,
-    price BIGINT NOT NULL DEFAULT 0,
+    youtube_url VARCHAR(512) NULL,
     type ENUM('tool', 'account', 'service', 'other') NOT NULL DEFAULT 'other',
     is_active TINYINT(1) NOT NULL DEFAULT 1,
     download_url TEXT NULL,
@@ -203,6 +203,19 @@ CREATE TABLE IF NOT EXISTS support_messages (
 );
 CREATE INDEX idx_support_messages_thread_id ON support_messages(thread_id);
 CREATE INDEX idx_support_messages_created_at ON support_messages(created_at);
+
+-- Bảng lưu key sản phẩm + thời hạn sử dụng
+CREATE TABLE IF NOT EXISTS product_keys (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    product_id INT NULL,
+    product_name VARCHAR(255) NOT NULL,
+    `key` VARCHAR(255) NOT NULL UNIQUE,
+    valid_duration ENUM('2h','12h','1d','3d','7d','10d','30d','90d','lifetime') NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_product_keys_product_id (product_id),
+    INDEX idx_product_keys_product_name (product_name),
+    CONSTRAINT fk_product_keys_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE SET NULL
+);
 
 -- Dev only: superadmin / 123456. Production: tạo admin qua tool, không hardcode mật khẩu trong SQL.
 INSERT INTO admins (username, password_hash, role, ref_code)

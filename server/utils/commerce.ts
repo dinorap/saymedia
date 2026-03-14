@@ -19,8 +19,7 @@ export async function ensureCommerceSchema() {
       admin_id INT NULL,
       name VARCHAR(120) NOT NULL,
       description TEXT NULL,
-      support_contact TEXT NULL,
-      price BIGINT NOT NULL DEFAULT 0,
+      youtube_url VARCHAR(512) NULL,
       type ENUM('tool', 'account', 'service', 'other') NOT NULL DEFAULT 'other',
       is_active TINYINT(1) NOT NULL DEFAULT 1,
       download_url TEXT NULL,
@@ -46,7 +45,7 @@ export async function ensureCommerceSchema() {
     "ALTER TABLE products ADD COLUMN long_description TEXT NULL AFTER description",
   );
   await addColumnIfMissing(
-    "ALTER TABLE products ADD COLUMN support_contact TEXT NULL AFTER description",
+    "ALTER TABLE products ADD COLUMN youtube_url VARCHAR(512) NULL AFTER description",
   );
   // Và cột admin_id để biết admin nào tạo.
   await addColumnIfMissing(

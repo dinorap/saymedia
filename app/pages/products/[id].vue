@@ -772,13 +772,15 @@ function openConfirm(p) {
   showConfirm.value = true;
 }
 
-async function doPurchase(p) {
+async function doPurchase(payload) {
+  const p = payload?.product || payload;
+  const duration = payload?.duration || null;
   if (!p) return;
   buying.value = true;
   try {
     const res = await $fetch("/api/orders/create", {
       method: "POST",
-      body: { product_id: p.id },
+      body: { product_id: p.id, duration },
     });
     const msg =
       locale.value === "vi"

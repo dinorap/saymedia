@@ -6,6 +6,7 @@ const MAX_DESCRIPTION = 2000;
 const MAX_DOWNLOAD_URL = 2000;
 const MAX_THUMBNAIL_URL = 512;
 const MAX_LONG_DESCRIPTION = 8000;
+const MAX_YOUTUBE_URL = 512;
 
 export default defineEventHandler(async (event) => {
   const currentUser = event.context.user;
@@ -16,6 +17,8 @@ export default defineEventHandler(async (event) => {
   const body = await readBody(event);
   const name = String(body?.name || "").trim().slice(0, MAX_NAME);
   const description = (String(body?.description || "").trim() || null)?.slice(0, MAX_DESCRIPTION) || null;
+  const youtubeUrl =
+    (String(body?.youtube_url || "").trim() || null)?.slice(0, MAX_YOUTUBE_URL) || null;
   const downloadUrl = (String(body?.download_url || "").trim() || null)?.slice(0, MAX_DOWNLOAD_URL) || null;
   const thumbnailUrl = (String(body?.thumbnail_url || "").trim() || null)?.slice(0, MAX_THUMBNAIL_URL) || null;
   const longDescription =
@@ -34,14 +37,10 @@ export default defineEventHandler(async (event) => {
   }
 
   const type = String(body?.type || "other").trim();
-  const price = Number(body?.price || 0);
   const isActive = body?.is_active === false ? 0 : 1;
 
   if (!name) {
     throw createError({ statusCode: 400, statusMessage: "Tên sản phẩm là bắt buộc" });
-  }
-  if (!Number.isFinite(price) || price < 0) {
-    throw createError({ statusCode: 400, statusMessage: "Giá sản phẩm không hợp lệ" });
   }
   if (!ALLOWED_TYPES.has(type)) {
     throw createError({ statusCode: 400, statusMessage: "Loại sản phẩm không hợp lệ" });
@@ -53,25 +52,25 @@ export default defineEventHandler(async (event) => {
         admin_id,
         name,
         description,
+        youtube_url,
         long_description,
         download_url,
         thumbnail_url,
         images_json,
-        price,
         type,
         is_active
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
     [
       currentUser.id,
       name,
       description || null,
+      youtubeUrl || null,
       longDescription || null,
       downloadUrl || null,
       thumbnailUrl || null,
       imagesJson,
-      Math.round(price),
       type,
       isActive,
     ],

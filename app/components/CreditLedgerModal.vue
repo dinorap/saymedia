@@ -7,6 +7,33 @@
           <button class="close-btn" @click="close">×</button>
         </div>
         <div class="body">
+          <div class="toolbar">
+            <div class="filter-group">
+              <label>{{ $t("admin.transactionType") || "Loại giao dịch" }}</label>
+              <select v-model="typeFilter">
+                <option value="">{{ $t("admin.all") || "Tất cả" }}</option>
+                <option value="deposit">Nạp tiền</option>
+                <option value="purchase">Mua sản phẩm</option>
+                <option value="refund">Hoàn tiền</option>
+                <option value="admin_adjust">Admin điều chỉnh</option>
+                <option value="system_adjust">Hệ thống điều chỉnh</option>
+              </select>
+            </div>
+            <div class="filter-group">
+              <label>Từ ngày</label>
+              <input v-model="fromDate" type="date" />
+            </div>
+            <div class="filter-group">
+              <label>Đến ngày</label>
+              <input v-model="toDate" type="date" />
+            </div>
+            <div class="actions">
+              <button class="btn btn-export" type="button" @click="exportCsv" :disabled="exporting">
+                {{ exporting ? "Đang xuất..." : "Xuất CSV" }}
+              </button>
+            </div>
+          </div>
+
           <div v-if="loading" class="state">{{ $t("admin.loading") }}</div>
           <div v-else-if="!items.length" class="state">{{ $t("admin.noData") }}</div>
           <table v-else class="data-table">
@@ -45,23 +72,81 @@ const emit = defineEmits(["update:modelValue"]);
 
 const items = ref([]);
 const loading = ref(false);
+const exporting = ref(false);
+const typeFilter = ref("");
+const fromDate = ref("");
+const toDate = ref("");
+let filterTimer = null;
 
 watch(
   () => props.modelValue,
-  async (v) => {
-    if (!v) return;
-    loading.value = true;
-    try {
-      const res = await $fetch("/api/credit-ledger/my?limit=100");
-      items.value = Array.isArray(res?.data) ? res.data : [];
-    } catch {
-      items.value = [];
-    } finally {
-      loading.value = false;
+  (v) => {
+    if (v) {
+      fetchData();
     }
   },
-  { immediate: true },
 );
+
+async function fetchData() {
+  loading.value = true;
+  try {
+    const params = new URLSearchParams();
+    params.set("limit", "200");
+    if (typeFilter.value) params.set("type", typeFilter.value);
+    if (fromDate.value) params.set("from", fromDate.value);
+    if (toDate.value) params.set("to", toDate.value + " 23:59:59");
+
+    const res = await $fetch(`/api/credit-ledger/my?${params.toString()}`);
+    items.value = Array.isArray(res?.data) ? res.data : [];
+  } catch {
+    items.value = [];
+  } finally {
+    loading.value = false;
+  }
+}
+
+watch(
+  () => [typeFilter.value, fromDate.value, toDate.value],
+  () => {
+    if (!props.modelValue) return;
+    if (filterTimer) clearTimeout(filterTimer);
+    filterTimer = setTimeout(() => {
+      fetchData();
+    }, 300);
+  },
+);
+
+function reload() {
+  fetchData();
+}
+
+async function exportCsv() {
+  exporting.value = true;
+  try {
+    const params = new URLSearchParams();
+    params.set("limit", "500");
+    params.set("format", "csv");
+    if (typeFilter.value) params.set("type", typeFilter.value);
+    if (fromDate.value) params.set("from", fromDate.value);
+    if (toDate.value) params.set("to", toDate.value + " 23:59:59");
+
+    const url = `/api/credit-ledger/my?${params.toString()}`;
+    const res = await fetch(url);
+    const text = await res.text();
+    const blob = new Blob([text], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "credit-history.csv";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(link.href);
+  } catch {
+    // ignore export errors in UI
+  } finally {
+    exporting.value = false;
+  }
+}
 
 function close() {
   emit("update:modelValue", false);
@@ -93,7 +178,14 @@ function formatDate(val) {
 .head { display: flex; justify-content: space-between; align-items: center; padding: 1rem; border-bottom: 1px solid rgba(1,123,251,.2); }
 .head h3 { margin: 0; }
 .close-btn { background: transparent; border: 0; color: var(--text-secondary); font-size: 1.5rem; cursor: pointer; }
-.body { padding: 1rem; overflow: auto; }
+.body { padding: 1rem; overflow: auto; display: flex; flex-direction: column; gap: .75rem; }
+.toolbar { display: flex; flex-wrap: wrap; gap: .5rem .75rem; align-items: flex-end; margin-bottom: .25rem; }
+.filter-group { display: flex; flex-direction: column; gap: .25rem; font-size: .8rem; color: var(--text-secondary); }
+.filter-group select,
+.filter-group input[type="date"] { min-width: 140px; padding: .35rem .55rem; border-radius: 6px; border: 1px solid var(--input-border); background: var(--input-bg); color: var(--text-primary); font-size: .85rem; }
+.actions { display: flex; gap: .5rem; margin-left: auto; }
+.btn { padding: .4rem .8rem; border-radius: 999px; border: 1px solid rgba(1,123,251,.4); background: rgba(1,123,251,.15); color: #fff; font-size: .8rem; cursor: pointer; }
+.btn-export { background: rgba(34,197,94,.18); border-color: rgba(34,197,94,.5); }
 .state { text-align: center; padding: 2rem; color: var(--text-muted); }
 .data-table { width: 100%; border-collapse: collapse; font-size: .9rem; }
 .data-table th,.data-table td { padding: .65rem .75rem; border-bottom: 1px solid rgba(1,123,251,.15); text-align: left; }

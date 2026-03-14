@@ -16,6 +16,14 @@
         <p v-if="balance != null" class="cpm-balance">
           {{ $t("product.balance") }}: {{ formatVnd(balance) }} {{ $t("product.points") }}
         </p>
+        <div class="cpm-duration">
+          <label class="cpm-duration-label">Thời lượng sử dụng</label>
+          <select v-model="selectedDuration" class="cpm-duration-select">
+            <option v-for="opt in durationOptions" :key="opt" :value="opt">
+              {{ opt === "lifetime" ? "Lifetime" : opt }}
+            </option>
+          </select>
+        </div>
         <footer class="cpm-footer">
           <button type="button" class="cpm-btn-cancel" @click="$emit('update:modelValue', false)">
             {{ $t("admin.cancel") }}
@@ -38,6 +46,29 @@ const props = defineProps({
 
 const emit = defineEmits(["update:modelValue", "confirm"]);
 
+const durationOptions = [
+  "2h",
+  "12h",
+  "1d",
+  "3d",
+  "7d",
+  "10d",
+  "30d",
+  "90d",
+  "lifetime",
+];
+
+const selectedDuration = ref("30d");
+
+watch(
+  () => props.modelValue,
+  (val) => {
+    if (val) {
+      selectedDuration.value = "30d";
+    }
+  },
+);
+
 function formatVnd(v) {
   return (Number(v) || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 }
@@ -45,7 +76,10 @@ function formatVnd(v) {
 function confirm() {
   if (!props.product) return;
   emit("update:modelValue", false);
-  emit("confirm", props.product);
+  emit("confirm", {
+    product: props.product,
+    duration: selectedDuration.value,
+  });
 }
 </script>
 
@@ -94,6 +128,27 @@ function confirm() {
   margin: 0 0 1rem;
   font-size: 0.9rem;
   color: var(--text-muted);
+}
+
+.cpm-duration {
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.cpm-duration-label {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+.cpm-duration-select {
+  flex: 1;
+  padding: 0.45rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  background: rgba(15, 23, 42, 0.9);
+  color: var(--text-primary);
+  font-size: 0.85rem;
 }
 
 .cpm-footer {

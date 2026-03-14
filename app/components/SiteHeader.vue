@@ -95,6 +95,32 @@
       </button>
     </div>
   </header>
+  <Teleport to="body">
+    <div
+      v-if="showAnnouncementPopup && popupAnnouncement"
+      class="announcement-popup-overlay"
+      @click.self="closeAnnouncementPopup"
+    >
+      <div class="announcement-popup">
+        <h3 class="announcement-popup-title">
+          {{ popupAnnouncement.title }}
+        </h3>
+        <p class="announcement-popup-meta">
+          <span>{{ popupAnnouncement.authorName || "Admin" }}</span>
+          <span>•</span>
+          <span>{{ formatPopupDate(popupAnnouncement.createdAt) }}</span>
+        </p>
+        <pre class="announcement-popup-content">
+{{ popupAnnouncement.content }}
+        </pre>
+        <div class="announcement-popup-actions">
+          <button type="button" class="announcement-popup-btn" @click="closeAnnouncementPopup">
+            Đã hiểu
+          </button>
+        </div>
+      </div>
+    </div>
+  </Teleport>
 </template>
 
 <script setup>
@@ -106,6 +132,9 @@ const cartCount = computed(() => Number(count.value || 0));
 const showDropdown = ref(false);
 const currentUser = ref(null);
 let closeTimeout = null;
+
+const popupAnnouncement = ref(null);
+const showAnnouncementPopup = ref(false);
 
 function openDropdown() {
   if (closeTimeout) {
@@ -143,6 +172,8 @@ onMounted(async () => {
   } else {
     currentUser.value = null;
   }
+
+  await maybeShowAnnouncementPopup();
 });
 
 async function doLogout() {
@@ -158,6 +189,55 @@ async function doLogout() {
 function goProfile() {
   showDropdown.value = false;
   navigateTo("/profile");
+}
+
+function formatPopupDate(val) {
+  if (!val) return "-";
+  const d = new Date(val);
+  return d.toLocaleString("vi-VN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+async function maybeShowAnnouncementPopup() {
+  if (!import.meta.client) return;
+  try {
+    const res = await $fetch("/api/announcements?popup=1");
+    const list = Array.isArray(res?.data) ? res.data : [];
+    const item = list[0];
+    if (!item) return;
+
+    const today = new Date().toISOString().slice(0, 10);
+    const storageKey = `announcement_popup_${item.id}_lastShown`;
+    const lastShown = localStorage.getItem(storageKey);
+    if (lastShown === today) return;
+
+    popupAnnouncement.value = item;
+    showAnnouncementPopup.value = true;
+  } catch {
+    // ignore errors
+  }
+}
+
+function closeAnnouncementPopup() {
+  if (!popupAnnouncement.value) {
+    showAnnouncementPopup.value = false;
+    return;
+  }
+  if (import.meta.client) {
+    const today = new Date().toISOString().slice(0, 10);
+    const storageKey = `announcement_popup_${popupAnnouncement.value.id}_lastShown`;
+    try {
+      localStorage.setItem(storageKey, today);
+    } catch {
+      // ignore
+    }
+  }
+  showAnnouncementPopup.value = false;
 }
 </script>
 
@@ -411,6 +491,77 @@ function goProfile() {
 .site-dropdown-item:hover {
   background: rgba(1, 123, 251, 0.15);
   color: var(--blue-bright);
+}
+
+.announcement-popup-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1200;
+  padding: 1rem;
+}
+
+.announcement-popup {
+  max-width: 520px;
+  width: 100%;
+  background: radial-gradient(circle at 0 0, rgba(56, 189, 248, 0.2), transparent 55%),
+    rgba(5, 15, 35, 0.97);
+  border-radius: 16px;
+  border: 1px solid rgba(56, 189, 248, 0.6);
+  box-shadow:
+    0 0 30px rgba(56, 189, 248, 0.45),
+    0 24px 70px rgba(15, 23, 42, 0.95);
+  padding: 20px 22px 18px;
+  color: var(--text-primary);
+}
+
+.announcement-popup-title {
+  margin: 0 0 6px;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.announcement-popup-meta {
+  margin: 0 0 10px;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.announcement-popup-content {
+  margin: 0;
+  max-height: 260px;
+  overflow: auto;
+  white-space: pre-wrap;
+  font-size: 0.9rem;
+  background: rgba(15, 23, 42, 0.9);
+  border-radius: 8px;
+  padding: 10px 12px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+}
+
+.announcement-popup-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 10px;
+}
+
+.announcement-popup-btn {
+  padding: 0.45rem 1.1rem;
+  border-radius: 999px;
+  border: none;
+  background: var(--blue-bright);
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  box-shadow: 0 0 18px rgba(37, 99, 235, 0.55);
 }
 
 @media (max-width: 1024px) {

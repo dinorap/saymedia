@@ -13,6 +13,13 @@ export type LoginBody = z.infer<typeof loginSchema>;
 /** Tạo đơn hàng */
 export const orderCreateSchema = z.object({
   product_id: z.coerce.number().int().positive("Sản phẩm không hợp lệ"),
+  duration: z
+    .string()
+    .trim()
+    .max(16)
+    .optional()
+    .or(z.null())
+    .optional(),
 });
 
 export type OrderCreateBody = z.infer<typeof orderCreateSchema>;

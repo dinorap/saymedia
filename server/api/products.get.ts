@@ -17,7 +17,7 @@ export default defineEventHandler(async () => {
         id,
         name,
         description,
-        price,
+        youtube_url,
         type,
         thumbnail_url
       FROM products

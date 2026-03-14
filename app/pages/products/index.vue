@@ -100,6 +100,23 @@
                     }}{{ (p.description || "").length > 140 ? "…" : "" }}
                   </p>
                   <div class="product-actions">
+                    <div class="product-duration">
+                      <label class="product-duration-label">Thời lượng</label>
+                      <select
+                        class="product-duration-select"
+                        :value="durationByProduct[p.id] || defaultDuration"
+                        @click.stop
+                        @change="onChangeDuration(p.id, $event.target.value)"
+                      >
+                        <option
+                          v-for="opt in durationOptions"
+                          :key="opt"
+                          :value="opt"
+                        >
+                          {{ formatDuration(opt) }}
+                        </option>
+                      </select>
+                    </div>
                     <button
                       type="button"
                       class="btn-secondary"
@@ -151,9 +168,24 @@ const buyingId = ref(null);
 const currentUser = ref(null);
 const showConfirmModal = ref(false);
 const confirmProduct = ref(null);
+const confirmDuration = ref("30d");
 const { add } = useCart();
 const search = ref("");
 const filterType = ref("");
+
+const durationOptions = [
+  "2h",
+  "12h",
+  "1d",
+  "3d",
+  "7d",
+  "10d",
+  "30d",
+  "90d",
+  "lifetime",
+];
+const defaultDuration = "30d";
+const durationByProduct = ref({});
 
 const filteredProducts = computed(() => {
   let list = products.value || [];
@@ -176,6 +208,11 @@ const filteredProducts = computed(() => {
 
 function formatVnd(v) {
   return (Number(v) || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+}
+
+function formatDuration(v) {
+  if (v === "lifetime") return "Lifetime";
+  return v;
 }
 
 async function fetchProducts() {
@@ -223,6 +260,8 @@ function openConfirm(p) {
     return;
   }
   confirmProduct.value = p;
+  confirmDuration.value =
+    durationByProduct.value[p.id] || defaultDuration;
   showConfirmModal.value = true;
 }
 
@@ -232,13 +271,21 @@ function addToCart(p) {
   showToast(t("cart.addedToCart"), "success");
 }
 
-async function doPurchase(product) {
+async function doPurchase(payload) {
+  const product = payload?.product || payload;
+  const duration =
+    payload?.duration ||
+    durationByProduct.value[product.id] ||
+    defaultDuration;
   if (!product) return;
   buyingId.value = product.id;
   try {
     const res = await $fetch("/api/orders/create", {
       method: "POST",
-      body: { product_id: product.id },
+      body: {
+        product_id: product.id,
+        duration,
+      },
     });
     const successMsg =
       locale.value === "vi"
@@ -265,6 +312,13 @@ async function doPurchase(product) {
   } finally {
     buyingId.value = null;
   }
+}
+
+function onChangeDuration(id, value) {
+  durationByProduct.value = {
+    ...durationByProduct.value,
+    [id]: value,
+  };
 }
 
 onMounted(async () => {

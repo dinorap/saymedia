@@ -283,6 +283,15 @@ function buySingle(item) {
   showConfirm.value = true;
 }
 
+function formatDuration(v) {
+  if (v === "lifetime") return "Lifetime";
+  return v;
+}
+
+function onChangeDuration(id, value) {
+  durationByProduct[id] = value;
+}
+
 function checkoutAll() {
   if (!cart.value.length) return;
   if (!currentUser.value) {
@@ -321,6 +330,20 @@ const checkoutTotal = computed(() =>
   checkoutItems.value.reduce((sum, item) => sum + Number(item.price || 0), 0),
 );
 
+const durationOptions = [
+  "2h",
+  "12h",
+  "1d",
+  "3d",
+  "7d",
+  "10d",
+  "30d",
+  "90d",
+  "lifetime",
+];
+const defaultDuration = "30d";
+const durationByProduct = reactive({});
+
 async function confirmCheckoutAll() {
   if (buyingAll.value) return;
   buyingAll.value = true;
@@ -333,7 +356,10 @@ async function confirmCheckoutAll() {
       try {
         const res = await $fetch("/api/orders/create", {
           method: "POST",
-          body: { product_id: item.id },
+          body: {
+            product_id: item.id,
+            duration: durationByProduct[item.id] || defaultDuration,
+          },
         });
         ok++;
         remove(item.id);
@@ -358,12 +384,15 @@ async function confirmCheckoutAll() {
   }
 }
 
-async function doPurchase(p) {
+async function doPurchase(payload) {
+  const p = payload?.product || payload;
+  const duration =
+    payload?.duration || durationByProduct[p.id] || defaultDuration;
   if (!p) return;
   try {
     const res = await $fetch("/api/orders/create", {
       method: "POST",
-      body: { product_id: p.id },
+      body: { product_id: p.id, duration },
     });
     showToast(t("cart.purchaseSuccessHistory"), "success");
     remove(p.id);
