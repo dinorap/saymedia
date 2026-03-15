@@ -75,10 +75,7 @@
               <td>{{ idx + 1 }}</td>
               <td>{{ a.username }}</td>
               <td>
-                <span
-                  class="badge"
-                  :class="roleBadgeClass(a.role)"
-                >
+                <span class="badge" :class="roleBadgeClass(a.role)">
                   {{ roleLabel(a.role) }}
                 </span>
               </td>
@@ -609,8 +606,8 @@ async function fetchUsers(page = 1, opts = { silent: false }) {
     if (userSearch.value.trim()) params.set("search", userSearch.value.trim());
     params.set("page", String(page));
     params.set("limit", String(userPageSize.value));
-     params.set("sort_field", userSortField.value);
-     params.set("sort_dir", userSortDirection.value);
+    params.set("sort_field", userSortField.value);
+    params.set("sort_dir", userSortDirection.value);
     const res = await $fetch(`/api/admin/users?${params}`);
     if (res?.success && res.data) users.value = res.data;
     if (res?.pagination) userPagination.value = res.pagination;
@@ -642,8 +639,7 @@ watch(
 );
 
 function goToUserPage(page) {
-  if (page >= 1 && page <= userPagination.value.totalPages)
-    fetchUsers(page);
+  if (page >= 1 && page <= userPagination.value.totalPages) fetchUsers(page);
 }
 
 function changeUserPageSize() {

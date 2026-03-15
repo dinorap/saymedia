@@ -24,7 +24,7 @@ export async function ensureProductKeySchema() {
       id BIGINT AUTO_INCREMENT PRIMARY KEY,
       product_id INT NULL,
       product_name VARCHAR(255) NOT NULL,
-      \`key\` VARCHAR(255) NOT NULL UNIQUE,
+      \`key\` VARCHAR(255) NOT NULL,
       valid_duration ENUM('2h','12h','1d','3d','7d','10d','30d','90d','lifetime') NOT NULL,
       price BIGINT UNSIGNED NOT NULL DEFAULT 0,
       created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -33,6 +33,35 @@ export async function ensureProductKeySchema() {
       CONSTRAINT fk_product_keys_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE SET NULL
     )
   `)
+
+  // Đảm bảo unique theo (product_id, key), không bắt toàn hệ thống phải unique theo key
+  try {
+    // Với schema cũ, cột `key` có UNIQUE implicit -> cần drop trước
+    await pool.query(
+      `
+        ALTER TABLE product_keys
+        DROP INDEX \`key\`
+      `,
+    )
+  } catch (e: any) {
+    // Nếu index không tồn tại thì bỏ qua
+    if (e?.code !== 'ER_CANT_DROP_FIELD_OR_KEY' && e?.code !== 'ER_KEY_DOES_NOT_EXIST') {
+      // Các lỗi khác vẫn ném ra để không nuốt bug nghiêm trọng
+      throw e
+    }
+  }
+  try {
+    await pool.query(
+      `
+        ALTER TABLE product_keys
+        ADD UNIQUE KEY uniq_product_key_per_product (product_id, \`key\`)
+      `,
+    )
+  } catch (e: any) {
+    if (e?.code !== 'ER_DUP_KEYNAME') {
+      throw e
+    }
+  }
 
   // Bổ sung cột price cho schema cũ (nếu thiếu)
   try {

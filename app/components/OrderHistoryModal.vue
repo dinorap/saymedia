@@ -12,6 +12,35 @@
         </header>
 
         <section class="history-body">
+          <div class="history-filters">
+            <div class="filter-group">
+              <label>Từ ngày</label>
+              <input v-model="fromDate" type="date" />
+            </div>
+            <div class="filter-group">
+              <label>Đến ngày</label>
+              <input v-model="toDate" type="date" />
+            </div>
+            <div class="filter-group">
+              <label>{{ $t("payment.history.status") }}</label>
+              <select v-model="statusFilter" class="filter-select">
+                <option value="">{{ $t("admin.all") || "Tất cả" }}</option>
+                <option value="pending">Đang chờ</option>
+                <option value="completed">Hoàn thành</option>
+                <option value="cancelled">Đã hủy</option>
+              </select>
+            </div>
+            <div class="filter-group filter-search">
+              <label>Tìm kiếm</label>
+              <input
+                v-model="searchKeyword"
+                type="text"
+                placeholder="Sản phẩm, ghi chú, số tiền..."
+                class="filter-search-input"
+              />
+            </div>
+          </div>
+
           <div v-if="loading" class="history-state">
             {{ $t("auth.loading") }}
           </div>
@@ -20,6 +49,9 @@
           </div>
           <div v-else-if="!items.length" class="history-state">
             {{ $t("payment.history.empty") }}
+          </div>
+          <div v-else-if="!filteredItems.length" class="history-state">
+            Không có bản ghi nào phù hợp với bộ lọc.
           </div>
           <div v-else class="history-table-wrap">
             <table class="history-table">
@@ -37,7 +69,7 @@
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="(o, idx) in items" :key="o.id">
+                <tr v-for="(o, idx) in filteredItems" :key="o.id">
                   <td>{{ idx + 1 }}</td>
                   <td>{{ o.product_name || "-" }}</td>
                   <td>{{ formatDate(o.created_at) }}</td>
@@ -48,7 +80,13 @@
                     </span>
                   </td>
                   <td class="history-note">
-                    {{ o.note || "-" }}
+                    <div
+                      class="history-note-preview"
+                      @mouseenter="onNoteMouseEnter($event, o)"
+                      @mouseleave="onNoteMouseLeave"
+                    >
+                      {{ formatNotePreview(o.note) }}
+                    </div>
                   </td>
                   <td class="history-note">
                     {{ o.refund_reason || o.refund_request_reason || "-" }}
@@ -85,6 +123,71 @@
             </table>
           </div>
         </section>
+
+        <!-- Popover xem đầy đủ ghi chú đơn (hover) -->
+        <Teleport to="body">
+          <Transition name="note-popover">
+            <div
+              v-if="notePopoverOrder"
+              class="note-popover"
+              :style="notePopoverStyle"
+              @mouseenter="clearNotePopoverLeaveTimer"
+              @mouseleave="onNoteMouseLeave"
+            >
+              <div class="note-popover-title">
+                Ghi chú đơn #{{ notePopoverOrder.id }}
+              </div>
+              <div class="note-popover-body">
+                <template
+                  v-if="
+                    parsedNote.duration !== null ||
+                    parsedNote.qty !== null ||
+                    parsedNote.keys.length
+                  "
+                >
+                  <p v-if="parsedNote.customText" class="note-popover-custom">
+                    {{ parsedNote.customText }}
+                  </p>
+                  <p
+                    v-if="parsedNote.duration !== null"
+                    class="note-popover-row"
+                  >
+                    <span class="note-popover-label">Loại key:</span>
+                    <span class="note-popover-value">{{
+                      parsedNote.duration
+                    }}</span>
+                  </p>
+                  <p
+                    v-if="parsedNote.qty !== null || parsedNote.keys.length"
+                    class="note-popover-row"
+                  >
+                    <span class="note-popover-label">Số lượng:</span>
+                    <span class="note-popover-value">{{
+                      parsedNote.qty ?? parsedNote.keys.length
+                    }}</span>
+                  </p>
+                  <template v-if="parsedNote.keys.length">
+                    <p class="note-popover-label">Key:</p>
+                    <div class="note-popover-keys">
+                      <div
+                        v-for="(k, i) in parsedNote.keys"
+                        :key="i"
+                        class="note-popover-key-line"
+                      >
+                        {{ k }}
+                      </div>
+                    </div>
+                  </template>
+                </template>
+                <template v-else>
+                  <pre class="note-popover-raw">{{
+                    notePopoverOrder.note || "—"
+                  }}</pre>
+                </template>
+              </div>
+            </div>
+          </Transition>
+        </Teleport>
 
         <footer class="history-footer">
           <div v-if="refundTarget" class="refund-box">
@@ -145,6 +248,190 @@ const error = ref("");
 const refundTarget = ref(null);
 const refundReason = ref("");
 const requestingId = ref(null);
+const fromDate = ref("");
+const toDate = ref("");
+const statusFilter = ref("");
+const searchKeyword = ref("");
+
+const notePopoverOrder = ref(null);
+const notePopoverStyle = ref({});
+let notePopoverLeaveTimer = null;
+
+function parseOrderNote(note) {
+  const result = {
+    customText: null,
+    duration: null,
+    qty: null,
+    keys: [],
+    isStructured: false,
+  };
+  if (!note || typeof note !== "string") return result;
+  const raw = note.trim();
+  if (!raw) return result;
+  const lines = raw.split(/\r?\n/).map((l) => l.trim());
+  const loaiKeyIdx = lines.findIndex((l) => /^Loại key:\s*/i.test(l));
+  if (loaiKeyIdx >= 0) {
+    result.isStructured = true;
+    const customParts = lines.slice(0, loaiKeyIdx).filter(Boolean);
+    result.customText = customParts.length ? customParts.join(" ") : null;
+    const m = lines[loaiKeyIdx].match(/^Loại key:\s*(.+)$/i);
+    result.duration = m ? m[1].trim() || null : null;
+    const soLuongIdx = lines.findIndex(
+      (l, i) => i > loaiKeyIdx && /^Số lượng:\s*/i.test(l),
+    );
+    if (soLuongIdx >= 0) {
+      const qm = lines[soLuongIdx].match(/^Số lượng:\s*(\d+)/i);
+      result.qty = qm ? parseInt(qm[1], 10) : null;
+    }
+    const keyLabelIdx = lines.findIndex(
+      (l, i) => i > loaiKeyIdx && /^Key:\s*$/i.test(l.replace(/\s+$/, "")),
+    );
+    if (keyLabelIdx >= 0) {
+      result.keys = lines.slice(keyLabelIdx + 1).filter(Boolean);
+    }
+    return result;
+  }
+  const parts = raw.split(";");
+  for (const part of parts) {
+    const eq = part.indexOf("=");
+    if (eq <= 0) continue;
+    const key = part.slice(0, eq).trim().toLowerCase();
+    const val = part.slice(eq + 1).trim();
+    if (key === "duration") {
+      result.duration = val || null;
+      result.isStructured = true;
+    } else if (key === "qty") {
+      const n = parseInt(val, 10);
+      result.qty = Number.isFinite(n) ? n : null;
+      result.isStructured = true;
+    } else if (key === "keys") {
+      result.keys = val
+        ? val
+            .split(",")
+            .map((k) => k.trim())
+            .filter(Boolean)
+        : [];
+      result.isStructured = true;
+    }
+  }
+  return result;
+}
+
+const parsedNote = computed(() => {
+  if (!notePopoverOrder.value?.note)
+    return { customText: null, duration: null, qty: null, keys: [] };
+  return parseOrderNote(notePopoverOrder.value.note);
+});
+
+function formatNotePreview(note) {
+  if (!note || typeof note !== "string") return "—";
+  const trimmed = note.trim();
+  if (!trimmed) return "—";
+  const parsed = parseOrderNote(note);
+  if (parsed.isStructured) {
+    const parts = [];
+    if (parsed.customText)
+      parts.push(
+        parsed.customText.slice(0, 25) +
+          (parsed.customText.length > 25 ? "…" : ""),
+      );
+    if (parsed.duration) parts.push(parsed.duration);
+    if (parsed.qty != null) parts.push(`${parsed.qty} key`);
+    if (parsed.keys.length && parsed.qty == null)
+      parts.push(`${parsed.keys.length} key`);
+    return parts.length
+      ? parts.join(" · ")
+      : trimmed.slice(0, 40) + (trimmed.length > 40 ? "…" : "");
+  }
+  return trimmed.length > 35 ? trimmed.slice(0, 35) + "…" : trimmed;
+}
+
+function onNoteMouseEnter(ev, order) {
+  if (notePopoverLeaveTimer) {
+    clearTimeout(notePopoverLeaveTimer);
+    notePopoverLeaveTimer = null;
+  }
+  notePopoverOrder.value = order;
+  const rect = ev.currentTarget?.getBoundingClientRect?.();
+  if (rect) {
+    notePopoverStyle.value = {
+      top: `${rect.bottom + 6}px`,
+      left: `${rect.left}px`,
+      minWidth: `${Math.min(320, Math.max(rect.width, 200))}px`,
+    };
+  } else {
+    notePopoverStyle.value = {};
+  }
+}
+
+function onNoteMouseLeave() {
+  notePopoverLeaveTimer = setTimeout(() => {
+    notePopoverOrder.value = null;
+    notePopoverLeaveTimer = null;
+  }, 100);
+}
+
+function clearNotePopoverLeaveTimer() {
+  if (notePopoverLeaveTimer) {
+    clearTimeout(notePopoverLeaveTimer);
+    notePopoverLeaveTimer = null;
+  }
+}
+
+function parseOrderDate(order) {
+  const raw = order?.created_at;
+  if (!raw) return null;
+  const s =
+    typeof raw === "string" && raw.includes(" ")
+      ? raw.replace(" ", "T") + "Z"
+      : raw;
+  const d = new Date(s);
+  return Number.isFinite(d.getTime()) ? d.toISOString().slice(0, 10) : null;
+}
+
+const filteredItems = computed(() => {
+  let list = items.value;
+  if (fromDate.value) {
+    list = list.filter((o) => {
+      const d = parseOrderDate(o);
+      return d && d >= fromDate.value;
+    });
+  }
+  if (toDate.value) {
+    list = list.filter((o) => {
+      const d = parseOrderDate(o);
+      return d && d <= toDate.value;
+    });
+  }
+  if (statusFilter.value) {
+    list = list.filter(
+      (o) =>
+        (o.status || "").toLowerCase() === statusFilter.value.toLowerCase(),
+    );
+  }
+  const q = (searchKeyword.value || "").trim().toLowerCase();
+  if (q) {
+    list = list.filter((o) => {
+      const product = (o.product_name || "").toLowerCase();
+      const note = (o.note || "").toLowerCase();
+      const reason = (
+        o.refund_reason ||
+        o.refund_request_reason ||
+        ""
+      ).toLowerCase();
+      const amountStr = (Number(o.amount) || 0)
+        .toString()
+        .replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+      return (
+        product.includes(q) ||
+        note.includes(q) ||
+        reason.includes(q) ||
+        amountStr.includes(q)
+      );
+    });
+  }
+  return list;
+});
 
 async function loadHistory(opts) {
   const silent = !!opts?.silent;
@@ -196,6 +483,11 @@ onUnmounted(() => {
 });
 
 function handleClose() {
+  notePopoverOrder.value = null;
+  if (notePopoverLeaveTimer) {
+    clearTimeout(notePopoverLeaveTimer);
+    notePopoverLeaveTimer = null;
+  }
   emit("update:modelValue", false);
   closeRefundModal();
 }
@@ -287,7 +579,7 @@ async function submitRefundRequest() {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 60;
+  z-index: 1000;
 }
 
 .history-modal {
@@ -327,6 +619,38 @@ async function submitRefundRequest() {
   padding: 0.75rem 1.5rem 1rem;
   flex: 1;
   overflow: hidden;
+}
+
+.history-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+  align-items: flex-end;
+  margin-bottom: 0.75rem;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.filter-group input[type="date"],
+.filter-group .filter-select,
+.filter-group .filter-search-input {
+  min-width: 140px;
+  padding: 0.35rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid var(--input-border);
+  background: var(--input-bg);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+}
+
+.filter-search .filter-search-input {
+  min-width: 200px;
 }
 
 .history-state {
@@ -370,9 +694,102 @@ async function submitRefundRequest() {
 }
 
 .history-note {
-  max-width: 320px;
-  white-space: pre-line;
+  max-width: 200px;
   color: var(--text-secondary);
+}
+
+.history-note-preview {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: help;
+  font-size: 0.88rem;
+}
+.history-note-preview:hover {
+  color: var(--blue-bright);
+}
+
+/* Popover ghi chú đơn (hover) */
+.note-popover {
+  position: fixed;
+  z-index: 1001;
+  background: rgba(8, 20, 45, 0.98);
+  border: 1px solid rgba(1, 123, 251, 0.45);
+  border-radius: 12px;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.5),
+    0 0 20px rgba(1, 123, 251, 0.15);
+  padding: 0;
+  max-width: 360px;
+  max-height: 70vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.note-popover-title {
+  padding: 0.65rem 1rem;
+  border-bottom: 1px solid rgba(1, 123, 251, 0.25);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--blue-bright);
+}
+.note-popover-body {
+  padding: 0.85rem 1rem;
+  overflow-y: auto;
+  font-size: 0.88rem;
+  color: var(--text-primary);
+}
+.note-popover-custom {
+  margin: 0 0 0.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+}
+.note-popover-row {
+  margin: 0 0 0.4rem;
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+.note-popover-label {
+  color: var(--text-secondary);
+  min-width: 5.5rem;
+  flex-shrink: 0;
+}
+.note-popover-value {
+  color: var(--text-primary);
+}
+.note-popover-keys {
+  margin-top: 0.35rem;
+  padding-left: 0.5rem;
+  border-left: 2px solid rgba(1, 123, 251, 0.4);
+}
+.note-popover-key-line {
+  padding: 0.2rem 0;
+  font-family: ui-monospace, monospace;
+  font-size: 0.82rem;
+  word-break: break-all;
+  color: var(--text-primary);
+}
+.note-popover-raw {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+.note-popover-enter-active,
+.note-popover-leave-active {
+  transition:
+    opacity 0.15s ease,
+    transform 0.15s ease;
+}
+.note-popover-enter-from,
+.note-popover-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
 }
 
 .history-note-hint {

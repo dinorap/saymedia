@@ -12,13 +12,21 @@ export default defineEventHandler(async (event) => {
   const query = getQuery(event);
   const type = query.type ? String(query.type).trim() : "";
   const userId = query.user_id ? parseInt(String(query.user_id), 10) : null;
+  const fromDate = query.from ? String(query.from).trim() : "";
+  const toDate = query.to ? String(query.to).trim() : "";
+  const formatCsv = query.format === "csv";
 
   let page = parseInt(String(query.page || 1), 10);
   if (!Number.isFinite(page) || page < 1) page = 1;
   let limit = parseInt(String(query.limit || 20), 10);
   if (!Number.isFinite(limit) || limit < 1) limit = 20;
-  limit = Math.min(100, Math.max(10, limit));
-  const offset = (page - 1) * limit;
+  if (formatCsv) {
+    limit = 10000;
+    page = 1;
+  } else {
+    limit = Math.min(100, Math.max(10, limit));
+  }
+  const offset = (page - 1) * limit;;
 
   const conditions: string[] = [];
   const params: any[] = [];
@@ -34,6 +42,14 @@ export default defineEventHandler(async (event) => {
   if (type) {
     conditions.push("l.transaction_type = ?");
     params.push(type);
+  }
+  if (fromDate) {
+    conditions.push("l.created_at >= ?");
+    params.push(fromDate + " 00:00:00");
+  }
+  if (toDate) {
+    conditions.push("l.created_at <= ?");
+    params.push(toDate + " 23:59:59");
   }
 
   const whereClause = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
@@ -63,6 +79,22 @@ export default defineEventHandler(async (event) => {
     `,
     [...params, limit, offset],
   );
+
+  if (formatCsv) {
+    const headers = ["id", "user_id", "user_username", "transaction_type", "delta", "balance_before", "balance_after", "note", "created_at"];
+    const escape = (v: any) => {
+      const s = v == null ? "" : String(v);
+      return s.includes(",") || s.includes('"') || s.includes("\n") ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    const lines = [headers.join(",")];
+    for (const r of rows) {
+      lines.push(headers.map((h) => escape(r[h])).join(","));
+    }
+    const csv = lines.join("\n");
+    setResponseHeader(event, "Content-Type", "text/csv; charset=utf-8");
+    setResponseHeader(event, "Content-Disposition", 'attachment; filename="admin-credit-ledger.csv"');
+    return csv;
+  }
 
   return {
     success: true,

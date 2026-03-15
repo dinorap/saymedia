@@ -28,6 +28,14 @@
         </select>
       </div>
       <div class="filter-group">
+        <label>Từ ngày</label>
+        <input v-model="fromDate" type="date" class="input input--sm" />
+      </div>
+      <div class="filter-group">
+        <label>Đến ngày</label>
+        <input v-model="toDate" type="date" class="input input--sm" />
+      </div>
+      <div class="filter-group">
         <label>{{ $t("admin.search") }}</label>
         <input
           v-model="search"
@@ -35,6 +43,16 @@
           class="input input--sm"
           :placeholder="$t('admin.search')"
         />
+      </div>
+      <div class="filter-group">
+        <button
+          type="button"
+          class="btn-export-csv"
+          :disabled="exportingCsv"
+          @click="exportCsv"
+        >
+          {{ exportingCsv ? "Đang xuất..." : "Xuất CSV" }}
+        </button>
       </div>
     </div>
 
@@ -53,6 +71,7 @@
             <th v-if="isSuperAdmin">{{ $t("admin.email") }}</th>
             <th v-if="isSuperAdmin">{{ $t("admin.adminId") }}</th>
             <th>{{ $t("admin.productName") || "Sản phẩm" }}</th>
+            <th>Người giới thiệu</th>
             <th>{{ $t("payment.history.amount") }}</th>
             <th>{{ $t("admin.status") }}</th>
             <th>{{ $t("admin.orderNote") || "Ghi chú" }}</th>
@@ -69,6 +88,14 @@
             <td v-if="isSuperAdmin">{{ o.user_email }}</td>
             <td v-if="isSuperAdmin">{{ o.admin_username || "-" }}</td>
             <td>{{ o.product_name || "-" }}</td>
+            <td>
+              <span
+                v-if="o.seller_admin_id && o.seller_admin_id !== o.product_owner_admin_id"
+              >
+                {{ o.seller_username || "-" }}
+              </span>
+              <span v-else>-</span>
+            </td>
             <td>{{ formatVnd(o.amount) }}</td>
             <td>
               <span class="badge" :class="statusClass(o.status)">
@@ -90,7 +117,13 @@
               </div>
             </td>
             <td class="order-note">
-              <div>{{ o.note || "-" }}</div>
+              <div
+                class="order-note-preview"
+                @mouseenter="onNoteMouseEnter($event, o)"
+                @mouseleave="onNoteMouseLeave"
+              >
+                {{ formatNotePreview(o.note) }}
+              </div>
               <div v-if="o.refund_request_reason" class="refund-request-hint">
                 {{ $t("admin.orderRefundRequest") }}:
                 {{ o.refund_request_reason }}
@@ -261,6 +294,45 @@
         </button>
       </div>
     </div>
+
+    <!-- Popover xem đầy đủ ghi chú đơn (hover) -->
+    <Teleport to="body">
+      <Transition name="note-popover">
+        <div
+          v-if="notePopoverOrder"
+          class="note-popover"
+          :style="notePopoverStyle"
+          @mouseenter="notePopoverLeaveTimer = null"
+          @mouseleave="onNoteMouseLeave"
+        >
+          <div class="note-popover-title">Ghi chú đơn #{{ notePopoverOrder.id }}</div>
+          <div class="note-popover-body">
+            <template v-if="parsedNote.duration !== null || parsedNote.qty !== null || parsedNote.keys.length">
+              <p v-if="parsedNote.customText" class="note-popover-custom">
+                {{ parsedNote.customText }}
+              </p>
+              <p v-if="parsedNote.duration !== null" class="note-popover-row">
+                <span class="note-popover-label">Loại key:</span>
+                <span class="note-popover-value">{{ parsedNote.duration }}</span>
+              </p>
+              <p v-if="parsedNote.qty !== null || parsedNote.keys.length" class="note-popover-row">
+                <span class="note-popover-label">Số lượng:</span>
+                <span class="note-popover-value">{{ parsedNote.qty ?? parsedNote.keys.length }}</span>
+              </p>
+              <template v-if="parsedNote.keys.length">
+                <p class="note-popover-label">Key:</p>
+                <div class="note-popover-keys">
+                  <div v-for="(k, i) in parsedNote.keys" :key="i" class="note-popover-key-line">{{ k }}</div>
+                </div>
+              </template>
+            </template>
+            <template v-else>
+              <pre class="note-popover-raw">{{ notePopoverOrder.note || "—" }}</pre>
+            </template>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
@@ -278,6 +350,9 @@ const loading = ref(true);
 const filterAdmin = ref("");
 const filterStatus = ref("");
 const search = ref("");
+const fromDate = ref("");
+const toDate = ref("");
+const exportingCsv = ref(false);
 let searchTimer = null;
 const pagination = ref({ page: 1, limit: 10, total: 0, totalPages: 1 });
 const pageSize = ref(10);
@@ -288,6 +363,101 @@ const refundReason = ref("");
 const savingNoteId = ref(null);
 const refundModalOrder = ref(null);
 let autoRefreshTimer = null;
+
+const notePopoverOrder = ref(null);
+const notePopoverStyle = ref({});
+let notePopoverLeaveTimer = null;
+
+function parseOrderNote(note) {
+  const result = { customText: null, duration: null, qty: null, keys: [], isStructured: false };
+  if (!note || typeof note !== "string") return result;
+  const raw = note.trim();
+  if (!raw) return result;
+  const lines = raw.split(/\r?\n/).map((l) => l.trim());
+  const loaiKeyIdx = lines.findIndex((l) => /^Loại key:\s*/i.test(l));
+  if (loaiKeyIdx >= 0) {
+    result.isStructured = true;
+    const customParts = lines.slice(0, loaiKeyIdx).filter(Boolean);
+    result.customText = customParts.length ? customParts.join(" ") : null;
+    const m = lines[loaiKeyIdx].match(/^Loại key:\s*(.+)$/i);
+    result.duration = m ? m[1].trim() || null : null;
+    const soLuongIdx = lines.findIndex((l, i) => i > loaiKeyIdx && /^Số lượng:\s*/i.test(l));
+    if (soLuongIdx >= 0) {
+      const qm = lines[soLuongIdx].match(/^Số lượng:\s*(\d+)/i);
+      result.qty = qm ? parseInt(qm[1], 10) : null;
+    }
+    const keyLabelIdx = lines.findIndex((l, i) => i > loaiKeyIdx && /^Key:\s*$/i.test(l.replace(/\s+$/, "")));
+    if (keyLabelIdx >= 0) {
+      result.keys = lines.slice(keyLabelIdx + 1).filter(Boolean);
+    }
+    return result;
+  }
+  const parts = raw.split(";");
+  for (const part of parts) {
+    const eq = part.indexOf("=");
+    if (eq <= 0) continue;
+    const key = part.slice(0, eq).trim().toLowerCase();
+    const val = part.slice(eq + 1).trim();
+    if (key === "duration") {
+      result.duration = val || null;
+      result.isStructured = true;
+    } else if (key === "qty") {
+      const n = parseInt(val, 10);
+      result.qty = Number.isFinite(n) ? n : null;
+      result.isStructured = true;
+    } else if (key === "keys") {
+      result.keys = val ? val.split(",").map((k) => k.trim()).filter(Boolean) : [];
+      result.isStructured = true;
+    }
+  }
+  return result;
+}
+
+const parsedNote = computed(() => {
+  if (!notePopoverOrder.value?.note) return { customText: null, duration: null, qty: null, keys: [] };
+  return parseOrderNote(notePopoverOrder.value.note);
+});
+
+function formatNotePreview(note) {
+  if (!note || typeof note !== "string") return "—";
+  const trimmed = note.trim();
+  if (!trimmed) return "—";
+  const parsed = parseOrderNote(note);
+  if (parsed.isStructured) {
+    const parts = [];
+    if (parsed.customText) parts.push(parsed.customText.slice(0, 25) + (parsed.customText.length > 25 ? "…" : ""));
+    if (parsed.duration) parts.push(parsed.duration);
+    if (parsed.qty != null) parts.push(`${parsed.qty} key`);
+    if (parsed.keys.length && parsed.qty == null) parts.push(`${parsed.keys.length} key`);
+    return parts.length ? parts.join(" · ") : trimmed.slice(0, 40) + (trimmed.length > 40 ? "…" : "");
+  }
+  return trimmed.length > 35 ? trimmed.slice(0, 35) + "…" : trimmed;
+}
+
+function onNoteMouseEnter(ev, order) {
+  if (notePopoverLeaveTimer) {
+    clearTimeout(notePopoverLeaveTimer);
+    notePopoverLeaveTimer = null;
+  }
+  notePopoverOrder.value = order;
+  const rect = ev.currentTarget?.getBoundingClientRect?.();
+  if (rect) {
+    notePopoverStyle.value = {
+      top: `${rect.bottom + 6}px`,
+      left: `${rect.left}px`,
+      minWidth: `${Math.min(320, Math.max(rect.width, 200))}px`,
+    };
+  } else {
+    notePopoverStyle.value = {};
+  }
+}
+
+function onNoteMouseLeave() {
+  notePopoverLeaveTimer = setTimeout(() => {
+    notePopoverOrder.value = null;
+    notePopoverLeaveTimer = null;
+  }, 100);
+}
 
 async function fetchAdmins() {
   if (!isSuperAdmin.value) return;
@@ -311,9 +481,9 @@ async function fetchOrders(page = 1, opts = { silent: false }) {
     if (isSuperAdmin.value && filterAdmin.value) {
       params.set("admin_id", String(filterAdmin.value));
     }
-    if (search.value.trim()) {
-      params.set("search", search.value.trim());
-    }
+    if (search.value.trim()) params.set("search", search.value.trim());
+    if (fromDate.value) params.set("from", fromDate.value);
+    if (toDate.value) params.set("to", toDate.value);
     const res = await $fetch(`/api/admin/orders?${params.toString()}`);
     if (res?.success && res.data) orders.value = res.data;
     if (res?.pagination) pagination.value = res.pagination;
@@ -328,14 +498,39 @@ async function fetchOrders(page = 1, opts = { silent: false }) {
 }
 
 watch(
-  () => search.value,
+  () => [search.value, fromDate.value, toDate.value],
   () => {
     if (searchTimer) clearTimeout(searchTimer);
-    searchTimer = setTimeout(() => {
-      fetchOrders(1);
-    }, 300);
+    searchTimer = setTimeout(() => fetchOrders(1), 300);
   },
 );
+
+async function exportCsv() {
+  exportingCsv.value = true;
+  try {
+    const params = new URLSearchParams();
+    params.set("format", "csv");
+    if (filterStatus.value) params.set("status", filterStatus.value);
+    if (isSuperAdmin.value && filterAdmin.value) params.set("admin_id", String(filterAdmin.value));
+    if (search.value.trim()) params.set("search", search.value.trim());
+    if (fromDate.value) params.set("from", fromDate.value);
+    if (toDate.value) params.set("to", toDate.value);
+    const url = `/api/admin/orders?${params.toString()}`;
+    const csv = await $fetch(url);
+    const blob = new Blob([String(csv)], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "admin-orders.csv";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(link.href);
+  } catch (e) {
+    console.error("[admin orders export]", e);
+  } finally {
+    exportingCsv.value = false;
+  }
+}
 
 function goToPage(page) {
   if (page >= 1 && page <= pagination.value.totalPages) {
@@ -496,6 +691,21 @@ onUnmounted(() => {
   min-width: 140px;
 }
 
+.btn-export-csv {
+  padding: 0.45rem 0.9rem;
+  border-radius: 8px;
+  border: 1px solid rgba(34, 197, 94, 0.5);
+  background: rgba(22, 163, 74, 0.2);
+  color: #86efac;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+.btn-export-csv:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .btn-search {
   padding: 0.45rem 0.75rem;
   background: rgba(1, 123, 251, 0.2);
@@ -550,9 +760,19 @@ onUnmounted(() => {
 }
 
 .order-note {
-  max-width: 320px;
-  white-space: pre-line;
+  max-width: 200px;
   color: var(--text-secondary);
+}
+.order-note-preview {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: help;
+  font-size: 0.9rem;
+}
+.order-note-preview:hover {
+  color: var(--blue-bright);
 }
 .refund-request-hint {
   margin-top: 0.35rem;
@@ -675,6 +895,84 @@ onUnmounted(() => {
 .btn-edit-note:disabled {
   opacity: 0.7;
   cursor: not-allowed;
+}
+
+/* Popover ghi chú đơn (hover) */
+.note-popover {
+  position: fixed;
+  z-index: 1001;
+  background: rgba(8, 20, 45, 0.98);
+  border: 1px solid rgba(1, 123, 251, 0.45);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 20px rgba(1, 123, 251, 0.15);
+  padding: 0;
+  max-width: 360px;
+  max-height: 70vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.note-popover-title {
+  padding: 0.65rem 1rem;
+  border-bottom: 1px solid rgba(1, 123, 251, 0.25);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--blue-bright);
+}
+.note-popover-body {
+  padding: 0.85rem 1rem;
+  overflow-y: auto;
+  font-size: 0.88rem;
+  color: var(--text-primary);
+}
+.note-popover-custom {
+  margin: 0 0 0.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+}
+.note-popover-row {
+  margin: 0 0 0.4rem;
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+.note-popover-label {
+  color: var(--text-secondary);
+  min-width: 5.5rem;
+  flex-shrink: 0;
+}
+.note-popover-value {
+  color: var(--text-primary);
+}
+.note-popover-keys {
+  margin-top: 0.35rem;
+  padding-left: 0.5rem;
+  border-left: 2px solid rgba(1, 123, 251, 0.4);
+}
+.note-popover-key-line {
+  padding: 0.2rem 0;
+  font-family: ui-monospace, monospace;
+  font-size: 0.82rem;
+  word-break: break-all;
+  color: var(--text-primary);
+}
+.note-popover-raw {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+.note-popover-enter-active,
+.note-popover-leave-active {
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+.note-popover-enter-from,
+.note-popover-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
 }
 
 .edit-note-overlay {

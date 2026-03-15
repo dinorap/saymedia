@@ -123,6 +123,7 @@
     "totalUsers": "Tổng người dùng",
     "monthlyRevenue": "Doanh thu tháng",
     "orders": "Quản lý đơn hàng",
+    "partners": "Đối tác & Doanh thu",
     "earningsOverview": "Tổng quan thu nhập",
     "thisMonth": "Tháng này",
     "topPerforming": "Trung tâm hoạt động tốt",
@@ -242,7 +243,7 @@
     "close": "Đóng",
     "productTabMain": "Sản phẩm",
     "productTabOwnerSellers": "Đối tác",
-    "productTabMySellers": "Sản phẩm bán cho chủ",
+    "productTabMySellers": "Sản phẩm của đối tác",
     "productOwnerSellersTitle": "Quản lý đối tác",
     "productMySellersEmpty": "Bạn chưa bán sản phẩm nào cho chủ.",
     "productRefCode": "Ref sản phẩm",
@@ -441,11 +442,18 @@
     "openLink": "Mở link tải"
   },
   "profile": {
-  "adminContactTitle": "Hỗ trợ tài khoản",
-  "adminContactLabel": "Admin phụ trách",
-  "adminContactEmpty": "Admin của bạn chưa trả lời, hãy để lại tin nhắn để được hỗ trợ sớm nhất.",
-  "adminContactHint": "Chat trực tiếp với admin phụ trách tài khoản về nạp tiền, đơn hàng và các vấn đề khác.",
-  "adminChatPlaceholder": "Nhập nội dung cần hỗ trợ..."
+    "balanceLabel": "Số dư hiện tại",
+    "pointsUnit": "điểm",
+    "depositButton": "Nạp tiền",
+    "tipNoPoints": "Bạn chưa có điểm. Hãy nạp tiền để bắt đầu sử dụng dịch vụ nhanh hơn.",
+    "statsDeposits": "Lượt nạp",
+    "statsOrders": "Đơn hàng",
+    "sectionActions": "Thao tác",
+    "adminContactTitle": "Hỗ trợ tài khoản",
+    "adminContactLabel": "Admin phụ trách",
+    "adminContactEmpty": "Admin của bạn chưa trả lời, hãy để lại tin nhắn để được hỗ trợ sớm nhất.",
+    "adminContactHint": "Chat trực tiếp với admin phụ trách tài khoản về nạp tiền, đơn hàng và các vấn đề khác.",
+    "adminChatPlaceholder": "Nhập nội dung cần hỗ trợ..."
   },
   "product": {
     "viewDetail": "Xem chi tiết",

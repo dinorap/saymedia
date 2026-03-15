@@ -183,6 +183,7 @@
 import { defineAsyncComponent } from "vue";
 import { useI18n } from "vue-i18n";
 import SiteHeader from "~/components/SiteHeader.vue";
+import { setProductRef, getProductRef } from "~/composables/useProductRef";
 const ConfirmPurchaseModal = defineAsyncComponent(
   () => import("~/components/product/ConfirmPurchaseModal.vue")
 );
@@ -419,12 +420,25 @@ async function doPurchase(payload) {
   if (!product) return;
   buyingId.value = product.id;
   try {
+    const route = useRoute();
+    let sellerRef: string | undefined;
+    if (route.query.ref && typeof route.query.ref === "string") {
+      const fromUrl = String(route.query.ref).trim();
+      if (fromUrl) {
+        setProductRef(product.id, fromUrl);
+        sellerRef = fromUrl;
+      }
+    } else {
+      const stored = getProductRef(product.id);
+      if (stored) sellerRef = stored;
+    }
     const res = await $fetch("/api/orders/create", {
       method: "POST",
       body: {
         product_id: product.id,
         duration,
         quantity,
+        ...(sellerRef ? { seller_ref: sellerRef } : {}),
       },
     });
     const successMsg =

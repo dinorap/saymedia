@@ -65,3 +65,11 @@ body {
 *::-webkit-scrollbar-thumb:hover {
   background-color: rgba(148, 163, 184, 0.9);
 }
+
+/* Icon cuốn lịch / đồng hồ ở ô chọn ngày giờ — màu trắng (WebKit) */
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  cursor: pointer;
+}

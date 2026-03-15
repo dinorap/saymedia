@@ -78,6 +78,9 @@
           <thead>
             <tr>
               <th>{{ $t("admin.username") }}</th>
+              <th>Sản phẩm</th>
+              <th>Nguồn đơn</th>
+              <th>Mã ref</th>
               <th>{{ $t("payment.history.amount") }}</th>
               <th>{{ $t("admin.status") }}</th>
               <th>{{ $t("admin.createdAt") }}</th>
@@ -86,6 +89,16 @@
           <tbody>
             <tr v-for="o in summary.recentOrders" :key="o.id">
               <td>{{ o.user_username }}</td>
+              <td>{{ o.product_name || "-" }}</td>
+              <td>
+                <span
+                  v-if="o.seller_username && o.seller_ref"
+                >
+                  {{ o.seller_username }}
+                </span>
+                <span v-else>-</span>
+              </td>
+              <td>{{ o.seller_ref || "-" }}</td>
               <td>{{ formatVnd(o.amount) }}</td>
               <td>{{ o.status }}</td>
               <td>{{ formatDate(o.created_at) }}</td>

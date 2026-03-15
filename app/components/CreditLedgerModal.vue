@@ -29,21 +29,23 @@
               <label>Đến ngày</label>
               <input v-model="toDate" type="date" />
             </div>
-            <div class="actions">
-              <button
-                class="btn btn-export"
-                type="button"
-                @click="exportCsv"
-                :disabled="exporting"
-              >
-                {{ exporting ? "Đang xuất..." : "Xuất CSV" }}
-              </button>
+            <div class="filter-group filter-search">
+              <label>Tìm kiếm</label>
+              <input
+                v-model="searchKeyword"
+                type="text"
+                placeholder="Loại, số tiền, ngày..."
+                class="filter-search-input"
+              />
             </div>
           </div>
 
           <div v-if="loading" class="state">{{ $t("admin.loading") }}</div>
           <div v-else-if="!items.length" class="state">
             {{ $t("admin.noData") }}
+          </div>
+          <div v-else-if="!filteredItems.length" class="state">
+            Không có bản ghi nào phù hợp với bộ lọc.
           </div>
           <table v-else class="data-table">
             <thead>
@@ -56,7 +58,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="row in items" :key="row.id">
+              <tr v-for="row in filteredItems" :key="row.id">
                 <td>#{{ row.id }}</td>
                 <td>{{ row.transaction_type }}</td>
                 <td :class="Number(row.delta) >= 0 ? 'up' : 'down'">
@@ -85,11 +87,27 @@ const emit = defineEmits(["update:modelValue"]);
 
 const items = ref([]);
 const loading = ref(false);
-const exporting = ref(false);
 const typeFilter = ref("");
 const fromDate = ref("");
 const toDate = ref("");
+const searchKeyword = ref("");
 let filterTimer = null;
+
+const filteredItems = computed(() => {
+  let list = items.value;
+  const q = (searchKeyword.value || "").trim().toLowerCase();
+  if (q) {
+    list = list.filter((row) => {
+      const typeStr = (row.transaction_type || "").toLowerCase();
+      const deltaStr = (Number(row.delta) || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+      const beforeStr = (Number(row.balance_before) || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+      const afterStr = (Number(row.balance_after) || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+      const dateStr = formatDate(row.created_at).toLowerCase();
+      return typeStr.includes(q) || deltaStr.includes(q) || beforeStr.includes(q) || afterStr.includes(q) || dateStr.includes(q);
+    });
+  }
+  return list;
+});
 
 let autoRefreshTimer = null;
 
@@ -147,34 +165,6 @@ watch(
 
 function reload() {
   fetchData();
-}
-
-async function exportCsv() {
-  exporting.value = true;
-  try {
-    const params = new URLSearchParams();
-    params.set("limit", "500");
-    params.set("format", "csv");
-    if (typeFilter.value) params.set("type", typeFilter.value);
-    if (fromDate.value) params.set("from", fromDate.value);
-    if (toDate.value) params.set("to", toDate.value + " 23:59:59");
-
-    const url = `/api/credit-ledger/my?${params.toString()}`;
-    const res = await fetch(url);
-    const text = await res.text();
-    const blob = new Blob([text], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = "credit-history.csv";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(link.href);
-  } catch {
-    // ignore export errors in UI
-  } finally {
-    exporting.value = false;
-  }
 }
 
 function close() {
@@ -259,7 +249,8 @@ function formatDate(val) {
   color: var(--text-secondary);
 }
 .filter-group select,
-.filter-group input[type="date"] {
+.filter-group input[type="date"],
+.filter-group .filter-search-input {
   min-width: 140px;
   padding: 0.35rem 0.55rem;
   border-radius: 6px;
@@ -268,23 +259,8 @@ function formatDate(val) {
   color: var(--text-primary);
   font-size: 0.85rem;
 }
-.actions {
-  display: flex;
-  gap: 0.5rem;
-  margin-left: auto;
-}
-.btn {
-  padding: 0.4rem 0.8rem;
-  border-radius: 999px;
-  border: 1px solid rgba(1, 123, 251, 0.4);
-  background: rgba(1, 123, 251, 0.15);
-  color: #fff;
-  font-size: 0.8rem;
-  cursor: pointer;
-}
-.btn-export {
-  background: rgba(34, 197, 94, 0.18);
-  border-color: rgba(34, 197, 94, 0.5);
+.filter-search .filter-search-input {
+  min-width: 180px;
 }
 .state {
   text-align: center;

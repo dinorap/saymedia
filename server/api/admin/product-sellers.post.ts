@@ -24,6 +24,7 @@ export default defineEventHandler(async (event) => {
   const body = await readBody(event);
   const productId = Number(body?.product_id);
   const sellerAdminId = Number(body?.seller_admin_id);
+  const commissionPercent = body?.commission_percent != null ? Math.min(100, Math.max(0, parseInt(String(body.commission_percent), 10) || 20)) : 20;
 
   if (!Number.isFinite(productId) || productId <= 0) {
     throw createError({
@@ -91,11 +92,16 @@ export default defineEventHandler(async (event) => {
       [productId, sellerAdminId],
     );
     if (existing) {
+      await conn.query(
+        "UPDATE product_sellers SET commission_percent = ? WHERE id = ?",
+        [commissionPercent, existing.id]
+      );
       await conn.commit();
       return {
         success: true,
         id: existing.id,
         ref_code: existing.ref_code,
+        commission_percent: commissionPercent,
         is_active: !!existing.is_active,
         existed: true,
       };
@@ -118,10 +124,10 @@ export default defineEventHandler(async (event) => {
 
     const [result]: any = await conn.query(
       `
-        INSERT INTO product_sellers (product_id, seller_admin_id, ref_code, is_active)
-        VALUES (?, ?, ?, 1)
+        INSERT INTO product_sellers (product_id, seller_admin_id, ref_code, commission_percent, is_active)
+        VALUES (?, ?, ?, ?, 1)
       `,
-      [productId, sellerAdminId, refCode],
+      [productId, sellerAdminId, refCode, commissionPercent],
     );
 
     await conn.commit();

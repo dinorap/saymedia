@@ -2,9 +2,11 @@ import jwt from "jsonwebtoken";
 import pool from "../../utils/db";
 import { checkOrderCreateRateLimit } from "../../utils/orderRateLimit";
 import {
-  applyCreditChange,
+  applyPurchaseCreditDeduction,
   ensureCreditLedgerSchema,
 } from "../../utils/creditLedger";
+import { ensureAdminWalletSchema, recordOrderEarnings } from "../../utils/adminWallet";
+import { ensureCommerceSchema } from "../../utils/commerce";
 import { addSocialProofItem } from "../../utils/socialProof";
 import { orderCreateSchema, parseBodyOrThrow } from "../../utils/schemas";
 import { VALID_KEY_DURATIONS, ensureProductKeySchema } from "../../utils/productKeys";
@@ -38,9 +40,11 @@ export default defineEventHandler(async (event) => {
   checkOrderCreateRateLimit(decoded.id);
   await ensureCreditLedgerSchema();
   await ensureProductKeySchema();
+  await ensureCommerceSchema();
 
   const body = parseBodyOrThrow(await readBody(event), orderCreateSchema);
   const productId = body.product_id;
+  const sellerRef = (body as any).seller_ref ? String((body as any).seller_ref).trim() : null;
   const quantityRaw = (body as any).quantity ?? 1;
   let quantity = Number(quantityRaw);
   if (!Number.isFinite(quantity) || quantity <= 0) quantity = 1;
@@ -57,7 +61,7 @@ export default defineEventHandler(async (event) => {
 
     const [[product]]: any = await conn.query(
       `
-        SELECT id, name, price, type, is_active, download_url
+        SELECT id, name, price, type, is_active, download_url, admin_id
         FROM products
         WHERE id = ? AND is_active = 1
         LIMIT 1
@@ -68,9 +72,25 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 404, statusMessage: "Không tìm thấy sản phẩm" });
     }
 
+    const productOwnerAdminId = product.admin_id ? Number(product.admin_id) : null;
+    let sellerAdminId = productOwnerAdminId;
+    if (sellerRef && productOwnerAdminId) {
+      const [[ps]]: any = await conn.query(
+        `
+          SELECT seller_admin_id
+          FROM product_sellers
+          WHERE product_id = ? AND ref_code = ? AND is_active = 1
+          LIMIT 1
+        `,
+        [productId, sellerRef],
+      );
+      if (ps) sellerAdminId = Number(ps.seller_admin_id);
+    }
+    if (!sellerAdminId) sellerAdminId = user.admin_id;
+
     const [[user]]: any = await conn.query(
       `
-        SELECT id, username, credit, admin_id
+        SELECT id, username, credit, paid_credit, bonus_credit, admin_id
         FROM users
         WHERE id = ?
         LIMIT 1
@@ -143,31 +163,65 @@ export default defineEventHandler(async (event) => {
     const amount = unitPrice * quantity;
 
     const initialStatus = "completed"; // tự duyệt luôn
-    const noteParts: string[] = [];
-    if (duration) noteParts.push(`duration=${duration}`);
-    if (quantity && quantity !== 1) noteParts.push(`qty=${quantity}`);
-    if (deliveredKeys.length) {
-      noteParts.push(`keys=${deliveredKeys.join(",")}`);
+    let note: string | null = null;
+    if (duration != null && duration !== "") {
+      const lines: string[] = [
+        `Loại key: ${duration}`,
+        `Số lượng: ${quantity ?? 1}`,
+        "Key:",
+        ...deliveredKeys,
+      ];
+      note = lines.join("\n");
     }
-    const note = noteParts.length ? noteParts.join(";") : null;
 
+    const amountInt = Math.round(amount);
     const [result]: any = await conn.query(
       `
-        INSERT INTO orders (user_id, product_id, admin_id, amount, status, note)
-        VALUES (?, ?, ?, ?, ?, ?)
+        INSERT INTO orders (user_id, product_id, admin_id, seller_admin_id, product_owner_admin_id, amount, paid_part, bonus_part, seller_ref, status, note)
+        VALUES (?, ?, ?, ?, ?, ?, NULL, NULL, ?, ?, ?)
       `,
-      [user.id, product.id, user.admin_id, amount, initialStatus, note],
+      [user.id, product.id, user.admin_id, sellerAdminId, productOwnerAdminId, amount, sellerRef, initialStatus, note],
     );
-    const creditResult = await applyCreditChange(conn, {
+    const orderId = result.insertId;
+
+    const creditResult = await applyPurchaseCreditDeduction(conn, {
       userId: user.id,
-      delta: -Math.round(amount),
-      transactionType: "purchase",
+      totalAmount: amountInt,
       referenceType: "order",
-      referenceId: result.insertId,
+      referenceId: orderId,
       note: `Mua ${quantity}x sản phẩm #${product.id}: ${product.name}`,
       actorType: "user",
       actorId: user.id,
     });
+
+    await conn.query(
+      "UPDATE orders SET paid_part = ?, bonus_part = ? WHERE id = ?",
+      [creditResult.paidPart, creditResult.bonusPart, orderId],
+    );
+
+    const totalCreditUsed =
+      Number(creditResult.paidPart || 0) + Number(creditResult.bonusPart || 0);
+
+    // Tạm thời: coi bonus như điểm thường → chia doanh thu theo tổng điểm đã trừ
+    if (totalCreditUsed > 0 && productOwnerAdminId && sellerAdminId) {
+      await ensureAdminWalletSchema();
+      let commissionPercent: number | null = 20;
+      if (sellerAdminId !== productOwnerAdminId) {
+        const [[ps]]: any = await conn.query(
+          "SELECT commission_percent FROM product_sellers WHERE product_id = ? AND seller_admin_id = ? LIMIT 1",
+          [productId, sellerAdminId],
+        );
+        commissionPercent = ps?.commission_percent != null ? Number(ps.commission_percent) : 20;
+      }
+      await recordOrderEarnings(conn, {
+        orderId,
+        sellerAdminId,
+        productOwnerAdminId,
+        paidPartCredit: totalCreditUsed,
+        commissionPercent,
+        productName: product.name,
+      });
+    }
 
     await conn.commit();
 
@@ -189,7 +243,7 @@ export default defineEventHandler(async (event) => {
 
     return {
       success: true,
-      orderId: result.insertId,
+      orderId,
       newCredit: creditResult.afterBalance,
     };
   } catch (e) {

@@ -4,98 +4,102 @@
 
     <main class="profile-main">
       <section class="profile-card" v-if="!loading && user">
-        <div class="profile-card-header">
-          <div class="profile-avatar">
-            <span>{{ user.username?.charAt(0)?.toUpperCase() }}</span>
+        <div class="profile-hero">
+          <div class="profile-avatar-wrap">
+            <div class="profile-avatar">
+              <span>{{ user.username?.charAt(0)?.toUpperCase() }}</span>
+            </div>
           </div>
-          <div>
-            <h2 class="profile-card-title">{{ user.username }}</h2>
-            <p v-if="user.email" class="profile-subtitle">
-              {{ user.email }}
-            </p>
-          </div>
-        </div>
+          <h1 class="profile-name">{{ user.username }}</h1>
+          <p v-if="user.email" class="profile-email">{{ user.email }}</p>
 
-        <div class="profile-grid">
-          <div class="profile-info">
-            <p class="profile-field">
-              <span class="profile-label">{{ $t("admin.username") }}</span>
-              <span class="profile-value">{{ user.username }}</span>
-            </p>
-            <p v-if="user.email" class="profile-field">
-              <span class="profile-label">{{ $t("admin.email") }}</span>
-              <span class="profile-value">{{ user.email }}</span>
-            </p>
-          </div>
-
-          <div class="profile-balance">
-            <p class="profile-balance-label">Số dư hiện tại</p>
+          <div class="profile-balance-block">
+            <span class="profile-balance-label">{{
+              $t("profile.balanceLabel")
+            }}</span>
             <p class="profile-balance-value">
               {{ formatVnd(user.credit || 0) }}
-              <span class="profile-balance-unit">điểm</span>
+              <span class="profile-balance-unit">{{
+                $t("profile.pointsUnit")
+              }}</span>
             </p>
-          </div>
-        </div>
-
-        <div class="profile-stats">
-          <div class="profile-stat-card">
-            <p class="profile-stat-label">Lượt nạp gần đây</p>
-            <p class="profile-stat-value">{{ quickStats.depositCount }}</p>
-          </div>
-          <div class="profile-stat-card">
-            <p class="profile-stat-label">Đơn hàng của bạn</p>
-            <p class="profile-stat-value">{{ quickStats.orderCount }}</p>
+            <button
+              type="button"
+              class="btn-deposit"
+              @click="showDepositModal = true"
+            >
+              <span class="btn-deposit-icon">⊕</span>
+              {{ $t("profile.depositButton") }}
+            </button>
           </div>
         </div>
 
         <div v-if="Number(user.credit || 0) <= 0" class="profile-tip">
-          Bạn chưa có điểm. Hãy nạp tiền để bắt đầu sử dụng dịch vụ nhanh hơn.
+          {{ $t("profile.tipNoPoints") }}
         </div>
 
-        <div class="profile-actions">
-          <button
-            type="button"
-            class="btn-secondary"
-            @click="showHistoryModal = true"
-          >
-            {{ $t("payment.history.title") }}
-          </button>
-          <button
-            type="button"
-            class="btn-secondary"
-            @click="showDepositModal = true"
-          >
-            Nạp tiền
-          </button>
-          <button
-            type="button"
-            class="btn-secondary"
-            @click="showOrderHistoryModal = true"
-          >
-            {{ $t("admin.orders") }}
-          </button>
-          <button
-            type="button"
-            class="btn-secondary"
-            @click="showCreditLedgerModal = true"
-          >
-            {{ $t("admin.creditLedger") || "Sổ sao kê tín chỉ" }}
-          </button>
-          <button
-            type="button"
-            class="btn-primary"
-            @click="showChangePassword = true"
-          >
-            {{ $t("admin.changePassword") }}
-          </button>
+        <div class="profile-stats">
+          <div class="profile-stat-card">
+            <span class="profile-stat-value">{{
+              quickStats.depositCount
+            }}</span>
+            <span class="profile-stat-label">{{
+              $t("profile.statsDeposits")
+            }}</span>
+          </div>
+          <div class="profile-stat-card">
+            <span class="profile-stat-value">{{ quickStats.orderCount }}</span>
+            <span class="profile-stat-label">{{
+              $t("profile.statsOrders")
+            }}</span>
+          </div>
+        </div>
+
+        <div class="profile-section">
+          <h3 class="profile-section-title">
+            {{ $t("profile.sectionActions") }}
+          </h3>
+          <div class="profile-actions">
+            <button
+              type="button"
+              class="btn-secondary"
+              @click="showHistoryModal = true"
+            >
+              {{ $t("payment.history.title") }}
+            </button>
+            <button
+              type="button"
+              class="btn-secondary"
+              @click="showOrderHistoryModal = true"
+            >
+              {{ $t("admin.orders") }}
+            </button>
+            <button
+              type="button"
+              class="btn-secondary"
+              @click="showCreditLedgerModal = true"
+            >
+              {{ $t("admin.creditLedger") || "Sổ sao kê tín chỉ" }}
+            </button>
+            <button
+              type="button"
+              class="btn-primary"
+              @click="showChangePassword = true"
+            >
+              {{ $t("admin.changePassword") }}
+            </button>
+          </div>
         </div>
       </section>
 
-      <section v-else-if="loading" class="profile-card">
+      <section v-else-if="loading" class="profile-card profile-card--plain">
         <p>{{ $t("auth.loading") || "Đang tải..." }}</p>
       </section>
 
-      <section v-else class="profile-card profile-card--error">
+      <section
+        v-else
+        class="profile-card profile-card--plain profile-card--error"
+      >
         <p>
           {{
             errorMessage || $t("auth.unauthorized") || "Vui lòng đăng nhập lại"
@@ -237,7 +241,8 @@ async function loadProfile(opts) {
     if (data?.success && data.user) {
       user.value = data.user;
     } else {
-      if (!silent) errorMessage.value = t("auth.unauthorized") || "Vui lòng đăng nhập lại";
+      if (!silent)
+        errorMessage.value = t("auth.unauthorized") || "Vui lòng đăng nhập lại";
     }
   } catch (e) {
     if (!silent) {
@@ -538,64 +543,172 @@ async function submitChangePassword() {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 2rem 1rem;
+  padding: 96px 1rem 2rem;
 }
 
 .profile-card {
   width: 100%;
-  max-width: 560px;
+  max-width: 480px;
   color: var(--text-primary);
-  border-radius: 1rem;
-  padding: 2rem;
+  border-radius: 1.25rem;
+  padding: 0;
   background: rgba(5, 15, 35, 0.96);
   box-shadow: var(--neon-shadow);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(1, 123, 251, 0.2);
+  overflow: hidden;
 }
 
-.profile-card-header {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  margin-bottom: 1.25rem;
+.profile-hero {
+  padding: 2rem 1.75rem 1.75rem;
+  text-align: center;
+  background: linear-gradient(180deg, rgba(1, 123, 251, 0.12) 0%, transparent 70%);
+  border-bottom: 1px solid rgba(1, 123, 251, 0.15);
+}
+
+.profile-avatar-wrap {
+  margin-bottom: 1rem;
 }
 
 .profile-avatar {
-  width: 48px;
-  height: 48px;
+  width: 72px;
+  height: 72px;
+  margin: 0 auto;
   border-radius: 999px;
-  color: var(--text-primary);
-  border: 1px solid rgba(1, 123, 251, 0.5);
+  border: 2px solid rgba(1, 123, 251, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  font-size: 1.2rem;
+  font-size: 1.75rem;
   color: var(--blue-electric);
+  background: rgba(1, 123, 251, 0.08);
+  box-shadow: 0 0 24px rgba(1, 123, 251, 0.2);
 }
 
-.profile-card-title {
-  font-size: 1.25rem;
-  margin: 0;
+.profile-name {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0 0 0.25rem;
+  letter-spacing: 0.02em;
 }
 
-.profile-subtitle {
-  margin-top: 0.25rem;
+.profile-email {
+  margin: 0 0 1.5rem;
   font-size: 0.9rem;
   color: var(--text-muted);
 }
 
-.profile-grid {
-  display: grid;
-  grid-template-columns: 1.4fr 1fr;
-  gap: 1.5rem;
-  align-items: stretch;
+.profile-balance-block {
+  padding: 1.25rem 1.5rem;
+  border-radius: 1rem;
+  background: rgba(0, 20, 50, 0.6);
+  border: 1px solid rgba(1, 123, 251, 0.3);
 }
 
-@media (max-width: 640px) {
-  .profile-grid {
-    grid-template-columns: 1fr;
-    gap: 1rem;
-  }
+.profile-balance-label {
+  display: block;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  margin-bottom: 0.35rem;
+}
+
+.profile-balance-value {
+  margin: 0 0 1rem;
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: 0.02em;
+}
+
+.profile-balance-unit {
+  margin-left: 0.35rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.btn-deposit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.9rem 1.5rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  background: linear-gradient(135deg, #059669 0%, #10b981 50%, #34d399 100%);
+  box-shadow: 0 4px 20px rgba(16, 185, 129, 0.4), 0 0 30px rgba(16, 185, 129, 0.15);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.btn-deposit:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 28px rgba(16, 185, 129, 0.5), 0 0 40px rgba(16, 185, 129, 0.2);
+}
+
+.btn-deposit-icon {
+  font-size: 1.35rem;
+  line-height: 1;
+  opacity: 0.95;
+}
+
+.profile-tip {
+  margin: 1rem 1.5rem 0;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(250, 204, 21, 0.35);
+  background: rgba(250, 204, 21, 0.08);
+  color: #fde68a;
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.profile-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  padding: 1.25rem 1.5rem;
+}
+
+.profile-stat-card {
+  padding: 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(1, 123, 251, 0.2);
+  background: rgba(1, 123, 251, 0.04);
+  text-align: center;
+}
+
+.profile-stat-value {
+  display: block;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--blue-electric);
+  margin-bottom: 0.2rem;
+}
+
+.profile-stat-label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.profile-section {
+  padding: 1rem 1.5rem 1.25rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.profile-section-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin: 0 0 0.75rem;
 }
 
 .profile-info {
@@ -608,7 +721,8 @@ async function submitChangePassword() {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
   font-size: 0.95rem;
 }
 
@@ -619,81 +733,41 @@ async function submitChangePassword() {
 
 .profile-value {
   font-weight: 500;
-}
-
-.profile-balance {
-  padding: 0.8rem 1rem;
-  border-radius: 0.9rem;
   color: var(--text-primary);
-  border: 1px solid rgba(1, 123, 251, 0.45);
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-
-.profile-balance-label {
-  font-size: 0.8rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--text-secondary);
-  margin: 0 0 0.25rem;
-}
-
-.profile-balance-value {
-  margin: 0;
-  font-size: 1.4rem;
-  font-weight: 600;
-}
-
-.profile-balance-unit {
-  margin-left: 0.25rem;
-  font-size: 0.8rem;
-  color: var(--text-muted);
-}
-
-.profile-stats {
-  margin-top: 1rem;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.75rem;
-}
-
-.profile-stat-card {
-  border: 1px solid rgba(1, 123, 251, 0.25);
-  color: var(--text-primary);
-  border-radius: 0.75rem;
-  padding: 0.7rem 0.9rem;
-}
-
-.profile-stat-label {
-  margin: 0;
-  font-size: 0.78rem;
-  color: var(--text-secondary);
-}
-
-.profile-stat-value {
-  margin: 0.25rem 0 0;
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
-.profile-tip {
-  margin-top: 0.9rem;
-  padding: 0.65rem 0.85rem;
-  border-radius: 0.7rem;
-  border: 1px solid rgba(250, 204, 21, 0.35);
-  color: var(--text-primary);
-  color: #fde68a;
-  font-size: 0.86rem;
 }
 
 .profile-actions {
-  margin-top: 1.5rem;
-  display: flex;
-  justify-content: flex-end;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 0.75rem;
+  width: 100%;
+}
+
+.profile-actions .btn-secondary,
+.profile-actions .btn-primary {
+  width: 100%;
+  min-width: 0;
+}
+
+@media (max-width: 480px) {
+  .profile-main {
+    padding-top: 80px;
+  }
+  .profile-hero {
+    padding: 1.5rem 1.25rem 1.25rem;
+  }
+  .profile-balance-value {
+    font-size: 1.5rem;
+  }
+  .profile-stats,
+  .profile-section {
+    padding-left: 1.25rem;
+    padding-right: 1.25rem;
+  }
+}
+
+.profile-card--plain {
+  padding: 2rem 1.5rem;
 }
 
 .profile-card--error {

@@ -57,12 +57,32 @@ export async function ensureCommerceSchema() {
   await addColumnIfMissing(
     "ALTER TABLE products ADD CONSTRAINT fk_products_admin_id FOREIGN KEY (admin_id) REFERENCES admins(id) ON DELETE SET NULL",
   );
+  try {
+    await pool.query("ALTER TABLE products ADD COLUMN product_type ENUM('master','shop') NULL DEFAULT 'master' AFTER admin_id");
+  } catch {
+    // Column or enum may already exist
+  }
 
   await addColumnIfMissing(
     "ALTER TABLE orders ADD COLUMN product_id INT NULL AFTER user_id",
   );
   await addColumnIfMissing(
+    "ALTER TABLE orders ADD COLUMN seller_admin_id INT NULL AFTER admin_id",
+  );
+  await addColumnIfMissing(
+    "ALTER TABLE orders ADD COLUMN product_owner_admin_id INT NULL AFTER seller_admin_id",
+  );
+  await addColumnIfMissing(
     "ALTER TABLE orders ADD COLUMN note TEXT NULL AFTER status",
+  );
+  await addColumnIfMissing(
+    "ALTER TABLE orders ADD COLUMN paid_part BIGINT NULL AFTER amount",
+  );
+  await addColumnIfMissing(
+    "ALTER TABLE orders ADD COLUMN bonus_part BIGINT NULL AFTER paid_part",
+  );
+  await addColumnIfMissing(
+    "ALTER TABLE orders ADD COLUMN seller_ref VARCHAR(64) NULL AFTER bonus_part",
   );
   await addColumnIfMissing(
     "CREATE INDEX idx_orders_product_id ON orders(product_id)",
@@ -98,13 +118,14 @@ export async function ensureCommerceSchema() {
     "ALTER TABLE user_cart_items ADD UNIQUE KEY uniq_user_product_duration (user_id, product_id, duration)",
   );
 
-  // Bảng liên kết sản phẩm với admin bán (shop) + mã ref riêng cho từng shop.
+  // Bảng liên kết sản phẩm với admin bán (shop) + mã ref riêng + % hoa hồng
   await pool.query(`
     CREATE TABLE IF NOT EXISTS product_sellers (
       id BIGINT AUTO_INCREMENT PRIMARY KEY,
       product_id INT NOT NULL,
       seller_admin_id INT NOT NULL,
       ref_code VARCHAR(32) NOT NULL UNIQUE,
+      commission_percent INT NULL DEFAULT 20,
       is_active TINYINT(1) NOT NULL DEFAULT 1,
       created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
       UNIQUE KEY uniq_product_seller (product_id, seller_admin_id),
@@ -112,6 +133,9 @@ export async function ensureCommerceSchema() {
       CONSTRAINT fk_product_sellers_admin FOREIGN KEY (seller_admin_id) REFERENCES admins(id) ON DELETE CASCADE
     )
   `);
+  await addColumnIfMissing(
+    "ALTER TABLE product_sellers ADD COLUMN commission_percent INT NULL DEFAULT 20 AFTER ref_code",
+  );
 
   // Index cho truy vấn nhanh khi data lớn (>100k record).
   await addColumnIfMissing("CREATE INDEX idx_orders_user_id ON orders(user_id)");

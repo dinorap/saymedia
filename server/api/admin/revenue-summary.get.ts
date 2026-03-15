@@ -59,9 +59,17 @@ export default defineEventHandler(async (event) => {
 
   const [recentOrders]: any = await pool.query(
     `
-      SELECT o.id, o.amount, o.status, o.created_at, u.username AS user_username
+      SELECT
+        o.id,
+        o.amount,
+        o.status,
+        o.created_at,
+        u.username AS user_username,
+        o.seller_ref,
+        sa.username AS seller_username
       FROM orders o
       JOIN users u ON o.user_id = u.id
+      LEFT JOIN admins sa ON o.seller_admin_id = sa.id
       ${scopeWhere}
       ORDER BY o.created_at DESC
       LIMIT 5

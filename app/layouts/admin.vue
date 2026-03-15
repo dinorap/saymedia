@@ -1,5 +1,5 @@
 <template>
-  <div class="admin-layout">
+  <div class="admin-layout" :class="{ 'sidebar-collapsed': sidebarCollapsed }">
     <div class="particles" aria-hidden="true" />
 
     <!-- Sidebar -->
@@ -48,9 +48,21 @@
             {{ $t("admin.productKeys") || "Key sản phẩm" }}
           </span>
         </NuxtLink>
-        <NuxtLink to="/admin/revenue" class="sidebar-item">
+        <NuxtLink
+          v-if="currentUser?.role !== 'admin_1'"
+          to="/admin/revenue"
+          class="sidebar-item"
+        >
           <span class="sidebar-item-icon" aria-hidden="true">📈</span>
           <span class="sidebar-item-label">{{ $t("admin.revenue") }}</span>
+        </NuxtLink>
+        <NuxtLink
+          v-if="currentUser?.role !== 'admin_1'"
+          to="/admin/partners"
+          class="sidebar-item"
+        >
+          <span class="sidebar-item-icon" aria-hidden="true">🤝</span>
+          <span class="sidebar-item-label">{{ $t("admin.partners") || "Đối tác & Doanh thu" }}</span>
         </NuxtLink>
         <NuxtLink to="/admin/ledger" class="sidebar-item">
           <span class="sidebar-item-icon" aria-hidden="true">📚</span>
@@ -120,6 +132,13 @@
     <!-- Main: header + content -->
     <div class="main-wrap">
       <header class="admin-header">
+        <button
+          type="button"
+          class="sidebar-toggle-btn"
+          @click="toggleSidebar"
+        >
+          <span class="sidebar-toggle-icon" aria-hidden="true">☰</span>
+        </button>
         <h1 class="admin-header-title">{{ pageTitle }}</h1>
         <div class="admin-header-actions">
           <div class="admin-lang-switcher">
@@ -216,6 +235,7 @@ const { locale, setLocale, t } = useI18n();
 const { show: showToast } = useToast();
 
 const currentUser = ref(null);
+const sidebarCollapsed = ref(false);
 const showChangePassword = ref(false);
 const pwForm = reactive({
   oldPassword: "",
@@ -233,6 +253,12 @@ const registerRefLink = computed(() => {
 });
 
 onMounted(async () => {
+  if (import.meta.client) {
+    try {
+      const stored = window.localStorage.getItem("admin_sidebar_collapsed");
+      if (stored === "1") sidebarCollapsed.value = true;
+    } catch {}
+  }
   try {
     const res = await $fetch("/api/auth/me");
     if (res?.success && res.user) {
@@ -245,6 +271,18 @@ onMounted(async () => {
     currentUser.value = null;
   }
 });
+
+function toggleSidebar() {
+  sidebarCollapsed.value = !sidebarCollapsed.value;
+  if (import.meta.client) {
+    try {
+      window.localStorage.setItem(
+        "admin_sidebar_collapsed",
+        sidebarCollapsed.value ? "1" : "0",
+      );
+    } catch {}
+  }
+}
 
 async function submitChangePassword() {
   pwError.value = "";

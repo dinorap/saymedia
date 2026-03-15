@@ -16,6 +16,8 @@ CREATE TABLE users (
     password_hash VARCHAR(255) NOT NULL,
     admin_id INT NOT NULL,
     credit BIGINT NOT NULL DEFAULT 0,
+    paid_credit BIGINT NOT NULL DEFAULT 0,
+    bonus_credit BIGINT NOT NULL DEFAULT 0,
     status ENUM('active', 'blocked') DEFAULT 'active',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (admin_id) REFERENCES admins(id) ON DELETE RESTRICT
@@ -127,6 +129,8 @@ CREATE TABLE orders (
     product_id INT NULL,
     admin_id INT NOT NULL,
     amount DECIMAL(10,2) NOT NULL,
+    paid_part BIGINT NULL,
+    bonus_part BIGINT NULL,
     status ENUM('pending', 'completed', 'cancelled') DEFAULT 'pending',
     note TEXT NULL,
     refund_reason TEXT NULL,
@@ -182,6 +186,8 @@ CREATE TABLE IF NOT EXISTS credit_ledger (
     note TEXT NULL,
     actor_type ENUM('user', 'admin', 'system') NOT NULL DEFAULT 'system',
     actor_id INT NULL,
+    paid_delta BIGINT NULL,
+    bonus_delta BIGINT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );

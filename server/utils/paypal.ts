@@ -1,6 +1,6 @@
 import pool from './db'
 import { convertVndToCredit, ensurePaymentSchema, PAYMENT_EXPIRE_MINUTES } from './payment'
-import { ensureCreditLedgerSchema, applyCreditChange } from './creditLedger'
+import { ensureCreditLedgerSchema, applyDepositCredit } from './creditLedger'
 import { addAuditLog } from './audit'
 import { addDepositSocialProofItem } from './socialProof'
 import crypto from 'crypto'
@@ -335,10 +335,11 @@ export async function capturePaypalDepositOrder(userId: number, orderId: string)
       [vndAmount, credited, bonusCredit || null, tx.id],
     )
 
-    await applyCreditChange(conn, {
+    const baseCredit = credited - (bonusCredit || 0)
+    await applyDepositCredit(conn, {
       userId: tx.user_id,
-      delta: credited,
-      transactionType: 'deposit',
+      paidCredit: baseCredit,
+      bonusCredit: bonusCredit || 0,
       referenceType: 'payment_transaction',
       referenceId: tx.trans_id,
       note: `Nạp qua PayPal (${vndAmount.toLocaleString('vi-VN')}đ)`,

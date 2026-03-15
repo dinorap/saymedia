@@ -546,6 +546,7 @@
 import { nextTick, watch } from "vue";
 import { defineAsyncComponent } from "vue";
 import SiteHeader from "~/components/SiteHeader.vue";
+import { setProductRef, getProductRef } from "~/composables/useProductRef";
 const ConfirmPurchaseModal = defineAsyncComponent(
   () => import("~/components/product/ConfirmPurchaseModal.vue"),
 );
@@ -963,9 +964,20 @@ async function doPurchase(payload) {
   if (!p) return;
   buying.value = true;
   try {
+    let sellerRef: string | undefined;
+    if (route.query.ref && typeof route.query.ref === "string") {
+      const fromUrl = String(route.query.ref).trim();
+      if (fromUrl) {
+        setProductRef(p.id, fromUrl);
+        sellerRef = fromUrl;
+      }
+    } else {
+      const stored = getProductRef(p.id);
+      if (stored) sellerRef = stored;
+    }
     const res = await $fetch("/api/orders/create", {
       method: "POST",
-      body: { product_id: p.id, duration, quantity: qty },
+      body: { product_id: p.id, duration, quantity: qty, ...(sellerRef ? { seller_ref: sellerRef } : {}) },
     });
     const msg =
       locale.value === "vi"
@@ -1180,6 +1192,14 @@ onMounted(async () => {
     fetchReviews(),
     fetchSimilar(),
   ]);
+  // Lưu ref theo sản phẩm nếu truy cập qua link có ?ref=
+  if (route.query.ref && typeof route.query.ref === "string") {
+    const fromUrl = String(route.query.ref).trim();
+    if (fromUrl) {
+      const pid = Number(route.params.id || product.value?.id);
+      if (pid) setProductRef(pid, fromUrl);
+    }
+  }
   autoRefreshTimer = setInterval(() => {
     fetchProduct({ silent: true });
   }, 5000);

@@ -466,11 +466,11 @@
               <h4 class="modal-section-title">
                 {{ $t("admin.productSellerAddTitle") }}
               </h4>
-              <div class="form-row inline">
-                <div class="inline-half">
+              <div class="form-row inline seller-add-row">
+                <div class="seller-shop-wrap">
                   <select
                     v-model.number="sellerModal.selectedShopId"
-                    class="input"
+                    class="input seller-shop-input"
                   >
                     <option :value="0">
                       {{ $t("admin.productSellerChooseShop") }}
@@ -480,11 +480,21 @@
                       :key="s.id"
                       :value="s.id"
                     >
-                      {{ s.username }} ({{ s.role }})
+                      {{ s.username }}
                     </option>
                   </select>
                 </div>
-                <div class="inline-half">
+                <div class="seller-commission-wrap">
+                  <input
+                    v-model.number="sellerModal.newCommissionPercent"
+                    type="number"
+                    min="0"
+                    max="100"
+                    class="input input--sm"
+                    placeholder="Hoa hồng %"
+                  />
+                </div>
+                <div class="seller-add-btn-wrap">
                   <button
                     type="button"
                     class="btn-primary"
@@ -518,6 +528,7 @@
                     <th>#</th>
                     <th>Shop</th>
                     <th>{{ $t("admin.productRefCode") }}</th>
+                    <th>Hoa hồng %</th>
                     <th>{{ $t("admin.status") }}</th>
                     <th>{{ $t("admin.actions") }}</th>
                   </tr>
@@ -525,9 +536,47 @@
                 <tbody>
                   <tr v-for="(row, idx) in sellerModal.items" :key="row.id">
                     <td>{{ idx + 1 }}</td>
-                    <td>{{ row.seller_username }} ({{ row.seller_role }})</td>
+                    <td>{{ row.seller_username }}</td>
                     <td>
                       <code class="ref-code">{{ row.ref_code }}</code>
+                    </td>
+                    <td>
+                      <template v-if="commissionEditId === row.id">
+                        <input
+                          v-model.number="commissionEditValue"
+                          type="number"
+                          min="0"
+                          max="100"
+                          class="input input--sm"
+                          style="width: 4rem"
+                        />
+                        <button
+                          type="button"
+                          class="btn-primary btn-primary--sm"
+                          :disabled="savingCommissionId === row.id"
+                          @click="saveCommission(row)"
+                        >
+                          {{ savingCommissionId === row.id ? "..." : "Lưu" }}
+                        </button>
+                        <button
+                          type="button"
+                          class="btn-secondary btn-primary--sm"
+                          @click="commissionEditId = null"
+                        >
+                          Hủy
+                        </button>
+                      </template>
+                      <template v-else>
+                        {{ row.commission_percent ?? 20 }}%
+                        <button
+                          v-if="isSuperAdmin"
+                          type="button"
+                          class="btn-small-inline"
+                          @click="startEditCommission(row)"
+                        >
+                          Sửa
+                        </button>
+                      </template>
                     </td>
                     <td>
                       <span
@@ -543,13 +592,21 @@
                         }}
                       </span>
                     </td>
-                    <td>
+                    <td class="seller-actions-cell">
                       <button
                         type="button"
                         class="btn-primary btn-primary--sm"
                         @click="copyListingRef(row)"
                       >
                         {{ $t("admin.productSellerCopyRef") }}
+                      </button>
+                      <button
+                        v-if="isSuperAdmin"
+                        type="button"
+                        class="btn-secondary btn-primary--sm seller-delete-btn"
+                        @click="deleteSeller(row)"
+                      >
+                        Xóa
                       </button>
                     </td>
                   </tr>
@@ -616,7 +673,11 @@ const sellerModal = reactive({
   items: [],
   shops: [],
   selectedShopId: 0,
+  newCommissionPercent: 20,
 });
+const commissionEditId = ref<number | null>(null);
+const commissionEditValue = ref(20);
+const savingCommissionId = ref<number | null>(null);
 
 const hasItems = computed(
   () => Array.isArray(items.value) && items.value.length > 0,
@@ -806,6 +867,28 @@ async function openSellerModal(product: any) {
   }
 }
 
+function startEditCommission(row: any) {
+  commissionEditId.value = row.id;
+  commissionEditValue.value = row.commission_percent ?? 20;
+}
+async function saveCommission(row: any) {
+  const v = Math.min(100, Math.max(0, Number(commissionEditValue.value) || 0));
+  savingCommissionId.value = row.id;
+  try {
+    await $fetch(`/api/admin/product-sellers/${row.id}`, {
+      method: "PUT",
+      body: { commission_percent: v },
+    });
+    row.commission_percent = v;
+    commissionEditId.value = null;
+    showToast("Đã cập nhật % hoa hồng", "success");
+  } catch (e) {
+    showToast(e?.data?.statusMessage || "Không cập nhật được", "error");
+  } finally {
+    savingCommissionId.value = null;
+  }
+}
+
 async function addSellerForCurrentProduct() {
   if (!sellerModal.product || !sellerModal.selectedShopId) return;
   addingSeller.value = true;
@@ -815,6 +898,7 @@ async function addSellerForCurrentProduct() {
       body: {
         product_id: sellerModal.product.id,
         seller_admin_id: sellerModal.selectedShopId,
+        commission_percent: sellerModal.newCommissionPercent ?? 20,
       },
     });
     if (res?.success) {
@@ -832,18 +916,42 @@ async function addSellerForCurrentProduct() {
   }
 }
 
-function buildListingRefUrl(refCode: string) {
-  if (!refCode) return "";
-  if (import.meta.client) {
-    return `${window.location.origin}/products?ref=${encodeURIComponent(
-      refCode,
-    )}`;
+async function deleteSeller(row: any) {
+  if (!row?.id) return;
+  const ok = await askConfirm(
+    `Xóa đối tác ${row.seller_username || ""} khỏi sản phẩm này?`,
+  );
+  if (!ok) return;
+  try {
+    await $fetch(`/api/admin/product-sellers/${row.id}`, {
+      method: "DELETE",
+    });
+    showToast("Đã xóa đối tác khỏi sản phẩm", "success");
+    // Cập nhật lại danh sách tại chỗ
+    sellerModal.items = sellerModal.items.filter((x: any) => x.id !== row.id);
+  } catch (e: any) {
+    showToast(
+      e?.data?.statusMessage || "Không thể xóa đối tác, thử lại sau",
+      "error",
+    );
   }
-  return `/products?ref=${encodeURIComponent(refCode)}`;
+}
+
+function buildListingRefUrl(productId: number | string, refCode: string) {
+  if (!productId || !refCode) return "";
+  const pid = String(productId);
+  if (import.meta.client) {
+    return `${window.location.origin}/products/${encodeURIComponent(
+      pid,
+    )}?ref=${encodeURIComponent(refCode)}`;
+  }
+  return `/products/${encodeURIComponent(pid)}?ref=${encodeURIComponent(
+    refCode,
+  )}`;
 }
 
 async function copyListingRef(row: any) {
-  const url = buildListingRefUrl(row.ref_code);
+  const url = buildListingRefUrl(row.product_id, row.ref_code);
   if (!url) return;
   try {
     await navigator.clipboard.writeText(url);
@@ -1046,8 +1154,14 @@ onUnmounted(() => {
   margin-bottom: 0.5rem;
   border-radius: 999px;
   padding: 3px;
-  background: radial-gradient(circle at top left, rgba(59, 130, 246, 0.35), rgba(15, 23, 42, 0.95));
-  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.8), 0 0 20px rgba(15, 23, 42, 0.9);
+  background: radial-gradient(
+    circle at top left,
+    rgba(59, 130, 246, 0.35),
+    rgba(15, 23, 42, 0.95)
+  );
+  box-shadow:
+    0 0 0 1px rgba(15, 23, 42, 0.8),
+    0 0 20px rgba(15, 23, 42, 0.9);
 }
 .subtab-btn {
   position: relative;
@@ -1116,6 +1230,21 @@ onUnmounted(() => {
   border-radius: 8px;
   color: var(--text-primary);
   font-size: 0.95rem;
+}
+.btn-small-inline {
+  margin-left: 0.35rem;
+  padding: 0.2rem 0.4rem;
+  font-size: 0.8rem;
+  background: rgba(1, 123, 251, 0.2);
+  border: 1px solid rgba(1, 123, 251, 0.4);
+  border-radius: 4px;
+  color: var(--blue-bright);
+  cursor: pointer;
+}
+.label-inline {
+  margin-right: 0.35rem;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
 }
 .btn-search {
   padding: 0.45rem 0.75rem;
@@ -1312,7 +1441,7 @@ onUnmounted(() => {
   border: 1px solid var(--blue-border);
   border-radius: 12px;
   padding: 1.5rem 1.75rem;
-  max-width: 760px;
+  max-width: 880px;
   width: 100%;
   box-shadow: 0 0 40px rgba(1, 123, 251, 0.2);
   max-height: 80vh;
@@ -1429,6 +1558,41 @@ onUnmounted(() => {
   gap: 0.75rem;
   justify-content: flex-end;
   margin-top: 0.5rem;
+}
+.seller-add-row {
+  align-items: flex-end;
+}
+.seller-shop-wrap {
+  flex: 1.2;
+}
+.seller-shop-input {
+  font-size: 0.9rem;
+  padding: 0.45rem 0.7rem;
+}
+.seller-commission-wrap {
+  flex: 0.6;
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+.seller-add-btn-wrap {
+  flex: 0.4;
+  display: flex;
+  justify-content: flex-end;
+}
+.seller-actions-cell {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  justify-content: flex-end;
+}
+.seller-delete-btn {
+  background: transparent;
+  border-color: rgba(239, 68, 68, 0.6);
+  color: #fecaca;
+}
+.seller-delete-btn:hover {
+  background: rgba(239, 68, 68, 0.15);
 }
 .btn-primary {
   padding: 0.5rem 1.25rem;

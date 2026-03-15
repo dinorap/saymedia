@@ -21,15 +21,24 @@
               <label>Đến ngày</label>
               <input v-model="toDate" type="date" />
             </div>
-            <div class="history-filter-actions">
-              <button
-                type="button"
-                class="btn-export"
-                :disabled="exporting"
-                @click="exportCsv"
-              >
-                {{ exporting ? "Đang xuất..." : "Xuất CSV" }}
-              </button>
+            <div class="filter-group">
+              <label>{{ $t("payment.history.status") }}</label>
+              <select v-model="statusFilter" class="filter-select">
+                <option value="">{{ $t("admin.all") || "Tất cả" }}</option>
+                <option value="success">Thành công</option>
+                <option value="pending">Đang chờ</option>
+                <option value="expired">Hết hạn</option>
+                <option value="cancelled">Đã hủy</option>
+              </select>
+            </div>
+            <div class="filter-group filter-search">
+              <label>Tìm kiếm</label>
+              <input
+                v-model="searchKeyword"
+                type="text"
+                placeholder="Số tiền, trạng thái..."
+                class="filter-search-input"
+              />
             </div>
           </div>
 
@@ -41,6 +50,9 @@
           </div>
           <div v-else-if="!items.length" class="history-state">
             {{ $t("payment.history.empty") }}
+          </div>
+          <div v-else-if="!filteredItems.length" class="history-state">
+            Không có bản ghi nào phù hợp với bộ lọc.
           </div>
           <div v-else class="history-table-wrap">
             <table class="history-table">
@@ -54,7 +66,7 @@
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="(tx, idx) in items" :key="tx.id">
+                <tr v-for="(tx, idx) in filteredItems" :key="tx.id">
                   <td>{{ idx + 1 }}</td>
                   <td>{{ formatDate(tx.created_at) }}</td>
                   <td>{{ formatVnd(tx.amount) }}</td>
@@ -99,8 +111,27 @@ const loading = ref(false);
 const error = ref("");
 const fromDate = ref("");
 const toDate = ref("");
-const exporting = ref(false);
+const statusFilter = ref("");
+const searchKeyword = ref("");
 let filterTimer = null;
+
+const filteredItems = computed(() => {
+  let list = items.value;
+  if (statusFilter.value) {
+    list = list.filter((tx) => (tx.status || "").toLowerCase() === statusFilter.value.toLowerCase());
+  }
+  const q = (searchKeyword.value || "").trim().toLowerCase();
+  if (q) {
+    list = list.filter((tx) => {
+      const amountStr = (Number(tx.amount) || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+      const actualStr = (Number(tx.actual_amount ?? tx.amount) || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+      const statusStr = (tx.status || "").toLowerCase();
+      const dateStr = formatDate(tx.created_at).toLowerCase();
+      return amountStr.includes(q) || actualStr.includes(q) || statusStr.includes(q) || dateStr.includes(q);
+    });
+  }
+  return list;
+});
 
 async function loadHistory(opts) {
   const silent = !!opts?.silent;
@@ -134,33 +165,6 @@ async function loadHistory(opts) {
 
 function reload() {
   loadHistory();
-}
-
-async function exportCsv() {
-  exporting.value = true;
-  try {
-    const params = new URLSearchParams();
-    params.set("limit", "500");
-    params.set("format", "csv");
-    if (fromDate.value) params.set("from", fromDate.value);
-    if (toDate.value) params.set("to", toDate.value + " 23:59:59");
-
-    const url = `/api/payment/history?${params.toString()}`;
-    const res = await fetch(url);
-    const text = await res.text();
-    const blob = new Blob([text], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = "deposit-history.csv";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(link.href);
-  } catch {
-    // ignore export error
-  } finally {
-    exporting.value = false;
-  }
 }
 
 let autoRefreshTimer = null;
@@ -292,8 +296,10 @@ function formatDate(val) {
   color: var(--text-secondary);
 }
 
-.filter-group input[type="date"] {
-  min-width: 150px;
+.filter-group input[type="date"],
+.filter-group .filter-select,
+.filter-group .filter-search-input {
+  min-width: 140px;
   padding: 0.35rem 0.6rem;
   border-radius: 999px;
   border: 1px solid var(--input-border);
@@ -302,30 +308,8 @@ function formatDate(val) {
   font-size: 0.85rem;
 }
 
-.history-filter-actions {
-  display: flex;
-  gap: 0.5rem;
-  margin-left: auto;
-}
-
-.btn-filter,
-.btn-export {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.4rem 0.9rem;
-  border-radius: 999px;
-  border: 1px solid rgba(148, 163, 184, 0.5);
-  background: rgba(15, 23, 42, 0.7);
-  color: var(--text-primary);
-  font-size: 0.8rem;
-  cursor: pointer;
-}
-
-.btn-export {
-  border-color: rgba(34, 197, 94, 0.6);
-  background: rgba(22, 163, 74, 0.15);
-  color: #bbf7d0;
+.filter-search .filter-search-input {
+  min-width: 180px;
 }
 
 .history-state {

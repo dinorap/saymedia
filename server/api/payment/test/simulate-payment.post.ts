@@ -2,7 +2,7 @@ import jwt from 'jsonwebtoken'
 import pool from '../../../utils/db'
 import { ensurePaymentSchema, PAYMENT_EXPIRE_MINUTES, convertVndToCredit } from '../../../utils/payment'
 import { addAuditLog } from '../../../utils/audit'
-import { applyCreditChange, ensureCreditLedgerSchema } from '../../../utils/creditLedger'
+import { applyDepositCredit, ensureCreditLedgerSchema } from '../../../utils/creditLedger'
 import { addDepositSocialProofItem } from '../../../utils/socialProof'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'chuoi_bi_mat_jwt_ngau_nhien_cua_sep_123456'
@@ -160,10 +160,11 @@ export default defineEventHandler(async (event) => {
       [tx.amount, credited, bonusCredit || null, transId],
     )
 
-    const creditResult = await applyCreditChange(conn, {
+    const baseCredit = credited - (bonusCredit || 0)
+    const creditResult = await applyDepositCredit(conn, {
       userId: decoded.id,
-      delta: credited,
-      transactionType: 'deposit',
+      paidCredit: baseCredit,
+      bonusCredit: bonusCredit || 0,
       referenceType: 'payment_transaction',
       referenceId: transId,
       note: `Nạp test ${Number(tx.amount || 0).toLocaleString('vi-VN')}đ`,

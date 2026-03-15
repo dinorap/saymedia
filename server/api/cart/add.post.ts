@@ -43,6 +43,13 @@ export default defineEventHandler(async (event) => {
   }
   const safeQty = !Number.isInteger(qty) || qty <= 0 ? 1 : Math.min(qty, 99);
 
+  // Quy ước: mỗi sản phẩm trong giỏ chỉ có một dòng (1 loại duration).
+  // Khi thêm/cập nhật, xóa mọi dòng khác product_id (tránh giữ lại duration cũ).
+  await pool.query(
+    "DELETE FROM user_cart_items WHERE user_id = ? AND product_id = ? AND (duration <=> ? ) = 0",
+    [decoded.id, productId, duration],
+  );
+
   await pool.query(
     `
       INSERT INTO user_cart_items (user_id, product_id, duration, qty)

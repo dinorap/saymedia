@@ -1,6 +1,6 @@
 import pool from "../../../../utils/db";
 import { addAuditLog } from "../../../../utils/audit";
-import { applyCreditChange, ensureCreditLedgerSchema } from "../../../../utils/creditLedger";
+import { applyRefundCredit, ensureCreditLedgerSchema } from "../../../../utils/creditLedger";
 import { ensureOrderRefundSchema } from "../../../../utils/orderRefund";
 
 export default defineEventHandler(async (event) => {
@@ -31,7 +31,7 @@ export default defineEventHandler(async (event) => {
 
     const [[order]]: any = await conn.query(
       `
-        SELECT id, user_id, admin_id, amount, status, refunded_at
+        SELECT id, user_id, admin_id, amount, paid_part, bonus_part, status, refunded_at
         FROM orders
         WHERE id = ?
         LIMIT 1
@@ -59,10 +59,11 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 400, statusMessage: "Số tiền đơn hàng không hợp lệ" });
     }
 
-    const creditResult = await applyCreditChange(conn, {
+    const creditResult = await applyRefundCredit(conn, {
       userId: Number(order.user_id),
-      delta: amount,
-      transactionType: "refund",
+      amount,
+      paidPart: order.paid_part != null ? Number(order.paid_part) : null,
+      bonusPart: order.bonus_part != null ? Number(order.bonus_part) : null,
       referenceType: "order",
       referenceId: id,
       note: `Hoàn tiền đơn #${id}: ${reason}`,

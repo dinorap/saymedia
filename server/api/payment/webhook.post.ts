@@ -1,7 +1,7 @@
 import pool from '../../utils/db'
 import { ensurePaymentSchema, PAYMENT_EXPIRE_MINUTES, convertVndToCredit } from '../../utils/payment'
 import { addAuditLog } from '../../utils/audit'
-import { applyCreditChange, ensureCreditLedgerSchema } from '../../utils/creditLedger'
+import { applyDepositCredit, ensureCreditLedgerSchema } from '../../utils/creditLedger'
 import { addDepositSocialProofItem } from '../../utils/socialProof'
 
 function extractTransId(content: string) {
@@ -215,10 +215,11 @@ export default defineEventHandler(async (event) => {
       [transferAmount, transferAmount, credited, bonusCredit || null, tx.trans_id],
     )
 
-    await applyCreditChange(conn, {
+    const baseCredit = credited - (bonusCredit || 0)
+    await applyDepositCredit(conn, {
       userId: tx.user_id,
-      delta: credited,
-      transactionType: 'deposit',
+      paidCredit: baseCredit,
+      bonusCredit: bonusCredit || 0,
       referenceType: 'payment_transaction',
       referenceId: tx.trans_id,
       note: `Nạp ${transferAmount.toLocaleString('vi-VN')}đ qua webhook`,

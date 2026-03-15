@@ -11,11 +11,19 @@ export default defineEventHandler(async (event) => {
   const adminId = query.admin_id ? parseInt(String(query.admin_id), 10) : null
   const status = query.status ? String(query.status) : ''
   const search = query.search ? String(query.search).trim() : ''
+  const fromDate = query.from ? String(query.from).trim() : ''
+  const toDate = query.to ? String(query.to).trim() : ''
+  const formatCsv = query.format === 'csv'
   let page = parseInt(String(query.page || 1), 10)
   if (!Number.isFinite(page) || page < 1) page = 1
   let limit = parseInt(String(query.limit || 10), 10)
   if (!Number.isFinite(limit) || limit < 1) limit = 10
-  limit = Math.min(50, Math.max(5, limit))
+  if (formatCsv) {
+    limit = 10000
+    page = 1
+  } else {
+    limit = Math.min(50, Math.max(5, limit))
+  }
   const offset = (page - 1) * limit
 
   const sortFieldRaw = String(query.sort_field || '').trim()
@@ -49,6 +57,14 @@ export default defineEventHandler(async (event) => {
     )
     const term = `%${search}%`
     params.push(term, term, term, term)
+  }
+  if (fromDate) {
+    conditions.push('pt.created_at >= ?')
+    params.push(fromDate + ' 00:00:00')
+  }
+  if (toDate) {
+    conditions.push('pt.created_at <= ?')
+    params.push(toDate + ' 23:59:59')
   }
 
   const whereClause = conditions.length ? ` WHERE ${conditions.join(' AND ')}` : ''
@@ -99,6 +115,22 @@ export default defineEventHandler(async (event) => {
   for (const row of rows) {
     const conv = convertVndToCredit(Number(row.amount || 0))
     row.expected_credit = conv.credit
+  }
+
+  if (formatCsv) {
+    const headers = ['id', 'trans_id', 'user_username', 'admin_username', 'provider', 'amount', 'actual_amount', 'credit_amount', 'expected_credit', 'status', 'promo_code', 'created_at']
+    const escape = (v: any) => {
+      const s = v == null ? '' : String(v)
+      return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g, '""')}"` : s
+    }
+    const lines = [headers.join(',')]
+    for (const r of rows) {
+      lines.push(headers.map((h) => escape(r[h])).join(','))
+    }
+    const csv = lines.join('\n')
+    setResponseHeader(event, 'Content-Type', 'text/csv; charset=utf-8')
+    setResponseHeader(event, 'Content-Disposition', 'attachment; filename="admin-deposits.csv"')
+    return csv
   }
 
   return {

@@ -2,6 +2,14 @@
   <div class="ledger-page">
     <div class="toolbar">
       <div class="filter-group">
+        <label>Từ ngày</label>
+        <input v-model="fromDate" type="date" class="input input--sm" />
+      </div>
+      <div class="filter-group">
+        <label>Đến ngày</label>
+        <input v-model="toDate" type="date" class="input input--sm" />
+      </div>
+      <div class="filter-group">
         <label>{{ $t("admin.transactionType") || "Loại giao dịch" }}</label>
         <input
           v-model="typeFilter"
@@ -14,6 +22,16 @@
         <input v-model="userIdFilter" class="input input--sm" placeholder="1" />
       </div>
       <button class="btn-refresh" @click="fetchLedger(1)">↻</button>
+      <div class="filter-group">
+        <button
+          type="button"
+          class="btn-export-csv"
+          :disabled="exportingCsv"
+          @click="exportCsv"
+        >
+          {{ exportingCsv ? "Đang xuất..." : "Xuất CSV" }}
+        </button>
+      </div>
     </div>
 
     <div class="table-wrap card">
@@ -98,6 +116,9 @@ const items = ref([]);
 const loading = ref(false);
 const typeFilter = ref("");
 const userIdFilter = ref("");
+const fromDate = ref("");
+const toDate = ref("");
+const exportingCsv = ref(false);
 const pagination = ref({ page: 1, limit: 10, total: 0, totalPages: 1 });
 const pageSize = ref(10);
 let timer = null;
@@ -110,8 +131,9 @@ async function fetchLedger(page = 1, opts = { silent: false }) {
     params.set("page", String(page));
     params.set("limit", String(pageSize.value || 20));
     if (typeFilter.value.trim()) params.set("type", typeFilter.value.trim());
-    if (userIdFilter.value.trim())
-      params.set("user_id", userIdFilter.value.trim());
+    if (userIdFilter.value.trim()) params.set("user_id", userIdFilter.value.trim());
+    if (fromDate.value) params.set("from", fromDate.value);
+    if (toDate.value) params.set("to", toDate.value);
     const res = await $fetch(`/api/admin/credit-ledger?${params.toString()}`);
     items.value = Array.isArray(res?.data) ? res.data : [];
     if (res?.pagination) pagination.value = res.pagination;
@@ -124,12 +146,38 @@ async function fetchLedger(page = 1, opts = { silent: false }) {
 }
 
 watch(
-  () => [typeFilter.value, userIdFilter.value],
+  () => [typeFilter.value, userIdFilter.value, fromDate.value, toDate.value],
   () => {
     if (timer) clearTimeout(timer);
     timer = setTimeout(() => fetchLedger(1), 300);
   },
 );
+
+async function exportCsv() {
+  exportingCsv.value = true;
+  try {
+    const params = new URLSearchParams();
+    params.set("format", "csv");
+    if (typeFilter.value.trim()) params.set("type", typeFilter.value.trim());
+    if (userIdFilter.value.trim()) params.set("user_id", userIdFilter.value.trim());
+    if (fromDate.value) params.set("from", fromDate.value);
+    if (toDate.value) params.set("to", toDate.value);
+    const url = `/api/admin/credit-ledger?${params.toString()}`;
+    const csv = await $fetch(url);
+    const blob = new Blob([String(csv)], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "admin-credit-ledger.csv";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(link.href);
+  } catch (e) {
+    console.error("[admin ledger export]", e);
+  } finally {
+    exportingCsv.value = false;
+  }
+}
 
 function goToPage(page) {
   if (page >= 1 && page <= pagination.value.totalPages) fetchLedger(page);
@@ -213,6 +261,20 @@ onUnmounted(() => {
   border: 1px solid rgba(1, 123, 251, 0.4);
   background: rgba(1, 123, 251, 0.2);
   color: #fff;
+}
+.btn-export-csv {
+  padding: 0.45rem 0.9rem;
+  border-radius: 8px;
+  border: 1px solid rgba(34, 197, 94, 0.5);
+  background: rgba(22, 163, 74, 0.2);
+  color: #86efac;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+.btn-export-csv:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 .table-wrap {
   overflow-x: auto;

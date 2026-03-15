@@ -222,6 +222,7 @@
 import { defineAsyncComponent } from "vue";
 import SiteHeader from "~/components/SiteHeader.vue";
 import { useCartStore } from "~/stores/cart";
+import { setProductRef, getProductRef } from "~/composables/useProductRef";
 const ConfirmPurchaseModal = defineAsyncComponent(
   () => import("~/components/product/ConfirmPurchaseModal.vue"),
 );
@@ -402,6 +403,20 @@ async function onChangeQty(item) {
   const safeQty = max >= 1 ? Math.max(1, Math.min(q, max)) : 0;
   item.qty = safeQty;
 
+  // Giữ trạng thái chọn cho dòng này ngay lập tức (không đợi đồng bộ server)
+  const newKey = itemKey(item);
+  const nextSelected = {};
+  for (const [key, val] of Object.entries(selected.value)) {
+    // Xóa các key cũ của cùng product (nếu đổi duration) nhưng giữ lựa chọn item khác
+    if (!key.startsWith(`${item.id}-`)) {
+      nextSelected[key] = val;
+    }
+  }
+  if (safeQty >= 1) {
+    nextSelected[newKey] = true;
+  }
+  selected.value = nextSelected;
+
   if (process.client) {
     const role = useCookie("user_role", { path: "/" }).value;
     if (role === "user" && safeQty >= 1) {
@@ -491,12 +506,15 @@ async function confirmCheckoutAll() {
 
     for (const item of items) {
       try {
+        const route = useRoute();
+        const sellerRef = route.query.ref && typeof route.query.ref === "string" ? String(route.query.ref).trim() : undefined;
         const res = await $fetch("/api/orders/create", {
           method: "POST",
           body: {
             product_id: item.id,
             duration: item.duration || null,
             quantity: item.qty || 1,
+            ...(sellerRef ? { seller_ref: sellerRef } : {}),
           },
         });
         ok++;
@@ -528,9 +546,21 @@ async function doPurchase(payload) {
   const quantity = payload?.quantity || p.qty || 1;
   if (!p) return;
   try {
+    const route = useRoute();
+    let sellerRef;
+    if (route.query.ref && typeof route.query.ref === "string") {
+      const fromUrl = String(route.query.ref).trim();
+      if (fromUrl) {
+        setProductRef(p.id, fromUrl);
+        sellerRef = fromUrl;
+      }
+    } else {
+      const stored = getProductRef(p.id);
+      if (stored) sellerRef = stored;
+    }
     const res = await $fetch("/api/orders/create", {
       method: "POST",
-      body: { product_id: p.id, duration, quantity },
+      body: { product_id: p.id, duration, quantity, ...(sellerRef ? { seller_ref: sellerRef } : {}) },
     });
     showToast(t("cart.purchaseSuccessHistory"), "success");
     remove(p.id, p.duration ?? duration);
@@ -542,22 +572,25 @@ async function doPurchase(payload) {
   }
 }
 
-let autoRefreshTimer: ReturnType<typeof setInterval> | null = null;
+let autoRefreshTimer = null;
+
+async function refreshCartFromServer() {
+  const role = useCookie("user_role", { path: "/" }).value;
+  if (role !== "user") return;
+  try {
+    const res = await $fetch("/api/cart/my");
+    if (res?.success && Array.isArray(res.items)) {
+      cartStore.setItems(res.items);
+    }
+  } catch {
+    // silent
+  }
+}
 
 onMounted(() => {
   initUser();
-  autoRefreshTimer = setInterval(async () => {
-    const role = useCookie("user_role", { path: "/" }).value;
-    if (role !== "user") return;
-    try {
-      const res = await $fetch("/api/cart/my");
-      if (res?.success && Array.isArray(res.items)) {
-        cartStore.setItems(res.items);
-      }
-    } catch {
-      // silent
-    }
-  }, 5000);
+  refreshCartFromServer();
+  autoRefreshTimer = setInterval(refreshCartFromServer, 5000);
 });
 
 onUnmounted(() => {

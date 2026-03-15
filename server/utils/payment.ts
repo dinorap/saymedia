@@ -5,6 +5,7 @@ let schemaReady = false
 
 export const PAYMENT_EXPIRE_MINUTES = 5
 export const DEFAULT_VND_PER_CREDIT = 1000
+let cachedVndPerCredit: number | null = null
 
 export async function ensurePaymentSchema() {
   if (schemaReady) return
@@ -93,6 +94,28 @@ export async function ensurePaymentSchema() {
     // Column may already exist.
   }
 
+  // Bảng cấu hình thanh toán (tùy chọn)
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS payment_settings (
+      id TINYINT PRIMARY KEY,
+      vnd_per_credit BIGINT NOT NULL,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    )
+  `)
+
+  try {
+    const [[row]]: any = await pool.query(
+      "SELECT vnd_per_credit FROM payment_settings WHERE id = 1 LIMIT 1",
+    )
+    if (row && Number(row.vnd_per_credit) > 0) {
+      const v = Math.round(Number(row.vnd_per_credit))
+      cachedVndPerCredit = v
+      process.env.DEPOSIT_VND_PER_CREDIT = String(v)
+    }
+  } catch {
+    // ignore
+  }
+
   try {
     await pool.query("ALTER TABLE deposit_promotions ADD COLUMN daily_end_time TIME NULL")
   } catch {
@@ -116,9 +139,17 @@ export async function ensurePaymentSchema() {
 }
 
 export function getVndPerCredit() {
+  if (cachedVndPerCredit != null) return cachedVndPerCredit
   const raw = Number(process.env.DEPOSIT_VND_PER_CREDIT || DEFAULT_VND_PER_CREDIT)
   if (!Number.isFinite(raw) || raw <= 0) return DEFAULT_VND_PER_CREDIT
   return Math.round(raw)
+}
+
+export function setVndPerCreditCache(v: number) {
+  if (!Number.isFinite(v) || v <= 0) return
+  const rounded = Math.round(v)
+  cachedVndPerCredit = rounded
+  process.env.DEPOSIT_VND_PER_CREDIT = String(rounded)
 }
 
 export function convertVndToCredit(vndAmount: number) {

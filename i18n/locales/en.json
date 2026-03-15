@@ -123,6 +123,7 @@
     "totalUsers": "Total Users",
     "monthlyRevenue": "Monthly Revenue",
     "orders": "Orders Management",
+    "partners": "Partners & Earnings",
     "earningsOverview": "Earnings Overview",
     "thisMonth": "This Month",
     "topPerforming": "Top Performing Centers",
@@ -242,7 +243,7 @@
     "close": "Close",
     "productTabMain": "Products",
     "productTabOwnerSellers": "Partners",
-    "productTabMySellers": "Products I sell for owner",
+    "productTabMySellers": "Partner products",
     "productOwnerSellersTitle": "Manage partners",
     "productMySellersEmpty": "You are not selling any products for the owner yet.",
     "productRefCode": "Product ref",
@@ -441,11 +442,18 @@
     "openLink": "Open download link"
   },
   "profile": {
-  "adminContactTitle": "Account support",
-  "adminContactLabel": "Assigned admin",
-  "adminContactEmpty": "Your admin has not replied yet. Leave a message to get support as soon as possible.",
-  "adminContactHint": "Chat directly with the admin in charge of your account about deposits, orders and other issues.",
-  "adminChatPlaceholder": "Type what you need help with..."
+    "balanceLabel": "Current balance",
+    "pointsUnit": "points",
+    "depositButton": "Deposit",
+    "tipNoPoints": "You have no points yet. Deposit to start using the service.",
+    "statsDeposits": "Deposits",
+    "statsOrders": "Orders",
+    "sectionActions": "Actions",
+    "adminContactTitle": "Account support",
+    "adminContactLabel": "Assigned admin",
+    "adminContactEmpty": "Your admin has not replied yet. Leave a message to get support as soon as possible.",
+    "adminContactHint": "Chat directly with the admin in charge of your account about deposits, orders and other issues.",
+    "adminChatPlaceholder": "Type what you need help with..."
   },
   "product": {
     "viewDetail": "View detail",

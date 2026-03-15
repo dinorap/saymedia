@@ -53,6 +53,14 @@
         </select>
       </div>
       <div class="filter-group">
+        <label>Từ ngày</label>
+        <input v-model="fromDate" type="date" class="input input--sm" />
+      </div>
+      <div class="filter-group">
+        <label>Đến ngày</label>
+        <input v-model="toDate" type="date" class="input input--sm" />
+      </div>
+      <div class="filter-group">
         <label>{{ $t("admin.search") }}</label>
         <input
           v-model="search"
@@ -60,6 +68,34 @@
           class="input input--sm"
           :placeholder="$t('admin.search')"
         />
+      </div>
+      <div
+        v-if="isSuperAdmin"
+        class="filter-group rate-group"
+      >
+        <label>Tỷ lệ quy đổi</label>
+        <div class="rate-inline">
+          <span>1 credit =</span>
+          <input
+            v-model.number="vndPerCredit"
+            type="number"
+            min="10"
+            step="10"
+            class="input input--sm rate-input"
+            @change="saveRate"
+          />
+          <span>VND</span>
+        </div>
+      </div>
+      <div class="filter-group">
+        <button
+          type="button"
+          class="btn-export-csv"
+          :disabled="exportingCsv"
+          @click="exportCsv"
+        >
+          {{ exportingCsv ? "Đang xuất..." : "Xuất CSV" }}
+        </button>
       </div>
     </div>
 
@@ -160,10 +196,14 @@ const isSuperAdmin = computed(() => roleCookie.value === "admin_0");
 const admins = ref([]);
 const deposits = ref([]);
 const loading = ref(true);
+const vndPerCredit = ref(1000);
 
 const filterAdmin = ref("");
 const filterStatus = ref("");
 const search = ref("");
+const fromDate = ref("");
+const toDate = ref("");
+const exportingCsv = ref(false);
 let searchTimer = null;
 const pagination = ref({ page: 1, limit: 10, total: 0, totalPages: 1 });
 const pageSize = ref(10);
@@ -209,9 +249,9 @@ async function fetchDeposits(page = 1, opts = { silent: false }) {
     if (isSuperAdmin.value && filterAdmin.value) {
       params.set("admin_id", String(filterAdmin.value));
     }
-    if (search.value.trim()) {
-      params.set("search", search.value.trim());
-    }
+    if (search.value.trim()) params.set("search", search.value.trim());
+    if (fromDate.value) params.set("from", fromDate.value);
+    if (toDate.value) params.set("to", toDate.value);
     const res = await $fetch(`/api/admin/deposits?${params.toString()}`);
     if (res?.success && res.data) deposits.value = res.data;
     if (res?.pagination) pagination.value = res.pagination;
@@ -225,15 +265,69 @@ async function fetchDeposits(page = 1, opts = { silent: false }) {
   }
 }
 
+async function fetchRate() {
+  if (!isSuperAdmin.value) return;
+  try {
+    const res = await $fetch("/api/admin/payment/settings");
+    if (res?.success && typeof res.vnd_per_credit === "number") {
+      vndPerCredit.value = res.vnd_per_credit;
+    }
+  } catch (e) {
+    console.error("[admin payment settings]", e);
+  }
+}
+
+async function saveRate() {
+  if (!isSuperAdmin.value) return;
+  const val = Number(vndPerCredit.value || 0);
+  if (!Number.isFinite(val) || val <= 0) return;
+  try {
+    const res = await $fetch("/api/admin/payment/settings", {
+      method: "POST",
+      body: { vnd_per_credit: val },
+    });
+    if (res?.success && typeof res.vnd_per_credit === "number") {
+      vndPerCredit.value = res.vnd_per_credit;
+    }
+  } catch (e) {
+    console.error("[admin payment settings save]", e);
+  }
+}
+
 watch(
-  () => search.value,
+  () => [search.value, fromDate.value, toDate.value],
   () => {
     if (searchTimer) clearTimeout(searchTimer);
-    searchTimer = setTimeout(() => {
-      fetchDeposits(1);
-    }, 300);
+    searchTimer = setTimeout(() => fetchDeposits(1), 300);
   },
 );
+
+async function exportCsv() {
+  exportingCsv.value = true;
+  try {
+    const params = new URLSearchParams();
+    params.set("format", "csv");
+    if (filterStatus.value) params.set("status", filterStatus.value);
+    if (isSuperAdmin.value && filterAdmin.value) params.set("admin_id", String(filterAdmin.value));
+    if (search.value.trim()) params.set("search", search.value.trim());
+    if (fromDate.value) params.set("from", fromDate.value);
+    if (toDate.value) params.set("to", toDate.value);
+    const url = `/api/admin/deposits?${params.toString()}`;
+    const csv = await $fetch(url);
+    const blob = new Blob([String(csv)], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "admin-deposits.csv";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(link.href);
+  } catch (e) {
+    console.error("[admin deposits export]", e);
+  } finally {
+    exportingCsv.value = false;
+  }
+}
 
 function goToPage(page) {
   if (page >= 1 && page <= pagination.value.totalPages) {
@@ -290,6 +384,7 @@ function statusClass(status) {
 
 onMounted(async () => {
   await fetchAdmins();
+  await fetchRate();
   await fetchDeposits(1);
   autoRefreshTimer = setInterval(() => {
     fetchDeposits(pagination.value.page || 1, { silent: true });
@@ -350,6 +445,20 @@ onUnmounted(() => {
   gap: 0.5rem;
 }
 
+.rate-group {
+  margin-left: auto;
+}
+.rate-inline {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  white-space: nowrap;
+}
+.rate-input {
+  width: 110px;
+  text-align: right;
+}
+
 .filter-group label {
   font-size: 0.85rem;
   color: var(--text-secondary);
@@ -359,6 +468,21 @@ onUnmounted(() => {
 .input--sm {
   padding: 0.45rem 0.75rem;
   min-width: 140px;
+}
+
+.btn-export-csv {
+  padding: 0.45rem 0.9rem;
+  border-radius: 8px;
+  border: 1px solid rgba(34, 197, 94, 0.5);
+  background: rgba(22, 163, 74, 0.2);
+  color: #86efac;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+.btn-export-csv:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .btn-search {

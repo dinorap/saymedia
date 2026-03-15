@@ -71,6 +71,10 @@ export function useCart() {
               duration: options?.duration ?? null,
             },
           });
+          const res: any = await $fetch("/api/cart/my");
+          if (res?.success && Array.isArray(res.items)) {
+            store.setItems(res.items);
+          }
         } catch {
           // ignore sync error, local cart vẫn hoạt động
         }
