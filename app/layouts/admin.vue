@@ -28,9 +28,15 @@
           <span class="sidebar-item-icon" aria-hidden="true">💰</span>
           <span class="sidebar-item-label">{{ $t("admin.deposits") }}</span>
         </NuxtLink>
-        <NuxtLink to="/admin/deposit-promotions" class="sidebar-item">
+        <NuxtLink
+          v-if="currentUser?.role !== 'admin_1'"
+          to="/admin/deposit-promotions"
+          class="sidebar-item"
+        >
           <span class="sidebar-item-icon" aria-hidden="true">🎟️</span>
-          <span class="sidebar-item-label">Mã khuyến mại nạp tiền</span>
+          <span class="sidebar-item-label">
+            {{ $t("depositPromotions.title") }}
+          </span>
         </NuxtLink>
         <NuxtLink to="/admin/products" class="sidebar-item">
           <span class="sidebar-item-icon" aria-hidden="true">🛒</span>
@@ -38,7 +44,9 @@
         </NuxtLink>
         <NuxtLink to="/admin/product-keys" class="sidebar-item">
           <span class="sidebar-item-icon" aria-hidden="true">🔑</span>
-          <span class="sidebar-item-label">Key sản phẩm</span>
+          <span class="sidebar-item-label">
+            {{ $t("admin.productKeys") || "Key sản phẩm" }}
+          </span>
         </NuxtLink>
         <NuxtLink to="/admin/revenue" class="sidebar-item">
           <span class="sidebar-item-icon" aria-hidden="true">📈</span>
@@ -50,17 +58,25 @@
             $t("admin.creditLedger") || "Sổ sao kê tín chỉ"
           }}</span>
         </NuxtLink>
-        <NuxtLink to="/admin/logs" class="sidebar-item">
+        <NuxtLink
+          v-if="currentUser?.role !== 'admin_1'"
+          to="/admin/logs"
+          class="sidebar-item"
+        >
           <span class="sidebar-item-icon" aria-hidden="true">📄</span>
           <span class="sidebar-item-label">{{ $t("admin.logs") }}</span>
         </NuxtLink>
         <NuxtLink to="/admin/support" class="sidebar-item">
           <span class="sidebar-item-icon" aria-hidden="true">💬</span>
-          <span class="sidebar-item-label">Chat hỗ trợ</span>
+          <span class="sidebar-item-label">
+            {{ $t("admin.supportChat") || "Chat hỗ trợ" }}
+          </span>
         </NuxtLink>
         <NuxtLink to="/admin/announcements" class="sidebar-item">
           <span class="sidebar-item-icon" aria-hidden="true">📢</span>
-          <span class="sidebar-item-label">Thông báo</span>
+          <span class="sidebar-item-label">
+            {{ $t("admin.announcements") }}
+          </span>
         </NuxtLink>
       </nav>
       <div class="sidebar-footer">
@@ -89,7 +105,7 @@
           class="sidebar-ref-btn"
           @click="copyRegisterRefLink"
         >
-          🔗 Copy link đăng ký
+          🔗 {{ $t("admin.copyRegisterRefLink") }}
         </button>
         <button
           type="button"
@@ -191,7 +207,6 @@
         </div>
       </div>
     </Teleport>
-
   </div>
 </template>
 

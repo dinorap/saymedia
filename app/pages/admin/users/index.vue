@@ -164,6 +164,22 @@
             :placeholder="$t('admin.search')"
           />
         </div>
+        <div class="filter-group">
+          <label>Sắp xếp theo</label>
+          <select v-model="userSortField" class="input input--sm">
+            <option value="created_at">Ngày tạo</option>
+            <option value="last_login">Lần đăng nhập gần nhất</option>
+            <option value="credit">Số dư tín chỉ</option>
+            <option value="total_deposit_amount">Số tiền đã nạp</option>
+          </select>
+        </div>
+        <button
+          type="button"
+          class="btn-add btn-sort-direction"
+          @click="toggleUserSortDirection"
+        >
+          {{ userSortDirection === "asc" ? "↑" : "↓" }}
+        </button>
         <button
           v-if="isSuperAdmin"
           type="button"
@@ -187,6 +203,8 @@
               <th>{{ $t("admin.username") }}</th>
               <th>{{ $t("admin.email") }}</th>
               <th>{{ $t("admin.credit") }}</th>
+              <th>Số tiền đã nạp</th>
+              <th>Lần đăng nhập gần nhất</th>
               <th v-if="isSuperAdmin">{{ $t("admin.adminId") }}</th>
               <th>{{ $t("admin.status") }}</th>
               <th>{{ $t("admin.createdAt") }}</th>
@@ -201,6 +219,8 @@
               <td>{{ u.username }}</td>
               <td>{{ u.email }}</td>
               <td>{{ formatVnd(u.credit || 0) }}</td>
+              <td>{{ formatVnd(u.total_deposit_amount || 0) }} đ</td>
+              <td>{{ formatDate(u.last_login) }}</td>
               <td v-if="isSuperAdmin">{{ u.admin_username || "-" }}</td>
               <td>
                 <span
@@ -543,8 +563,11 @@ const userSearch = ref("");
 const userPage = ref(1);
 const userPagination = ref({ page: 1, limit: 10, total: 0, totalPages: 1 });
 const userPageSize = ref(10);
+const userSortField = ref("created_at");
+const userSortDirection = ref("desc");
 
 let userSearchTimer = null;
+let autoRefreshTimer = null;
 
 const filteredAdmins = computed(() => {
   const term = adminSearch.value.trim().toLowerCase();
@@ -574,9 +597,11 @@ async function fetchAdmins() {
   }
 }
 
-async function fetchUsers(page = 1) {
+async function fetchUsers(page = 1, opts = { silent: false }) {
   userPage.value = page;
-  loadingUsers.value = true;
+  if (!opts?.silent) {
+    loadingUsers.value = true;
+  }
   try {
     const params = new URLSearchParams();
     if (userFilterAdmin.value) params.set("admin_id", userFilterAdmin.value);
@@ -584,6 +609,8 @@ async function fetchUsers(page = 1) {
     if (userSearch.value.trim()) params.set("search", userSearch.value.trim());
     params.set("page", String(page));
     params.set("limit", String(userPageSize.value));
+     params.set("sort_field", userSortField.value);
+     params.set("sort_dir", userSortDirection.value);
     const res = await $fetch(`/api/admin/users?${params}`);
     if (res?.success && res.data) users.value = res.data;
     if (res?.pagination) userPagination.value = res.pagination;
@@ -591,7 +618,9 @@ async function fetchUsers(page = 1) {
     console.error("[users]", e);
     users.value = [];
   } finally {
-    loadingUsers.value = false;
+    if (!opts?.silent) {
+      loadingUsers.value = false;
+    }
   }
 }
 
@@ -605,12 +634,25 @@ watch(
   },
 );
 
+watch(
+  () => userSortField.value,
+  () => {
+    fetchUsers(1);
+  },
+);
+
 function goToUserPage(page) {
-  if (page >= 1 && page <= userPagination.value.totalPages) fetchUsers(page);
+  if (page >= 1 && page <= userPagination.value.totalPages)
+    fetchUsers(page);
 }
 
 function changeUserPageSize() {
   userPagination.value.page = 1;
+  fetchUsers(1);
+}
+
+function toggleUserSortDirection() {
+  userSortDirection.value = userSortDirection.value === "asc" ? "desc" : "asc";
   fetchUsers(1);
 }
 
@@ -874,8 +916,23 @@ async function submitAdjustCredit() {
 }
 
 onMounted(() => {
-  if (isSuperAdmin.value) fetchAdmins();
-  fetchUsers();
+  if (isSuperAdmin.value) {
+    fetchAdmins();
+  }
+  fetchUsers(1);
+  autoRefreshTimer = setInterval(() => {
+    if (isSuperAdmin.value) {
+      fetchAdmins();
+    }
+    fetchUsers(userPage.value || 1, { silent: true });
+  }, 5000);
+});
+
+onUnmounted(() => {
+  if (autoRefreshTimer) {
+    clearInterval(autoRefreshTimer);
+    autoRefreshTimer = null;
+  }
 });
 </script>
 
@@ -936,6 +993,90 @@ onMounted(() => {
 
 .panel-header .users-toolbar {
   flex: 1;
+}
+
+.user-stats-title {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.user-stats-empty {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.user-stats-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.user-stats-main-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.user-stats-username {
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user-stats-amount {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--blue-bright);
+}
+
+.user-stats-note {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.user-stats-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  max-height: 140px;
+  overflow-y: auto;
+}
+
+.user-stats-list-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.user-stats-meta {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.user-stats-toolbar {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.user-stats-toolbar .btn-add {
+  margin-left: auto;
+}
+
+.btn-sort-direction {
+  padding-inline: 0.7rem;
 }
 
 .section-title {

@@ -16,16 +16,17 @@ export const useToast = () => {
   }));
 
   function show(message: string, type: ToastType = "info", duration = 3000) {
-    toast.value.visible = true;
-    toast.value.message = message;
-    toast.value.type = type;
-
     if (hideTimeout) {
       clearTimeout(hideTimeout);
       hideTimeout = null;
     }
+    toast.value = {
+      visible: true,
+      message: String(message || ""),
+      type,
+    };
 
-    if (process.client && duration > 0) {
+    if (import.meta.client && duration > 0) {
       hideTimeout = setTimeout(() => {
         toast.value.visible = false;
       }, duration);

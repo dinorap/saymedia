@@ -1,5 +1,6 @@
 import pool from "../../utils/db";
 import { cacheGet, cacheSet, PRODUCT_DETAIL_KEY } from "../../utils/cache";
+import { ensureProductKeySchema } from "../../utils/productKeys";
 
 const CACHE_TTL = 60;
 
@@ -51,11 +52,32 @@ export default defineEventHandler(async (event) => {
 
   delete product.images_json;
 
+  // Lấy thêm thông tin giá theo từng loại key (thời hạn) của sản phẩm này
+  await ensureProductKeySchema();
+  const [priceRows]: any = await pool.query(
+    `
+      SELECT
+        product_id,
+        valid_duration,
+        MIN(price) AS price
+      FROM product_keys
+      WHERE product_id = ?
+      GROUP BY product_id, valid_duration
+    `,
+    [id],
+  );
+
+  const durationPrices: Record<string, number> = {};
+  for (const row of priceRows || []) {
+    durationPrices[String(row.valid_duration)] = Number(row.price) || 0;
+  }
+
   const result = {
     success: true,
     data: {
       ...product,
       images,
+      duration_prices: durationPrices,
     },
   };
   cacheSet(PRODUCT_DETAIL_KEY(id), result, CACHE_TTL);

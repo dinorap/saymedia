@@ -29,6 +29,30 @@
         </select>
       </div>
       <div class="filter-group">
+        <label>{{ $t("admin.sort") }}</label>
+        <select
+          v-model="sortMode"
+          class="input input--sm"
+          @change="() => fetchDeposits(1)"
+        >
+          <option value="created_desc">
+            {{ $t("admin.sortNewest") }}
+          </option>
+          <option value="created_asc">
+            {{ $t("admin.sortOldest") }}
+          </option>
+          <option value="amount_desc">
+            {{ $t("admin.sortAmountDesc") }}
+          </option>
+          <option value="amount_asc">
+            {{ $t("admin.sortAmountAsc") }}
+          </option>
+          <option value="status_asc">
+            {{ $t("admin.sortStatusAsc") }}
+          </option>
+        </select>
+      </div>
+      <div class="filter-group">
         <label>{{ $t("admin.search") }}</label>
         <input
           v-model="search"
@@ -49,10 +73,12 @@
           <tr>
             <th>{{ $t("admin.id") }}</th>
             <th>{{ $t("admin.username") }}</th>
-            <th>Hình thức</th>
-            <th>Số tiền (VND)</th>
-            <th>Tín chỉ (dự kiến)</th>
-            <th>Tín chỉ đã cộng</th>
+            <th>{{ $t("admin.depositAdmin") }}</th>
+            <th>{{ $t("admin.depositMethod") }}</th>
+            <th>{{ $t("admin.depositAmount") }}</th>
+            <th>{{ $t("admin.depositExpectedCredit") }}</th>
+            <th>{{ $t("admin.depositRealCredit") }}</th>
+            <th>{{ $t("admin.depositPromoCode") }}</th>
             <th>{{ $t("admin.status") }}</th>
             <th>{{ $t("admin.createdAt") }}</th>
           </tr>
@@ -63,6 +89,7 @@
               {{ (pagination.page - 1) * pagination.limit + idx + 1 }}
             </td>
             <td>{{ tx.user_username }}</td>
+            <td>{{ tx.admin_username || "-" }}</td>
             <td>
               <span class="provider-pill" :class="`provider-pill--${tx.provider || 'sepay'}`">
                 {{ providerLabel(tx.provider) }}
@@ -71,6 +98,7 @@
             <td>{{ formatVnd(tx.amount) }}</td>
             <td>{{ formatCredit(tx.expected_credit) }}</td>
             <td>{{ formatCredit(tx.credit_amount) }}</td>
+            <td>{{ tx.promo_code || "-" }}</td>
             <td>
               <span class="badge" :class="statusClass(tx.status)">
                 {{ tx.status }}
@@ -139,6 +167,8 @@ const search = ref("");
 let searchTimer = null;
 const pagination = ref({ page: 1, limit: 10, total: 0, totalPages: 1 });
 const pageSize = ref(10);
+let autoRefreshTimer = null;
+const sortMode = ref("created_desc");
 
 async function fetchAdmins() {
   if (!isSuperAdmin.value) return;
@@ -150,12 +180,31 @@ async function fetchAdmins() {
   }
 }
 
-async function fetchDeposits(page = 1) {
-  loading.value = true;
+async function fetchDeposits(page = 1, opts = { silent: false }) {
+  if (!opts?.silent) {
+    loading.value = true;
+  }
   try {
     const params = new URLSearchParams();
     params.set("page", String(page));
     params.set("limit", String(pageSize.value));
+    // Map sort mode -> sort_field + sort_dir
+    if (sortMode.value === "created_asc") {
+      params.set("sort_field", "created_at");
+      params.set("sort_dir", "asc");
+    } else if (sortMode.value === "created_desc") {
+      params.set("sort_field", "created_at");
+      params.set("sort_dir", "desc");
+    } else if (sortMode.value === "amount_asc") {
+      params.set("sort_field", "amount");
+      params.set("sort_dir", "asc");
+    } else if (sortMode.value === "amount_desc") {
+      params.set("sort_field", "amount");
+      params.set("sort_dir", "desc");
+    } else if (sortMode.value === "status_asc") {
+      params.set("sort_field", "status");
+      params.set("sort_dir", "asc");
+    }
     if (filterStatus.value) params.set("status", filterStatus.value);
     if (isSuperAdmin.value && filterAdmin.value) {
       params.set("admin_id", String(filterAdmin.value));
@@ -170,7 +219,9 @@ async function fetchDeposits(page = 1) {
     console.error("[admin deposits]", e);
     deposits.value = [];
   } finally {
-    loading.value = false;
+    if (!opts?.silent) {
+      loading.value = false;
+    }
   }
 }
 
@@ -240,6 +291,16 @@ function statusClass(status) {
 onMounted(async () => {
   await fetchAdmins();
   await fetchDeposits(1);
+  autoRefreshTimer = setInterval(() => {
+    fetchDeposits(pagination.value.page || 1, { silent: true });
+  }, 5000);
+});
+
+onUnmounted(() => {
+  if (autoRefreshTimer) {
+    clearInterval(autoRefreshTimer);
+    autoRefreshTimer = null;
+  }
 });
 </script>
 
@@ -272,6 +333,15 @@ onMounted(async () => {
   background: rgba(5, 15, 35, 0.5);
   border: 1px solid rgba(1, 123, 251, 0.2);
   border-radius: 10px;
+}
+
+.btn-refresh {
+  padding: 0.45rem 0.75rem;
+  background: rgba(1, 123, 251, 0.2);
+  border: 1px solid rgba(1, 123, 251, 0.4);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.95rem;
 }
 
 .filter-group {

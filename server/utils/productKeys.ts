@@ -48,6 +48,47 @@ export async function ensureProductKeySchema() {
     }
   }
 
+  // Bổ sung cột admin_id để biết admin nào đã nhập key (người tạo)
+  try {
+    await pool.query(
+      `
+        ALTER TABLE product_keys
+        ADD COLUMN admin_id INT NULL
+      `,
+    )
+  } catch (e: any) {
+    if (e?.code !== 'ER_DUP_FIELDNAME') {
+      throw e
+    }
+  }
+  try {
+    await pool.query(
+      `
+        ALTER TABLE product_keys
+        ADD INDEX idx_product_keys_admin_id (admin_id)
+      `,
+    )
+  } catch (e: any) {
+    if (e?.code !== 'ER_DUP_KEYNAME') {
+      throw e
+    }
+  }
+  try {
+    await pool.query(
+      `
+        ALTER TABLE product_keys
+        ADD CONSTRAINT fk_product_keys_admin
+          FOREIGN KEY (admin_id) REFERENCES admins(id) ON DELETE SET NULL
+      `,
+    )
+  } catch (e: any) {
+    // Có thể constraint đã tồn tại
+    if (!e?.code || e.code === 'ER_CANT_CREATE_TABLE') {
+      // Nếu lỗi khác hẳn thì ném ra để không nuốt bug nghiêm trọng
+      throw e
+    }
+  }
+
   productKeySchemaReady = true
 }
 

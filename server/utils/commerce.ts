@@ -86,6 +86,33 @@ export async function ensureCommerceSchema() {
     )
   `);
 
+  // Bổ sung cột duration cho user_cart_items để lưu loại key (thời lượng)
+  await addColumnIfMissing(
+    "ALTER TABLE user_cart_items ADD COLUMN duration VARCHAR(32) NULL AFTER product_id",
+  );
+  // Chuyển unique key sang (user_id, product_id, duration) để cùng 1 sản phẩm nhưng loại key khác nhau vẫn tách dòng.
+  await addColumnIfMissing(
+    "ALTER TABLE user_cart_items DROP INDEX uniq_user_product",
+  );
+  await addColumnIfMissing(
+    "ALTER TABLE user_cart_items ADD UNIQUE KEY uniq_user_product_duration (user_id, product_id, duration)",
+  );
+
+  // Bảng liên kết sản phẩm với admin bán (shop) + mã ref riêng cho từng shop.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS product_sellers (
+      id BIGINT AUTO_INCREMENT PRIMARY KEY,
+      product_id INT NOT NULL,
+      seller_admin_id INT NOT NULL,
+      ref_code VARCHAR(32) NOT NULL UNIQUE,
+      is_active TINYINT(1) NOT NULL DEFAULT 1,
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE KEY uniq_product_seller (product_id, seller_admin_id),
+      CONSTRAINT fk_product_sellers_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+      CONSTRAINT fk_product_sellers_admin FOREIGN KEY (seller_admin_id) REFERENCES admins(id) ON DELETE CASCADE
+    )
+  `);
+
   // Index cho truy vấn nhanh khi data lớn (>100k record).
   await addColumnIfMissing("CREATE INDEX idx_orders_user_id ON orders(user_id)");
   await addColumnIfMissing("CREATE INDEX idx_orders_created_at ON orders(created_at)");

@@ -30,6 +30,10 @@ export default defineEventHandler(async (event) => {
   const body = await readBody(event);
   const productId = Number(body?.product_id || 0);
   const qty = Number(body?.qty || 1);
+  const duration =
+    typeof body?.duration === "string" && body.duration.trim()
+      ? String(body.duration).trim().slice(0, 32)
+      : null;
 
   if (!Number.isInteger(productId) || productId <= 0) {
     throw createError({
@@ -41,11 +45,11 @@ export default defineEventHandler(async (event) => {
 
   await pool.query(
     `
-      INSERT INTO user_cart_items (user_id, product_id, qty)
-      VALUES (?, ?, ?)
+      INSERT INTO user_cart_items (user_id, product_id, duration, qty)
+      VALUES (?, ?, ?, ?)
       ON DUPLICATE KEY UPDATE qty = VALUES(qty)
     `,
-    [decoded.id, productId, safeQty],
+    [decoded.id, productId, duration, safeQty],
   );
 
   return { success: true };

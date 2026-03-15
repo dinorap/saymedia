@@ -12,7 +12,10 @@ export async function ensureAnnouncementsSchema() {
       content TEXT NOT NULL,
       author_name VARCHAR(120) NOT NULL,
       is_popup TINYINT(1) NOT NULL DEFAULT 0,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      image_url VARCHAR(500) NULL,
+      images_json TEXT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP
     )
   `);
 
@@ -26,6 +29,48 @@ export async function ensureAnnouncementsSchema() {
     );
   } catch (e: any) {
     // ER_DUP_FIELDNAME => cột đã tồn tại, bỏ qua
+    if (e?.code !== "ER_DUP_FIELDNAME") {
+      throw e;
+    }
+  }
+
+  // Bổ sung cột image_url cho schema cũ (nếu thiếu)
+  try {
+    await pool.query(
+      `
+        ALTER TABLE announcements
+        ADD COLUMN image_url VARCHAR(500) NULL
+      `,
+    );
+  } catch (e: any) {
+    if (e?.code !== "ER_DUP_FIELDNAME") {
+      throw e;
+    }
+  }
+
+  // Bổ sung cột images_json cho schema cũ (nếu thiếu)
+  try {
+    await pool.query(
+      `
+        ALTER TABLE announcements
+        ADD COLUMN images_json TEXT NULL
+      `,
+    );
+  } catch (e: any) {
+    if (e?.code !== "ER_DUP_FIELDNAME") {
+      throw e;
+    }
+  }
+
+  // Bổ sung cột updated_at cho schema cũ (nếu thiếu)
+  try {
+    await pool.query(
+      `
+        ALTER TABLE announcements
+        ADD COLUMN updated_at TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP
+      `,
+    );
+  } catch (e: any) {
     if (e?.code !== "ER_DUP_FIELDNAME") {
       throw e;
     }

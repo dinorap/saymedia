@@ -14,22 +14,30 @@
         <div class="kpi-value">{{ summary.totalOrders }}</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-label">Đơn hoàn thành</div>
+        <div class="kpi-label">
+          {{ $t("admin.revenueCompletedOrders") }}
+        </div>
         <div class="kpi-value">{{ summary.completedOrders }}</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-label">Tổng nạp thành công</div>
+        <div class="kpi-label">
+          {{ $t("admin.revenueTotalDeposits") }}
+        </div>
         <div class="kpi-value">{{ formatVnd(summary.totalDepositAmount) }}</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-label">Doanh thu đơn hoàn thành</div>
+        <div class="kpi-label">
+          {{ $t("admin.revenueCompletedAmount") }}
+        </div>
         <div class="kpi-value">{{ formatVnd(summary.completedAmount) }}</div>
       </div>
     </div>
 
     <div class="grid-row">
       <div class="card">
-        <h2 class="card-title">Nạp tiền gần đây</h2>
+        <h2 class="card-title">
+          {{ $t("admin.revenueRecentDeposits") }}
+        </h2>
         <div v-if="loading" class="table-loading">
           {{ $t("admin.loading") }}
         </div>
@@ -57,7 +65,9 @@
       </div>
 
       <div class="card">
-        <h2 class="card-title">Đơn hàng gần đây</h2>
+        <h2 class="card-title">
+          {{ $t("admin.revenueRecentOrders") }}
+        </h2>
         <div v-if="loading" class="table-loading">
           {{ $t("admin.loading") }}
         </div>
@@ -92,7 +102,7 @@
           :class="{ active: activeView === 'day' }"
           @click="activeView = 'day'"
         >
-          Theo ngày
+          {{ $t("admin.revenueViewByDay") }}
         </button>
         <button
           type="button"
@@ -100,7 +110,7 @@
           :class="{ active: activeView === 'month' }"
           @click="activeView = 'month'"
         >
-          Theo tháng
+          {{ $t("admin.revenueViewByMonth") }}
         </button>
         <button
           type="button"
@@ -108,11 +118,11 @@
           :class="{ active: activeView === 'year' }"
           @click="activeView = 'year'"
         >
-          Theo năm
+          {{ $t("admin.revenueViewByYear") }}
         </button>
       </div>
       <div class="detail-filters">
-        <span>Khoảng thời gian:</span>
+        <span>{{ $t("admin.revenueRangeLabel") }}:</span>
         <input v-model="fromDate" type="date" class="input input--sm" />
         <span>-</span>
         <input v-model="toDate" type="date" class="input input--sm" />
@@ -123,12 +133,18 @@
       <table v-else class="detail-table">
         <thead>
           <tr>
-            <th>Kỳ</th>
-            <th>Số đơn</th>
-            <th>Hoàn thành</th>
-            <th class="detail-amount">Doanh thu hoàn thành</th>
-            <th class="detail-amount">Tổng nạp thành công</th>
-            <th class="detail-bar-cell">Tỉ lệ doanh thu</th>
+            <th>{{ $t("admin.revenuePeriod") }}</th>
+            <th>{{ $t("admin.revenueOrdersCount") }}</th>
+            <th>{{ $t("admin.revenueCompletedCount") }}</th>
+            <th class="detail-amount">
+              {{ $t("admin.revenueCompletedRevenue") }}
+            </th>
+            <th class="detail-amount">
+              {{ $t("admin.revenueTotalDepositAmount") }}
+            </th>
+            <th class="detail-bar-cell">
+              {{ $t("admin.revenueRatio") }}
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -170,6 +186,7 @@
 definePageMeta({ layout: "admin", middleware: ["admin"] });
 
 const loading = ref(true);
+let autoRefreshTimer = null;
 const summary = reactive({
   totalUsers: 0,
   totalAdmins: 0,
@@ -189,15 +206,15 @@ const activeView = ref("day");
 const fromDate = ref("");
 const toDate = ref("");
 
-async function fetchSummary() {
-  loading.value = true;
+async function fetchSummary(opts = { silent: false }) {
+  if (!opts?.silent) loading.value = true;
   try {
     const res = await $fetch("/api/admin/revenue-summary");
     if (res?.success && res.data) {
       Object.assign(summary, res.data);
     }
   } finally {
-    loading.value = false;
+    if (!opts?.silent) loading.value = false;
   }
 }
 
@@ -223,7 +240,16 @@ function formatDate(val) {
   });
 }
 
-onMounted(fetchSummary);
+onMounted(() => {
+  fetchSummary();
+  autoRefreshTimer = setInterval(() => fetchSummary({ silent: true }), 5000);
+});
+onUnmounted(() => {
+  if (autoRefreshTimer) {
+    clearInterval(autoRefreshTimer);
+    autoRefreshTimer = null;
+  }
+});
 
 const currentSeries = computed(() => {
   let base = [];

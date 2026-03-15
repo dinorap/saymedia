@@ -106,6 +106,21 @@ CREATE INDEX idx_products_type ON products(type);
 CREATE INDEX idx_products_active ON products(is_active);
 CREATE INDEX idx_products_admin_id ON products(admin_id);
 
+-- Bảng liên kết sản phẩm với admin bán (shop) + mã ref riêng cho từng shop
+CREATE TABLE IF NOT EXISTS product_sellers (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    product_id INT NOT NULL,
+    seller_admin_id INT NOT NULL,
+    ref_code VARCHAR(32) NOT NULL UNIQUE,
+    is_active TINYINT(1) NOT NULL DEFAULT 1,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uniq_product_seller (product_id, seller_admin_id),
+    CONSTRAINT fk_product_sellers_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+    CONSTRAINT fk_product_sellers_admin FOREIGN KEY (seller_admin_id) REFERENCES admins(id) ON DELETE CASCADE
+);
+CREATE INDEX idx_product_sellers_product_id ON product_sellers(product_id);
+CREATE INDEX idx_product_sellers_seller_admin_id ON product_sellers(seller_admin_id);
+
 CREATE TABLE orders (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,

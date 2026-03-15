@@ -78,21 +78,29 @@
                 class="refund-status"
                 v-if="o.refunded_at || o.refund_request_status"
               >
-                <span v-if="o.refunded_at" class="badge badge--refund-done">
-                  Đã hoàn tiền
-                </span>
+              <span v-if="o.refunded_at" class="badge badge--refund-done">
+                {{ $t("admin.orderRefunded") }}
+              </span>
                 <span
                   v-else-if="o.refund_request_status === 'pending'"
                   class="badge badge--refund-pending"
                 >
-                  Đang chờ hoàn tiền
+                  {{ $t("admin.orderRefundPending") }}
                 </span>
               </div>
             </td>
             <td class="order-note">
               <div>{{ o.note || "-" }}</div>
               <div v-if="o.refund_request_reason" class="refund-request-hint">
-                Y/C hoàn: {{ o.refund_request_reason }}
+                {{ $t("admin.orderRefundRequest") }}:
+                {{ o.refund_request_reason }}
+              </div>
+              <div
+                v-if="o.refunded_at && o.refunded_by_admin_username"
+                class="refund-refunded-by"
+              >
+                {{ $t("admin.orderRefundedBy") }}:
+                {{ o.refunded_by_admin_username }}
               </div>
             </td>
             <td>{{ formatDate(o.created_at) }}</td>
@@ -173,20 +181,21 @@
       >
         <div class="edit-note-modal">
           <h3 class="edit-note-title">
-            Hoàn tiền đơn #{{ refundModalOrder.id }}
+            {{ $t("admin.orderRefundTitle") }} #{{ refundModalOrder.id }}
           </h3>
           <p class="refund-info">
             {{ refundModalOrder.user_username }} -
-            {{ refundModalOrder.product_name || "Sản phẩm" }}
+            {{ refundModalOrder.product_name || $t("admin.productName") }}
           </p>
           <p class="refund-info">
-            Số điểm: {{ formatVnd(refundModalOrder.amount) }}
+            {{ $t("admin.orderRefundAmount") }}:
+            {{ formatVnd(refundModalOrder.amount) }}
           </p>
           <textarea
             v-model="refundReason"
             class="edit-note-textarea"
             rows="3"
-            placeholder="Lý do hoàn tiền (bắt buộc)"
+            :placeholder="$t('admin.orderRefundReasonPlaceholder')"
           />
           <div class="edit-note-actions">
             <button
@@ -202,13 +211,13 @@
               :disabled="
                 savingNoteId === refundModalOrder?.id || !refundReason.trim()
               "
-              @click="refundOrder"
-            >
-              {{
-                savingNoteId === refundModalOrder?.id
-                  ? "..."
-                  : "Xác nhận hoàn tiền"
-              }}
+                @click="refundOrder"
+              >
+                {{
+                  savingNoteId === refundModalOrder?.id
+                    ? "..."
+                    : $t("admin.orderRefundConfirm")
+                }}
             </button>
           </div>
         </div>
@@ -278,6 +287,7 @@ const editStatus = ref("pending");
 const refundReason = ref("");
 const savingNoteId = ref(null);
 const refundModalOrder = ref(null);
+let autoRefreshTimer = null;
 
 async function fetchAdmins() {
   if (!isSuperAdmin.value) return;
@@ -289,8 +299,10 @@ async function fetchAdmins() {
   }
 }
 
-async function fetchOrders(page = 1) {
-  loading.value = true;
+async function fetchOrders(page = 1, opts = { silent: false }) {
+  if (!opts?.silent) {
+    loading.value = true;
+  }
   try {
     const params = new URLSearchParams();
     params.set("page", String(page));
@@ -309,7 +321,9 @@ async function fetchOrders(page = 1) {
     console.error("[admin orders]", e);
     orders.value = [];
   } finally {
-    loading.value = false;
+    if (!opts?.silent) {
+      loading.value = false;
+    }
   }
 }
 
@@ -405,7 +419,7 @@ async function refundOrder() {
   const id = refundModalOrder.value.id;
   if (!refundReason.value.trim()) {
     const { show } = useToast();
-    show("Vui lòng nhập lý do hoàn tiền", "error");
+    show(t("admin.orderRefundReasonRequired"), "error");
     return;
   }
   savingNoteId.value = id;
@@ -422,10 +436,10 @@ async function refundOrder() {
     }
     refundModalOrder.value = null;
     const { show } = useToast();
-    show("Đã hoàn tiền thành công", "success");
+    show(t("admin.orderRefundSuccess"), "success");
   } catch (e) {
     const { show } = useToast();
-    show(e?.data?.statusMessage || "Hoàn tiền thất bại", "error");
+    show(e?.data?.statusMessage || t("admin.orderRefundFailed"), "error");
   } finally {
     savingNoteId.value = null;
   }
@@ -434,6 +448,16 @@ async function refundOrder() {
 onMounted(async () => {
   await fetchAdmins();
   await fetchOrders(1);
+  autoRefreshTimer = setInterval(() => {
+    fetchOrders(pagination.value.page || 1, { silent: true });
+  }, 5000);
+});
+
+onUnmounted(() => {
+  if (autoRefreshTimer) {
+    clearInterval(autoRefreshTimer);
+    autoRefreshTimer = null;
+  }
 });
 </script>
 
@@ -479,6 +503,10 @@ onMounted(async () => {
   border-radius: 8px;
   cursor: pointer;
   font-size: 1rem;
+}
+
+.btn-sort-direction {
+  padding-inline: 0.75rem;
 }
 
 .table-wrap {
@@ -529,6 +557,12 @@ onMounted(async () => {
 .refund-request-hint {
   margin-top: 0.35rem;
   color: #ffb266;
+  font-size: 0.8rem;
+}
+
+.refund-refunded-by {
+  margin-top: 0.2rem;
+  color: #6ee7b7;
   font-size: 0.8rem;
 }
 

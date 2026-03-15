@@ -30,21 +30,46 @@ export function useCart() {
     }
   }
 
-  async function addAndSync(product: {
-    id: number;
-    name?: string;
-    price?: number;
-    thumbnail_url?: string | null;
-    type?: string | null;
-  }) {
-    store.add(product);
+  async function addAndSync(
+    product: {
+      id: number;
+      name?: string;
+      price?: number;
+      thumbnail_url?: string | null;
+      type?: string | null;
+    },
+    options?: {
+      qty?: number;
+      duration?: string | null;
+    },
+  ) {
+    const payload: any = {
+      ...product,
+    };
+
+    if (options?.qty != null) {
+      payload.qty = options.qty;
+    }
+    if (options?.duration != null) {
+      payload.duration = options.duration;
+    }
+
+    store.add(payload);
     if (process.client) {
       const role = useCookie("user_role", { path: "/" }).value;
       if (role === "user") {
         try {
+          const qty =
+            options?.qty != null && Number.isFinite(options.qty)
+              ? Math.max(1, Math.min(100, Number(options.qty)))
+              : 1;
           await $fetch("/api/cart/add", {
             method: "POST",
-            body: { product_id: product.id, qty: 1 },
+            body: {
+              product_id: product.id,
+              qty,
+              duration: options?.duration ?? null,
+            },
           });
         } catch {
           // ignore sync error, local cart vẫn hoạt động

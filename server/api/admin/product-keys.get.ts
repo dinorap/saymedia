@@ -12,6 +12,9 @@ export default defineEventHandler(async (event) => {
   const query = getQuery(event)
   const search = query.search ? String(query.search).trim() : ''
   const duration = query.duration ? String(query.duration).trim() : ''
+  const productIdRaw = query.product_id ? Number(query.product_id) : null
+  const sortFieldRaw = String(query.sort_field || '').trim()
+  const sortDirRaw = String(query.sort_dir || '').trim().toLowerCase()
 
   let page = parseInt(String(query.page || 1), 10)
   if (!Number.isFinite(page) || page < 1) page = 1
@@ -22,6 +25,17 @@ export default defineEventHandler(async (event) => {
 
   const where: string[] = []
   const params: any[] = []
+
+  if (productIdRaw && Number.isFinite(productIdRaw) && productIdRaw > 0) {
+    where.push('pk.product_id = ?')
+    params.push(productIdRaw)
+  }
+
+  // admin_1 chỉ xem được các key do chính mình nhập
+  if (currentUser.role === 'admin_1') {
+    where.push('pk.admin_id = ?')
+    params.push(currentUser.id)
+  }
 
   if (search) {
     where.push('(pk.product_name LIKE ? OR pk.`key` LIKE ?)')
@@ -34,6 +48,19 @@ export default defineEventHandler(async (event) => {
   }
 
   const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : ''
+
+  const allowedSortFields = new Set(['created_at', 'price', 'valid_duration'])
+  const sortField = allowedSortFields.has(sortFieldRaw)
+    ? sortFieldRaw
+    : 'created_at'
+  const sortDir = sortDirRaw === 'asc' ? 'ASC' : 'DESC'
+
+  const orderExpression =
+    sortField === 'price'
+      ? 'pk.price'
+      : sortField === 'valid_duration'
+        ? 'pk.valid_duration'
+        : 'pk.created_at'
 
   const [[{ total }]]: any = await pool.query(
     `
@@ -59,7 +86,7 @@ export default defineEventHandler(async (event) => {
       FROM product_keys pk
       LEFT JOIN products p ON pk.product_id = p.id
       ${whereSql}
-      ORDER BY pk.created_at DESC, pk.id DESC
+      ORDER BY ${orderExpression} ${sortDir}, pk.id DESC
       LIMIT ? OFFSET ?
     `,
     [...params, limit, offset],

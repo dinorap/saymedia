@@ -20,6 +20,12 @@ export const orderCreateSchema = z.object({
     .optional()
     .or(z.null())
     .optional(),
+  quantity: z.coerce
+    .number()
+    .int()
+    .min(1, "Số lượng tối thiểu là 1")
+    .max(100, "Số lượng tối đa là 100")
+    .optional(),
 });
 
 export type OrderCreateBody = z.infer<typeof orderCreateSchema>;

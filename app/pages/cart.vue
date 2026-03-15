@@ -46,13 +46,17 @@
             </span>
           </div>
 
-          <article v-for="item in cart" :key="item.id" class="cart-item">
+          <article
+            v-for="item in cart"
+            :key="`${item.id}-${item.duration || 'default'}`"
+            class="cart-item"
+          >
             <div class="select-cell">
               <input
                 type="checkbox"
                 class="select-checkbox"
-                :checked="!!selected[item.id]"
-                @change="toggleSelect(item.id, $event.target.checked)"
+                :checked="!!selected[itemKey(item)]"
+                @change="toggleSelect(item, $event.target.checked)"
               />
             </div>
             <div class="thumb">
@@ -75,11 +79,40 @@
               </div>
             </div>
             <div class="price">
-              {{ formatVnd(item.price) }}
+              {{ formatVnd(getItemUnitPrice(item) * (item.qty || 1)) }}
               <span class="unit">{{ $t("product.points") }}</span>
             </div>
             <div class="actions">
-              <button type="button" class="btn-danger" @click="remove(item.id)">
+              <label class="actions-label">Loại key</label>
+              <select
+                class="actions-select"
+                v-model="item.duration"
+              >
+                <option
+                  v-for="opt in getDurationOptions(item)"
+                  :key="opt"
+                  :value="opt"
+                >
+                  {{ formatDuration(opt) }}
+                </option>
+              </select>
+
+              <label class="actions-label">Số lượng</label>
+              <input
+                v-model.number="item.qty"
+                type="number"
+                min="1"
+                max="100"
+                class="actions-qty-input"
+                @change="onChangeQty(item)"
+                @blur="onChangeQty(item)"
+              />
+
+              <button
+                type="button"
+                class="btn-danger"
+                @click="remove(item.id)"
+              >
                 {{ $t("cart.remove") }}
               </button>
               <button
@@ -125,6 +158,7 @@
       v-model="showConfirm"
       :product="confirmProduct"
       :balance="currentUser?.credit"
+      :quantity="confirmProduct?.qty || 1"
       @confirm="doPurchase"
     />
 
@@ -191,18 +225,42 @@ const checkoutMode = ref("all"); // 'all' | 'selected'
 
 const selected = ref({});
 
+function itemKey(item) {
+  return `${item.id}-${item.duration || "default"}`;
+}
+
 const selectedItems = computed(() =>
-  cart.value.filter((item) => selected.value[item.id]),
+  cart.value.filter((item) => selected.value[itemKey(item)]),
 );
 
+function getCurrentDuration(item) {
+  const options = getDurationOptions(item);
+  if (!options.length) return null;
+  if (item?.duration && options.includes(item.duration)) return item.duration;
+  if (options.includes("2h")) return "2h";
+  return options[0];
+}
+
+function getItemUnitPrice(item) {
+  const map = item?.duration_prices || {};
+  const duration = getCurrentDuration(item);
+  if (duration && typeof map[duration] === "number") {
+    return Number(map[duration] || 0);
+  }
+  return Number(item?.price || 0);
+}
+
 const selectedTotal = computed(() =>
-  selectedItems.value.reduce((sum, item) => sum + Number(item.price || 0), 0),
+  selectedItems.value.reduce(
+    (sum, item) => sum + getItemUnitPrice(item) * Number(item.qty || 1),
+    0,
+  ),
 );
 
 const allSelected = computed(
   () =>
     cart.value.length > 0 &&
-    cart.value.every((item) => selected.value[item.id]),
+    cart.value.every((item) => selected.value[itemKey(item)]),
 );
 
 function formatVnd(v) {
@@ -229,13 +287,14 @@ watch(
     const map = { ...selected.value };
     // Ensure all items exist in map; default to selected
     for (const item of newCart) {
-      if (map[item.id] === undefined) {
-        map[item.id] = true;
+      const key = itemKey(item);
+      if (map[key] === undefined) {
+        map[key] = true;
       }
     }
     // Clean up removed items
     for (const key in map) {
-      if (!newCart.find((i) => i.id === Number(key))) {
+      if (!newCart.find((i) => itemKey(i) === key)) {
         delete map[key];
       }
     }
@@ -244,10 +303,11 @@ watch(
   { immediate: true },
 );
 
-function toggleSelect(id, checked) {
+function toggleSelect(item, checked) {
+  const key = itemKey(item);
   selected.value = {
     ...selected.value,
-    [id]: checked,
+    [key]: checked,
   };
 }
 
@@ -258,7 +318,7 @@ function toggleSelectAll(checked) {
   }
   const map = {};
   for (const item of cart.value) {
-    map[item.id] = true;
+    map[itemKey(item)] = true;
   }
   selected.value = map;
 }
@@ -288,8 +348,25 @@ function formatDuration(v) {
   return v;
 }
 
-function onChangeDuration(id, value) {
-  durationByProduct[id] = value;
+async function onChangeQty(item) {
+  let q = Number(item.qty || 1);
+  if (!Number.isFinite(q) || q <= 0) q = 1;
+  if (q > 100) q = 100;
+  item.qty = q;
+
+  if (process.client) {
+    const role = useCookie("user_role", { path: "/" }).value;
+    if (role === "user") {
+      try {
+        await $fetch("/api/cart/add", {
+          method: "POST",
+          body: { product_id: item.id, qty: q, duration: item.duration || null },
+        });
+      } catch {
+        // ignore sync error
+      }
+    }
+  }
 }
 
 function checkoutAll() {
@@ -327,10 +404,13 @@ const checkoutItems = computed(() =>
 );
 
 const checkoutTotal = computed(() =>
-  checkoutItems.value.reduce((sum, item) => sum + Number(item.price || 0), 0),
+  checkoutItems.value.reduce(
+    (sum, item) => sum + getItemUnitPrice(item) * Number(item.qty || 1),
+    0,
+  ),
 );
 
-const durationOptions = [
+const baseDurationOptions = [
   "2h",
   "12h",
   "1d",
@@ -341,8 +421,13 @@ const durationOptions = [
   "90d",
   "lifetime",
 ];
-const defaultDuration = "30d";
-const durationByProduct = reactive({});
+
+function getDurationOptions(item) {
+  const map = item?.duration_prices || {};
+  const keys = Object.keys(map || {});
+  if (keys.length) return keys;
+  return baseDurationOptions;
+}
 
 async function confirmCheckoutAll() {
   if (buyingAll.value) return;
@@ -358,7 +443,8 @@ async function confirmCheckoutAll() {
           method: "POST",
           body: {
             product_id: item.id,
-            duration: durationByProduct[item.id] || defaultDuration,
+            duration: item.duration || null,
+            quantity: item.qty || 1,
           },
         });
         ok++;
@@ -386,13 +472,13 @@ async function confirmCheckoutAll() {
 
 async function doPurchase(payload) {
   const p = payload?.product || payload;
-  const duration =
-    payload?.duration || durationByProduct[p.id] || defaultDuration;
+  const duration = payload?.duration || p.duration || null;
+  const quantity = payload?.quantity || p.qty || 1;
   if (!p) return;
   try {
     const res = await $fetch("/api/orders/create", {
       method: "POST",
-      body: { product_id: p.id, duration },
+      body: { product_id: p.id, duration, quantity },
     });
     showToast(t("cart.purchaseSuccessHistory"), "success");
     remove(p.id);
@@ -485,7 +571,7 @@ onMounted(initUser);
 }
 .cart-item {
   display: grid;
-  grid-template-columns: 32px 64px minmax(0, 1fr) 160px 220px;
+  grid-template-columns: 32px 64px minmax(0, 1fr) 160px 380px;
   gap: 14px;
   align-items: center;
   padding: 14px;
@@ -567,8 +653,42 @@ onMounted(initUser);
 }
 .actions {
   display: flex;
+  align-items: center;
   justify-content: flex-end;
   gap: 10px;
+  flex-wrap: wrap;
+}
+
+.actions-label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.actions-select {
+  min-width: 120px;
+  padding: 0.3rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.6);
+  background: rgba(15, 23, 42, 0.95);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+}
+
+.actions-qty-input {
+  width: 72px;
+  padding: 0.3rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.6);
+  background: rgba(15, 23, 42, 0.95);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+}
+
+.actions-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
   flex-wrap: wrap;
 }
 .btn-primary {

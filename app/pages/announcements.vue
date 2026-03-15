@@ -3,19 +3,20 @@
     <SiteHeader />
     <main class="announcements-main">
       <section class="announcements-hero">
-        <h1 class="announcements-title">Thông báo từ hệ thống</h1>
+        <h1 class="announcements-title">
+          {{ $t("announcements.pageTitle") }}
+        </h1>
         <p class="announcements-subtitle">
-          Nơi cập nhật các tin quan trọng, hướng dẫn và lưu ý mới nhất dành cho
-          bạn.
+          {{ $t("announcements.pageSubtitle") }}
         </p>
       </section>
 
       <section class="announcements-list" aria-live="polite">
         <div v-if="loading" class="announcements-state">
-          Đang tải thông báo...
+          {{ $t("announcements.loading") }}
         </div>
         <div v-else-if="!items.length" class="announcements-state">
-          Chưa có thông báo nào.
+          {{ $t("announcements.empty") }}
         </div>
         <div v-else class="announcements-list-inner">
           <article
@@ -23,23 +24,25 @@
             :key="item.id"
             class="announcement-card"
           >
-            <header class="announcement-head">
+            <div v-if="item.imageUrl" class="announcement-thumb-wrap">
+              <NuxtImg
+                :src="item.imageUrl"
+                alt="Ảnh thông báo"
+                class="announcement-thumb"
+              />
+            </div>
+            <div class="announcement-body">
               <h2 class="announcement-title">
                 {{ item.title }}
               </h2>
-              <p class="announcement-meta">
-                <span class="announcement-author">
-                  {{ item.authorName || "Admin" }}
-                </span>
-                <span class="announcement-dot">•</span>
-                <span class="announcement-time">{{
-                  formatDate(item.createdAt)
-                }}</span>
+              <p class="announcement-content">
+                {{ item.content }}
               </p>
-            </header>
-            <p class="announcement-content">
-              {{ item.content }}
-            </p>
+              <p class="announcement-time-line">
+                {{ item.authorName || $t("admin.profileName") }} •
+                {{ formatDate(item.createdAt) }}
+              </p>
+            </div>
           </article>
         </div>
       </section>
@@ -119,66 +122,73 @@ onMounted(async () => {
 }
 
 .announcements-list-inner {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
 }
 
 .announcement-card {
   width: 100%;
-  padding: 18px 22px;
-  border-radius: 18px;
-  background:
-    radial-gradient(circle at 0 0, rgba(56, 189, 248, 0.2), transparent 55%),
-    rgba(5, 15, 35, 0.95);
-  border: 1px solid rgba(56, 189, 248, 0.45);
-  box-shadow:
-    0 0 28px rgba(56, 189, 248, 0.35),
-    0 18px 50px rgba(15, 23, 42, 0.95);
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.98);
+  border: 1px solid rgba(148, 163, 184, 0.4);
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
 }
 
-.announcement-head {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+.announcement-body {
+  flex: 1;
+  min-width: 0;
 }
 
 .announcement-title {
   margin: 0;
   font-size: 1.05rem;
   font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.announcement-meta {
-  margin: 0;
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-  display: flex;
-  align-items: center;
-  gap: 4px;
+.announcement-thumb-wrap {
+  flex-shrink: 0;
 }
 
-.announcement-author {
-  font-weight: 500;
-}
-
-.announcement-dot {
-  opacity: 0.7;
+.announcement-thumb {
+  width: 96px;
+  height: 96px;
+  border-radius: 12px;
+  object-fit: cover;
+  border: 1px solid rgba(148, 163, 184, 0.5);
 }
 
 .announcement-content {
-  margin: 0;
-  font-size: 0.92rem;
-  color: var(--text-primary);
-  white-space: pre-line;
+  margin: 2px 0 0;
+  font-size: 0.86rem;
+  color: var(--text-secondary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.announcement-time-line {
+  margin: 2px 0 0;
+  font-size: 0.78rem;
+  color: var(--text-muted);
 }
 
 @media (max-width: 1200px) {
   .announcements-main {
     padding: 32px 24px 60px;
+  }
+  .announcements-list-inner {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 

@@ -180,8 +180,8 @@ function formatDate(val) {
   });
 }
 
-async function fetchList(page = 1) {
-  loading.value = true;
+async function fetchList(page = 1, opts = { silent: false }) {
+  if (!opts?.silent) loading.value = true;
   try {
     const params = new URLSearchParams();
     params.set("page", String(page));
@@ -198,7 +198,7 @@ async function fetchList(page = 1) {
     items.value = [];
     pagination.value = { page: 1, limit: 10, total: 0, totalPages: 1 };
   } finally {
-    loading.value = false;
+    if (!opts?.silent) loading.value = false;
   }
 }
 
@@ -276,7 +276,20 @@ function goToPage(page) {
   fetchList(page);
 }
 
-onMounted(() => fetchList(1));
+let autoRefreshTimer = null;
+onMounted(() => {
+  fetchList(1);
+  autoRefreshTimer = setInterval(
+    () => fetchList(pagination.value.page || 1, { silent: true }),
+    5000,
+  );
+});
+onUnmounted(() => {
+  if (autoRefreshTimer) {
+    clearInterval(autoRefreshTimer);
+    autoRefreshTimer = null;
+  }
+});
 </script>
 
 <style scoped>

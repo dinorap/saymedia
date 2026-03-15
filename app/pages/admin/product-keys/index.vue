@@ -11,7 +11,7 @@
         />
       </div>
       <div class="filter-group">
-        <label>Thời hạn</label>
+        <label>{{ $t("admin.keyDuration") }}</label>
         <select v-model="duration" class="input input--sm">
           <option value="">{{ $t("admin.all") }}</option>
           <option v-for="opt in durationOptions" :key="opt" :value="opt">
@@ -19,12 +19,8 @@
           </option>
         </select>
       </div>
-      <button
-        type="button"
-        class="btn-add btn-add--right"
-        @click="openModal()"
-      >
-        + Thêm key
+      <button type="button" class="btn-add btn-add--right" @click="openModal()">
+        + {{ $t("admin.add") }}
       </button>
     </div>
 
@@ -37,32 +33,30 @@
         <thead>
           <tr>
             <th>#</th>
-            <th>Tên sản phẩm</th>
-            <th>Key</th>
-            <th>Thời hạn</th>
-            <th>Giá key (VND)</th>
+            <th>{{ $t("admin.productName") }}</th>
+            <th>Tổng số key</th>
+            <th>Các thời hạn</th>
             <th>{{ $t("admin.createdAt") }}</th>
+            <th>{{ $t("admin.updatedAt") || "Cập nhật gần nhất" }}</th>
             <th class="th-actions">{{ $t("admin.actions") }}</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="(row, idx) in items" :key="row.id">
+          <tr v-for="(row, idx) in items" :key="`${row.product_id}-${idx}`">
             <td>{{ idx + 1 + (pagination.page - 1) * pagination.limit }}</td>
             <td>{{ row.product_name }}</td>
-            <td class="key-cell">
-              <code>{{ row.key }}</code>
-            </td>
-            <td>{{ row.valid_duration }}</td>
-            <td>{{ formatPrice(row.price) }}</td>
-            <td>{{ formatDate(row.created_at) }}</td>
+            <td>{{ row.total_keys }}</td>
+            <td>{{ row.durations || "-" }}</td>
+            <td>{{ formatDate(row.first_created_at) }}</td>
+            <td>{{ formatDate(row.last_created_at) }}</td>
             <td class="td-actions">
               <button
                 type="button"
-                class="btn-icon btn-icon--danger"
-                :title="$t('admin.delete')"
-                @click="deleteKey(row)"
+                class="btn-icon"
+                title="Quản lý key"
+                @click="openProductKeysModal(row)"
               >
-                🗑️
+                🔑
               </button>
             </td>
           </tr>
@@ -119,19 +113,20 @@
           <form class="modal-form" @submit.prevent="save">
             <div class="form-row">
               <label>Tên sản phẩm</label>
-              <select v-model.number="form.product_id" class="input" required>
+              <select
+                v-model.number="form.product_id"
+                class="input"
+                :disabled="modalProductLocked && !!currentProduct"
+                required
+              >
                 <option disabled :value="0">Chọn sản phẩm</option>
-                <option
-                  v-for="p in productOptions"
-                  :key="p.id"
-                  :value="p.id"
-                >
+                <option v-for="p in productOptions" :key="p.id" :value="p.id">
                   {{ p.name }}
                 </option>
               </select>
             </div>
             <div class="form-row">
-              <label>Giá mỗi key (VND)</label>
+              <label>Giá mỗi key (điểm)</label>
               <input
                 v-model.number="form.price"
                 type="number"
@@ -157,7 +152,11 @@
                   class="input-file-hidden"
                   @change="onUploadKeysFile"
                 />
-                <button type="button" class="btn-upload" @click="openKeysFilePicker">
+                <button
+                  type="button"
+                  class="btn-upload"
+                  @click="openKeysFilePicker"
+                >
                   Tải file .txt
                 </button>
               </div>
@@ -179,7 +178,7 @@
               <button
                 type="button"
                 class="btn-secondary"
-                @click="modalOpen = false"
+                @click="closeAddKeyModal"
               >
                 {{ $t("admin.cancel") }}
               </button>
@@ -191,10 +190,188 @@
         </div>
       </div>
     </Teleport>
+
+    <!-- Modal quản lý key theo sản phẩm -->
+    <Teleport to="body">
+      <div
+        v-if="productKeysModalOpen"
+        class="modal-overlay"
+        @click.self="closeProductKeysModal"
+      >
+        <div class="modal modal--wide">
+          <h3 class="modal-title">
+            Quản lý key - {{ currentProduct?.product_name || "" }}
+          </h3>
+          <div class="product-keys-toolbar">
+            <div class="product-keys-left">
+              <div class="filter-group">
+                <label>Thời hạn</label>
+                <select
+                  v-model="productKeysDuration"
+                  class="input input--sm"
+                  @change="fetchProductKeys(1)"
+                >
+                  <option value="">{{ $t("admin.all") }}</option>
+                  <option
+                    v-for="opt in durationOptions"
+                    :key="opt"
+                    :value="opt"
+                  >
+                    {{ opt }}
+                  </option>
+                </select>
+              </div>
+              <button
+                type="button"
+                class="btn-add btn-add--small"
+                @click="openModalForCurrentProduct"
+              >
+                + Thêm key cho sản phẩm này
+              </button>
+            </div>
+            <div class="product-keys-right">
+              <div class="price-row">
+                <label>Thời hạn sửa giá</label>
+                <select v-model="priceEditDuration" class="input input--sm">
+                  <option disabled value="">Chọn thời hạn</option>
+                  <option
+                    v-for="opt in durationOptions"
+                    :key="opt"
+                    :value="opt"
+                  >
+                    {{ opt }}
+                  </option>
+                </select>
+              </div>
+              <div class="price-row">
+                <label>Giá mới (điểm)</label>
+                <input
+                  v-model.number="priceEditValue"
+                  type="number"
+                  min="1"
+                  class="input input--sm"
+                  placeholder="Nhập giá mới..."
+                />
+              </div>
+              <div class="price-row price-row--button">
+                <button
+                  type="button"
+                  class="btn-primary btn-primary--sm"
+                  :disabled="priceEditLoading"
+                  @click="applyBulkPrice"
+                >
+                  {{ priceEditLoading ? "..." : "Sửa giá theo thời hạn" }}
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="table-wrap table-wrap--inner">
+            <div v-if="productKeysLoading" class="table-loading">
+              {{ $t("admin.loading") }}
+            </div>
+            <div v-else-if="!productKeys.length" class="table-empty">
+              {{ $t("admin.noData") }}
+            </div>
+            <table v-else class="data-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Key</th>
+                  <th>Thời hạn</th>
+                  <th>Giá key (VND)</th>
+                  <th>{{ $t("admin.createdAt") }}</th>
+                  <th class="th-actions">{{ $t("admin.actions") }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(row, idx) in productKeys" :key="row.id">
+                  <td>
+                    {{
+                      idx +
+                      1 +
+                      (productKeysPagination.page - 1) *
+                        productKeysPagination.limit
+                    }}
+                  </td>
+                  <td class="key-cell">
+                    <code>{{ row.key }}</code>
+                  </td>
+                  <td>{{ row.valid_duration }}</td>
+                  <td>{{ formatPrice(row.price) }}</td>
+                  <td>{{ formatDate(row.created_at) }}</td>
+                  <td class="td-actions">
+                    <button
+                      type="button"
+                      class="btn-icon btn-icon--danger"
+                      :title="$t('admin.delete')"
+                      @click="deleteKey(row, true)"
+                    >
+                      🗑️
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div
+            v-if="productKeysPagination.total > 0"
+            class="pagination pagination--inner"
+          >
+            <div class="page-left">
+              <label>{{ $t("admin.records") }} / page</label>
+              <select
+                v-model.number="productKeysPageSize"
+                class="input input--sm"
+                @change="changeProductKeysPageSize"
+              >
+                <option :value="10">10</option>
+                <option :value="25">25</option>
+                <option :value="50">50</option>
+              </select>
+            </div>
+            <span class="page-info">
+              {{ $t("admin.page") }} {{ productKeysPagination.page }}
+              {{ $t("admin.of") }}
+              {{ productKeysPagination.totalPages }}
+              ({{ productKeysPagination.total }} {{ $t("admin.records") }})
+            </span>
+            <div class="page-right">
+              <button
+                type="button"
+                class="btn-page"
+                :disabled="productKeysPagination.page <= 1"
+                @click="goToProductKeysPage(productKeysPagination.page - 1)"
+              >
+                {{ $t("admin.prev") }}
+              </button>
+              <button
+                type="button"
+                class="btn-page"
+                :disabled="
+                  productKeysPagination.page >= productKeysPagination.totalPages
+                "
+                @click="goToProductKeysPage(productKeysPagination.page + 1)"
+              >
+                {{ $t("admin.next") }}
+              </button>
+            </div>
+          </div>
+          <div class="modal-actions modal-actions--bottom">
+            <button
+              type="button"
+              class="btn-secondary"
+              @click="closeProductKeysModal"
+            >
+              {{ $t("admin.close") || "Đóng" }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 definePageMeta({ layout: "admin", middleware: ["admin"] });
 
 const { t } = useI18n();
@@ -205,9 +382,10 @@ const items = ref([]);
 const loading = ref(false);
 const search = ref("");
 const duration = ref("");
-const pagination = ref({ page: 1, limit: 20, total: 0, totalPages: 1 });
-const pageSize = ref(20);
+const pagination = ref({ page: 1, limit: 10, total: 0, totalPages: 1 });
+const pageSize = ref(10);
 let searchTimer = null;
+let autoRefreshTimer = null;
 
 const durationOptions = [
   "2h",
@@ -232,6 +410,24 @@ const error = ref("");
 const saving = ref(false);
 const productOptions = ref([]);
 const keysFileInput = ref(null);
+
+const productKeysModalOpen = ref(false);
+const currentProduct = ref(null);
+const productKeys = ref([]);
+const productKeysLoading = ref(false);
+const productKeysDuration = ref("");
+const productKeysPagination = ref({
+  page: 1,
+  limit: 10,
+  total: 0,
+  totalPages: 1,
+});
+const productKeysPageSize = ref(10);
+const modalProductLocked = ref(false);
+
+const priceEditDuration = ref("");
+const priceEditValue = ref<number | null>(null);
+const priceEditLoading = ref(false);
 
 const keysCount = computed(() => {
   return String(form.keys_text || "")
@@ -262,21 +458,27 @@ function formatPrice(val) {
   return n.toLocaleString("vi-VN");
 }
 
-async function fetchList() {
-  loading.value = true;
+async function fetchList(opts = { silent: false }) {
+  if (!opts?.silent) {
+    loading.value = true;
+  }
   try {
     const query = new URLSearchParams();
     if (search.value.trim()) query.set("search", search.value.trim());
     if (duration.value) query.set("duration", duration.value);
     query.set("page", String(pagination.value.page));
     query.set("limit", String(pageSize.value));
-    const res = await $fetch(`/api/admin/product-keys?${query.toString()}`);
+    const res = await $fetch(
+      `/api/admin/product-keys/summary?${query.toString()}`,
+    );
     items.value = res?.success && Array.isArray(res.data) ? res.data : [];
     if (res?.pagination) pagination.value = res.pagination;
   } catch {
     items.value = [];
   } finally {
-    loading.value = false;
+    if (!opts?.silent) {
+      loading.value = false;
+    }
   }
 }
 
@@ -317,6 +519,7 @@ function openModal() {
   form.valid_duration = "";
   error.value = "";
   modalOpen.value = true;
+  modalProductLocked.value = false;
 }
 
 async function save() {
@@ -337,6 +540,11 @@ async function save() {
     error.value = "Danh sách key không được để trống";
     return;
   }
+  const uniqueKeys = Array.from(new Set(keys));
+  if (uniqueKeys.length !== keys.length) {
+    error.value = "Danh sách key có chứa key trùng nhau, vui lòng xoá bớt.";
+    return;
+  }
   if (!form.valid_duration) {
     error.value = "Vui lòng chọn thời hạn";
     return;
@@ -345,20 +553,48 @@ async function save() {
   saving.value = true;
   try {
     const selected = productOptions.value.find((p) => p.id === form.product_id);
-    const productName = selected?.name || "";
-    await $fetch("/api/admin/product-keys", {
+    let productName = selected?.name || "";
+    if (
+      (!productName || !selected) &&
+      currentProduct.value &&
+      modalProductLocked.value
+    ) {
+      productName = currentProduct.value.product_name || "";
+    }
+    if (!productName) {
+      error.value = "Không tìm thấy tên sản phẩm, vui lòng chọn lại sản phẩm.";
+      saving.value = false;
+      return;
+    }
+    const res = await $fetch("/api/admin/product-keys", {
       method: "POST",
       body: {
         product_id: form.product_id,
         product_name: productName,
         price: form.price,
-        keys,
+        keys: uniqueKeys,
         valid_duration: form.valid_duration,
       },
     });
     modalOpen.value = false;
     await fetchList();
-    showToast("Đã thêm key", "success");
+    if (modalProductLocked.value && currentProduct.value) {
+      // Mở lại modal quản lý key cho sản phẩm hiện tại sau khi thêm
+      productKeysPagination.value.page = 1;
+      productKeysModalOpen.value = true;
+      await fetchProductKeys(1);
+    }
+    const inserted = res?.inserted ?? 0;
+    const skipped = res?.skipped ?? 0;
+    let msg = "Đã thêm key";
+    if (inserted && skipped) {
+      msg = `Đã thêm ${inserted} key, bỏ qua ${skipped} key đã tồn tại`;
+    } else if (inserted && !skipped) {
+      msg = `Đã thêm ${inserted} key`;
+    } else if (!inserted && skipped) {
+      msg = "Không thêm được key mới, tất cả key đã tồn tại";
+    }
+    showToast(msg, inserted ? "success" : "warning");
   } catch (e) {
     error.value = e?.data?.statusMessage || e?.message || "Lỗi";
     showToast(error.value, "error");
@@ -395,7 +631,7 @@ async function onUploadKeysFile(event) {
   }
 }
 
-async function deleteKey(row) {
+async function deleteKey(row, isInProductModal = false) {
   const ok = await askConfirm({
     title: t("admin.delete"),
     message: `Xóa key này?\n${row.key}`,
@@ -407,10 +643,189 @@ async function deleteKey(row) {
     await $fetch(`/api/admin/product-keys/${row.id}`, {
       method: "DELETE",
     });
-    await fetchList();
+    if (isInProductModal && currentProduct.value) {
+      await fetchProductKeys(productKeysPagination.value.page);
+      await fetchList({ silent: true });
+    } else {
+      await fetchList();
+    }
     showToast(t("admin.deleteSuccess"), "success");
   } catch (e) {
     showToast(e?.data?.statusMessage || "Lỗi", "error");
+  }
+}
+
+function openProductKeysModal(row) {
+  currentProduct.value = row;
+  productKeysDuration.value = "";
+  productKeysPagination.value.page = 1;
+  productKeysPageSize.value = 10;
+  productKeysModalOpen.value = true;
+  modalProductLocked.value = true;
+  priceEditDuration.value = "";
+  priceEditValue.value = null;
+  fetchProductKeys(1);
+}
+
+function closeProductKeysModal() {
+  productKeysModalOpen.value = false;
+  currentProduct.value = null;
+  productKeys.value = [];
+}
+
+async function applyBulkPrice() {
+  if (!currentProduct.value) {
+    showToast("Không xác định được sản phẩm", "error");
+    return;
+  }
+  if (!priceEditDuration.value) {
+    showToast("Vui lòng chọn thời hạn cần sửa giá", "error");
+    return;
+  }
+  if (!priceEditValue.value || priceEditValue.value <= 0) {
+    showToast("Giá mới phải lớn hơn 0", "error");
+    return;
+  }
+
+  // #region agent log
+  fetch("http://127.0.0.1:7557/ingest/c867f427-67a3-44df-9ddd-ff559a241d03", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Debug-Session-Id": "e83c79",
+    },
+    body: JSON.stringify({
+      sessionId: "e83c79",
+      runId: "initial",
+      hypothesisId: "H2_H3_H4",
+      location: "app/pages/admin/product-keys/index.vue:681",
+      message: "applyBulkPrice before confirm",
+      data: {
+        productId: currentProduct.value?.product_id ?? null,
+        priceEditDuration: priceEditDuration.value,
+        priceEditValue: priceEditValue.value,
+      },
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {});
+  // #endregion agent log
+
+  const ok = await askConfirm({
+    title: "Xác nhận sửa giá",
+    message: `Sửa giá toàn bộ key thời hạn "${priceEditDuration.value}" của sản phẩm này thành ${priceEditValue.value!.toLocaleString(
+      "vi-VN",
+    )} điểm?`,
+    confirmText: "Sửa giá",
+    cancelText: t("admin.cancel"),
+  });
+  if (!ok) return;
+
+  priceEditLoading.value = true;
+  try {
+    // #region agent log
+    fetch("http://127.0.0.1:7557/ingest/c867f427-67a3-44df-9ddd-ff559a241d03", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Debug-Session-Id": "e83c79",
+      },
+      body: JSON.stringify({
+        sessionId: "e83c79",
+        runId: "initial",
+        hypothesisId: "H2_H3_H4",
+        location: "app/pages/admin/product-keys/index.vue:692",
+        message: "applyBulkPrice before $fetch",
+        data: {
+          productId: currentProduct.value?.product_id ?? null,
+          priceEditDuration: priceEditDuration.value,
+          priceEditValue: priceEditValue.value,
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion agent log
+
+    const res = await $fetch("/api/admin/product-keys/update-price", {
+      method: "POST",
+      body: {
+        product_id: currentProduct.value.product_id,
+        valid_duration: priceEditDuration.value,
+        price: priceEditValue.value,
+      },
+    });
+    const updated = res?.updated ?? 0;
+    await fetchProductKeys(productKeysPagination.value.page);
+    await fetchList({ silent: true });
+    showToast(
+      updated
+        ? `Đã cập nhật giá cho ${updated} key`
+        : "Không có key nào được cập nhật",
+      updated ? "success" : "warning",
+    );
+  } catch (e) {
+    showToast(e?.data?.statusMessage || "Lỗi cập nhật giá", "error");
+  } finally {
+    priceEditLoading.value = false;
+  }
+}
+
+async function fetchProductKeys(page = 1, opts = { silent: false }) {
+  if (!currentProduct.value) return;
+  if (!opts?.silent) {
+    productKeysLoading.value = true;
+  }
+  try {
+    const query = new URLSearchParams();
+    query.set("product_id", String(currentProduct.value.product_id || 0));
+    if (productKeysDuration.value) {
+      query.set("duration", productKeysDuration.value);
+    }
+    query.set("page", String(page));
+    query.set("limit", String(productKeysPageSize.value));
+    const res = await $fetch(`/api/admin/product-keys?${query.toString()}`);
+    productKeys.value = res?.success && Array.isArray(res.data) ? res.data : [];
+    if (res?.pagination) productKeysPagination.value = res.pagination;
+  } catch {
+    productKeys.value = [];
+  } finally {
+    if (!opts?.silent) {
+      productKeysLoading.value = false;
+    }
+  }
+}
+
+function goToProductKeysPage(page) {
+  if (page < 1 || page > productKeysPagination.value.totalPages) {
+    return;
+  }
+  productKeysPagination.value.page = page;
+  fetchProductKeys(page);
+}
+
+function changeProductKeysPageSize() {
+  productKeysPagination.value.page = 1;
+  fetchProductKeys(1);
+}
+
+function openModalForCurrentProduct() {
+  if (!currentProduct.value) {
+    return;
+  }
+  // Ẩn modal danh sách key để form thêm nổi lên trên, nhưng giữ currentProduct
+  productKeysModalOpen.value = false;
+  form.product_id = currentProduct.value.product_id || 0;
+  form.price = 0;
+  form.keys_text = "";
+  form.valid_duration = "";
+  error.value = "";
+  modalOpen.value = true;
+}
+
+function closeAddKeyModal() {
+  modalOpen.value = false;
+  if (modalProductLocked.value && currentProduct.value) {
+    // Mở lại modal quản lý key nếu đang thêm từ trong đó
+    productKeysModalOpen.value = true;
   }
 }
 
@@ -429,6 +844,16 @@ onMounted(() => {
     .catch(() => {
       productOptions.value = [];
     });
+  autoRefreshTimer = setInterval(() => {
+    fetchList({ silent: true });
+  }, 5000);
+});
+
+onUnmounted(() => {
+  if (autoRefreshTimer) {
+    clearInterval(autoRefreshTimer);
+    autoRefreshTimer = null;
+  }
 });
 </script>
 
@@ -457,6 +882,14 @@ onMounted(() => {
   align-items: center;
   gap: 0.5rem;
 }
+.search-group label {
+  min-width: 9 0px;
+}
+
+.filter-group label {
+  min-width: 100px;
+}
+
 .input--sm {
   padding: 0.45rem 0.75rem;
   min-width: 180px;
@@ -481,6 +914,9 @@ onMounted(() => {
   overflow-y: auto;
   padding: 1rem;
   max-height: 71vh;
+}
+.table-wrap--inner {
+  max-height: 55vh;
 }
 .table-loading,
 .table-empty {
@@ -585,6 +1021,9 @@ onMounted(() => {
   width: 100%;
   box-shadow: 0 0 40px rgba(1, 123, 251, 0.2);
 }
+.modal--wide {
+  max-width: 1000px;
+}
 .modal-title {
   font-size: 1.2rem;
   font-weight: 600;
@@ -650,6 +1089,83 @@ onMounted(() => {
   justify-content: flex-end;
   margin-top: 0.5rem;
 }
+.modal-actions--bottom {
+  justify-content: flex-end;
+  margin-top: 1rem;
+}
+.product-keys-toolbar {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 1.25rem 2rem;
+  margin-bottom: 0.65rem;
+  align-items: flex-start;
+  justify-content: space-between;
+  width: 100%;
+}
+.product-keys-left {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.product-keys-left .filter-group {
+  gap: 0.4rem;
+}
+.product-keys-left .filter-group label {
+  font-size: 0.8rem;
+}
+.btn-add--small {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.8rem;
+}
+.product-keys-right {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.price-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.price-row label {
+  min-width: 100px;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+.price-row--button {
+  justify-content: flex-end;
+}
+.btn-primary--sm {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.8rem;
+}
+
+/* Select / input / button trong toolbar key — nhỏ gọn, không chiếm hết div */
+.product-keys-toolbar .input--sm {
+  min-width: 0;
+  width: 120px;
+  max-width: 140px;
+  padding: 0.35rem 0.6rem;
+  font-size: 0.8rem;
+}
+
+.product-keys-right .input--sm {
+  width: 130px;
+  max-width: 130px;
+}
+
+.price-row input.input--sm {
+  width: 130px;
+  max-width: 130px;
+}
+
+.product-keys-left .btn-add--small,
+.price-row--button .btn-primary--sm {
+  border-radius: 6px;
+}
+.pagination--inner {
+  margin-top: 0.75rem;
+}
 .btn-primary {
   padding: 0.5rem 1.25rem;
   background: var(--blue-bright);
@@ -668,5 +1184,7 @@ onMounted(() => {
   font-weight: 500;
   cursor: pointer;
 }
+.page-left label {
+  min-width: 120px;
+}
 </style>
-

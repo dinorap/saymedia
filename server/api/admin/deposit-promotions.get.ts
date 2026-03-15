@@ -30,6 +30,22 @@ export default defineEventHandler(async (event) => {
 
   await ensurePaymentSchema();
 
+  const query = getQuery(event);
+  const sortFieldRaw = String(query.sort_field || "").trim();
+  const sortDirRaw = String(query.sort_dir || "").trim().toLowerCase();
+  const allowedSortFields = new Set(["created_at", "code", "min_amount"]);
+  const sortField = allowedSortFields.has(sortFieldRaw)
+    ? sortFieldRaw
+    : "created_at";
+  const sortDir = sortDirRaw === "asc" ? "ASC" : "DESC";
+
+  const orderExpression =
+    sortField === "code"
+      ? "code"
+      : sortField === "min_amount"
+        ? "min_amount"
+        : "created_at";
+
   const [rows]: any = await pool.query(
     `
       SELECT
@@ -46,7 +62,7 @@ export default defineEventHandler(async (event) => {
         daily_end_time,
         created_at
       FROM deposit_promotions
-      ORDER BY created_at DESC, id DESC
+      ORDER BY ${orderExpression} ${sortDir}, id DESC
     `,
   );
 

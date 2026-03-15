@@ -44,7 +44,7 @@ export default defineEventHandler(async (event) => {
     if (single) keys = [single]
   }
 
-  // Giới hạn để tránh spam
+  // Loại bỏ key trùng trong payload và giới hạn số lượng để tránh spam
   keys = Array.from(new Set(keys)).slice(0, 2000)
   if (!keys.length) {
     throw createError({ statusCode: 400, statusMessage: 'Danh sách key trống' })
@@ -64,14 +64,16 @@ export default defineEventHandler(async (event) => {
   let inserted = 0
   let skipped = 0
 
+  const adminIdForKey = currentUser.role === 'admin_1' || currentUser.role === 'admin_0' ? currentUser.id : null
+
   for (const k of keys) {
     try {
       await pool.query(
         `
-          INSERT INTO product_keys (product_id, product_name, \`key\`, valid_duration, price)
-          VALUES (?, ?, ?, ?, ?)
+          INSERT INTO product_keys (product_id, product_name, \`key\`, valid_duration, price, admin_id)
+          VALUES (?, ?, ?, ?, ?, ?)
         `,
-        [finalProductId, rawProductName, k, rawDuration, Math.round(rawPrice)],
+        [finalProductId, rawProductName, k, rawDuration, Math.round(rawPrice), adminIdForKey],
       )
       inserted++
     } catch (e: any) {
@@ -81,6 +83,13 @@ export default defineEventHandler(async (event) => {
       }
       throw e
     }
+  }
+
+  if (inserted === 0 && skipped > 0) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'Tất cả các key vừa nhập đều đã tồn tại trong hệ thống',
+    })
   }
 
   return {

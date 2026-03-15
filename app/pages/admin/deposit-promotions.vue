@@ -1,82 +1,88 @@
 <template>
   <div class="promo-page">
-    <h2 class="promo-title">Mã khuyến mại nạp tiền</h2>
+    <h2 class="promo-title">{{ $t("depositPromotions.title") }}</h2>
 
     <div class="promo-layout">
       <!-- Form cấu hình mã -->
       <form class="promo-form card" @submit.prevent="handleSubmit">
-        <h3 class="promo-form-title">Tạo / cập nhật mã</h3>
+        <h3 class="promo-form-title">
+          {{ $t("depositPromotions.formTitle") }}
+        </h3>
 
         <div class="promo-form-grid">
           <div class="field">
-            <label>Mã khuyến mại</label>
+            <label>{{ $t("depositPromotions.code") }}</label>
             <input
               v-model="form.code"
               type="text"
               class="input"
               autocomplete="off"
-              placeholder="VD: TET50"
+              :placeholder="$t('depositPromotions.codePlaceholder')"
               required
             />
           </div>
 
           <div class="field">
-            <label>Bonus % (trên tín chỉ)</label>
+            <label>{{ $t("depositPromotions.bonusPercent") }}</label>
             <input
               v-model.number="form.bonus_percent"
               type="number"
               min="0"
               class="input"
-              placeholder="VD: 50"
+              :placeholder="$t('depositPromotions.bonusPercentPlaceholder')"
             />
           </div>
 
           <div class="field">
-            <label>Bonus tín chỉ cố định</label>
+            <label>{{ $t("depositPromotions.bonusCredit") }}</label>
             <input
               v-model.number="form.bonus_credit"
               type="number"
               min="0"
               class="input"
-              placeholder="VD: 100"
+              :placeholder="$t('depositPromotions.bonusCreditPlaceholder')"
             />
           </div>
 
           <div class="field">
-            <label>Số lượt tối đa (toàn hệ thống)</label>
+            <label>{{ $t("depositPromotions.maxTotalUses") }}</label>
             <input
               v-model.number="form.max_total_uses"
               type="number"
               min="0"
               class="input"
-              placeholder="Không giới hạn nếu để trống"
+              :placeholder="
+                $t('depositPromotions.maxTotalUsesPlaceholder')
+              "
             />
           </div>
 
           <div class="field">
-            <label>Số lượt / mỗi user</label>
+            <label>{{ $t("depositPromotions.maxUsesPerUser") }}</label>
             <input
               v-model.number="form.max_uses_per_user"
               type="number"
               min="0"
               class="input"
-              placeholder="Không giới hạn nếu để trống"
+              :placeholder="
+                $t('depositPromotions.maxUsesPerUserPlaceholder')
+              "
             />
           </div>
 
           <div class="field">
-            <label>Số tiền tối thiểu (VND)</label>
+            <label>{{ $t("depositPromotions.minAmount") }}</label>
             <input
               v-model.number="form.min_amount"
               type="number"
               min="0"
               class="input"
-              placeholder="VD: 100000"
+              :placeholder="$t('depositPromotions.minAmountPlaceholder')"
             />
           </div>
 
           <div class="field">
-            <label>Bắt đầu từ</label>
+            <label>{{ $t("depositPromotions.startsAt") }}</label>
             <input
               v-model="form.starts_at"
               type="datetime-local"
@@ -85,7 +91,7 @@
           </div>
 
           <div class="field">
-            <label>Kết thúc lúc</label>
+            <label>{{ $t("depositPromotions.endsAt") }}</label>
             <input
               v-model="form.ends_at"
               type="datetime-local"
@@ -94,7 +100,7 @@
           </div>
 
           <div class="field">
-            <label>Giờ bắt đầu mỗi ngày</label>
+            <label>{{ $t("depositPromotions.dailyStart") }}</label>
             <input
               v-model="form.daily_start_time"
               type="time"
@@ -103,7 +109,7 @@
           </div>
 
           <div class="field">
-            <label>Giờ kết thúc mỗi ngày</label>
+            <label>{{ $t("depositPromotions.dailyEnd") }}</label>
             <input
               v-model="form.daily_end_time"
               type="time"
@@ -115,24 +121,30 @@
         <p v-if="error" class="promo-error">{{ error }}</p>
 
         <button type="submit" class="btn-primary" :disabled="saving">
-          {{ saving ? "Đang lưu..." : "Lưu mã khuyến mại" }}
+          {{
+            saving
+              ? $t("depositPromotions.saving")
+              : $t("depositPromotions.saveButton")
+          }}
         </button>
       </form>
 
       <!-- Danh sách mã -->
       <div class="promo-list card">
-        <h3 class="promo-form-title">Danh sách mã hiện có</h3>
+        <h3 class="promo-form-title">
+          {{ $t("depositPromotions.listTitle") }}
+        </h3>
         <table v-if="items.length" class="data-table">
           <thead>
             <tr>
-              <th>Mã</th>
-              <th>Bonus</th>
-              <th>Giới hạn</th>
-              <th>Tối thiểu</th>
-              <th>Thời gian áp dụng</th>
-              <th>Khung giờ mỗi ngày</th>
-              <th>Ngày tạo</th>
-              <th>Hành động</th>
+              <th>{{ $t("depositPromotions.columnCode") }}</th>
+              <th>{{ $t("depositPromotions.columnBonus") }}</th>
+              <th>{{ $t("depositPromotions.columnLimit") }}</th>
+              <th>{{ $t("depositPromotions.columnMin") }}</th>
+              <th>{{ $t("depositPromotions.columnTimeRange") }}</th>
+              <th>{{ $t("depositPromotions.columnDailyRange") }}</th>
+              <th>{{ $t("depositPromotions.columnCreatedAt") }}</th>
+              <th>{{ $t("depositPromotions.columnActions") }}</th>
             </tr>
           </thead>
           <tbody>
@@ -153,12 +165,12 @@
               <td>
                 <div>
                   <span>
-                    Tổng:
+                    {{ $t("depositPromotions.totalLabel") }}:
                     {{ p.max_total_uses || "∞" }}
                   </span>
                   <br />
                   <span>
-                    /user:
+                    {{ $t("depositPromotions.perUserLabel") }}:
                     {{ p.max_uses_per_user || "∞" }}
                   </span>
                 </div>
@@ -171,11 +183,21 @@
               </td>
               <td>
                 <div class="promo-time">
-                  <span v-if="p.starts_at">Từ: {{ formatDate(p.starts_at) }}</span>
-                  <span v-else>Từ: -</span>
+                  <span v-if="p.starts_at">
+                    {{ $t("depositPromotions.timeFrom") }}:
+                    {{ formatDate(p.starts_at) }}
+                  </span>
+                  <span v-else>
+                    {{ $t("depositPromotions.timeFrom") }}: -
+                  </span>
                   <br />
-                  <span v-if="p.ends_at">Đến: {{ formatDate(p.ends_at) }}</span>
-                  <span v-else>Đến: -</span>
+                  <span v-if="p.ends_at">
+                    {{ $t("depositPromotions.timeTo") }}:
+                    {{ formatDate(p.ends_at) }}
+                  </span>
+                  <span v-else>
+                    {{ $t("depositPromotions.timeTo") }}: -
+                  </span>
                 </div>
               </td>
               <td>
@@ -188,21 +210,23 @@
               <td>
                 <div class="promo-actions">
                   <button type="button" class="btn-link" @click="fillForm(p)">
-                    Sửa
+                    {{ $t("depositPromotions.edit") }}
                   </button>
                   <button
                     type="button"
                     class="btn-link btn-link--danger"
                     @click="deletePromo(p)"
                   >
-                    Xóa
+                    {{ $t("depositPromotions.delete") }}
                   </button>
                 </div>
               </td>
             </tr>
           </tbody>
         </table>
-        <p v-else class="promo-empty">Chưa có mã nào.</p>
+        <p v-else class="promo-empty">
+          {{ $t("depositPromotions.listEmpty") }}
+        </p>
       </div>
     </div>
   </div>
@@ -212,10 +236,12 @@
 definePageMeta({ layout: "admin", middleware: ["admin"] });
 
 const { show: showToast } = useToast();
+const { t } = useI18n();
 
 const items = ref([]);
 const saving = ref(false);
 const error = ref("");
+let autoRefreshTimer = null;
 
 const form = reactive({
   code: "",
@@ -245,20 +271,20 @@ function formatDate(d) {
   }
 }
 
-async function fetchPromos() {
+async function fetchPromos(opts = { silent: false }) {
   try {
-    const res = await $fetch("/api/admin/deposit-promotions");
+    const res = await $fetch(`/api/admin/deposit-promotions`);
     items.value = Array.isArray(res.data) ? res.data : [];
   } catch (e) {
     error.value =
-      e?.data?.statusMessage || "Không tải được danh sách mã khuyến mại.";
+      e?.data?.statusMessage || t("depositPromotions.loadError");
   }
 }
 
 async function deletePromo(p) {
   if (!p?.code) return;
   const ok = window.confirm(
-    `Xóa mã khuyến mại "${p.code}"? Mọi cấu hình tier liên quan cũng sẽ bị xóa.`,
+    t("depositPromotions.deleteConfirm", { code: p.code }),
   );
   if (!ok) return;
   try {
@@ -278,10 +304,10 @@ async function deletePromo(p) {
       form.daily_end_time = "";
     }
     await fetchPromos();
-    showToast(`Đã xóa mã "${p.code}".`, "success");
+    showToast(t("depositPromotions.deleted", { code: p.code }), "success");
   } catch (e) {
     error.value =
-      e?.data?.statusMessage || "Không xóa được mã khuyến mại, thử lại sau.";
+      e?.data?.statusMessage || t("depositPromotions.deleteError");
   }
 }
 
@@ -302,11 +328,11 @@ function fillForm(p) {
 
 async function handleSubmit() {
   if (!form.code.trim()) {
-    error.value = "Vui lòng nhập mã khuyến mại.";
+    error.value = t("depositPromotions.codeRequired");
     return;
   }
   if (!form.bonus_percent && !form.bonus_credit) {
-    error.value = "Cần cấu hình bonus % hoặc số tín chỉ cố định.";
+    error.value = t("depositPromotions.bonusRequired");
     return;
   }
   saving.value = true;
@@ -329,16 +355,28 @@ async function handleSubmit() {
       },
     });
     await fetchPromos();
-    showToast("Đã lưu mã khuyến mại.", "success");
+    showToast(t("depositPromotions.saved"), "success");
   } catch (e) {
     error.value =
-      e?.data?.statusMessage || "Không lưu được mã khuyến mại, thử lại sau.";
+      e?.data?.statusMessage || t("depositPromotions.saveError");
   } finally {
     saving.value = false;
   }
 }
 
-onMounted(fetchPromos);
+onMounted(() => {
+  fetchPromos();
+  autoRefreshTimer = setInterval(() => {
+    fetchPromos();
+  }, 5000);
+});
+
+onUnmounted(() => {
+  if (autoRefreshTimer) {
+    clearInterval(autoRefreshTimer);
+    autoRefreshTimer = null;
+  }
+});
 </script>
 
 <style scoped>
@@ -432,6 +470,7 @@ onMounted(fetchPromos);
   overflow: hidden;
   margin-top: 0.25rem;
 }
+
 
 .promo-actions {
   display: flex;

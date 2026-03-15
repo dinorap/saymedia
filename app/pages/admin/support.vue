@@ -2,7 +2,9 @@
   <div class="support-page">
     <div class="support-sidebar">
       <div class="support-header">
-        <h2 class="support-title">Chat hỗ trợ</h2>
+        <h2 class="support-title">
+          {{ $t("admin.supportChat") || "Chat hỗ trợ" }}
+        </h2>
         <div v-if="isSuperAdmin" class="support-tabs">
           <button
             type="button"
@@ -10,7 +12,7 @@
             :class="{ 'support-tab--active': scope === 'mine' }"
             @click="changeScope('mine')"
           >
-            Khách của tôi
+            {{ $t("admin.supportMyCustomers") }}
           </button>
           <button
             type="button"
@@ -18,22 +20,28 @@
             :class="{ 'support-tab--active': scope === 'all' }"
             @click="changeScope('all')"
           >
-            Tất cả khách
+            {{ $t("admin.supportAllCustomers") }}
           </button>
         </div>
         <div class="support-filters-row">
           <div class="support-filters">
             <select v-model="topicFilter" class="support-filter-select">
-              <option value="all">Mọi chủ đề</option>
-              <option value="account">Tài khoản</option>
-              <option value="product">Sản phẩm</option>
+              <option value="all">
+                {{ $t("admin.supportTopicAll") }}
+              </option>
+              <option value="account">
+                {{ $t("admin.supportTopicAccount") }}
+              </option>
+              <option value="product">
+                {{ $t("admin.supportTopicProduct") }}
+              </option>
             </select>
           </div>
           <input
             v-model="searchTerm"
             type="text"
             class="support-search-input"
-            placeholder="Tìm theo tên user, admin, sản phẩm..."
+            :placeholder="$t('admin.supportSearchPlaceholder')"
           />
         </div>
       </div>
@@ -59,7 +67,7 @@
               </span>
             </div>
             <div class="support-thread-admin">
-              Admin:
+              {{ $t("admin.supportAdminLabel") }}:
               <strong>
                 {{ t.admin_username || "#" + t.admin_id }}
               </strong>
@@ -73,13 +81,13 @@
           </div>
         </button>
         <p v-if="!threads.length" class="support-empty">
-          Chưa có phiên chat hỗ trợ nào.
+          {{ $t("admin.supportNoThreads") }}
         </p>
       </div>
     </div>
     <div class="support-chat">
       <div v-if="!activeThread" class="support-chat-empty">
-        Chọn 1 phiên chat ở bên trái để bắt đầu trả lời khách.
+        {{ $t("admin.supportSelectThread") }}
       </div>
       <div v-else class="support-chat-inner">
         <header class="support-chat-header">
@@ -92,8 +100,8 @@
             <div class="support-chat-subtitle">
               {{
                 activeThread.topic === "product"
-                  ? "Liên hệ sản phẩm"
-                  : "Liên hệ tài khoản"
+                  ? $t("admin.supportContactProduct")
+                  : $t("admin.supportContactAccount")
               }}
               <span v-if="activeThread.product_name">
                 · {{ activeThread.product_name }}
@@ -115,7 +123,7 @@
             </div>
           </div>
           <p v-if="!messages.length" class="support-empty">
-            Chưa có tin nhắn nào trong phiên chat này.
+            {{ $t("admin.supportNoMessages") }}
           </p>
         </main>
         <footer class="support-chat-input-row">
@@ -123,7 +131,7 @@
             v-model="draft"
             type="text"
             class="support-input"
-            placeholder="Nhập nội dung phản hồi cho khách..."
+            :placeholder="$t('admin.supportInputPlaceholder')"
             @keyup.enter="sendMessage"
           />
           <button
@@ -132,7 +140,7 @@
             :disabled="sending || !draft.trim()"
             @click="sendMessage"
           >
-            Gửi
+            {{ $t("admin.supportSend") }}
           </button>
         </footer>
       </div>
@@ -418,12 +426,18 @@ async function sendMessage() {
   }
 }
 
+let autoRefreshTimer = null;
 onMounted(() => {
   loadThreads();
   setupWebSocket();
+  autoRefreshTimer = setInterval(loadThreads, 5000);
 });
 
 onUnmounted(() => {
+  if (autoRefreshTimer) {
+    clearInterval(autoRefreshTimer);
+    autoRefreshTimer = null;
+  }
   wsManuallyClosed = true;
   if (wsReconnectTimer) {
     clearTimeout(wsReconnectTimer);

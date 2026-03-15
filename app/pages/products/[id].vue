@@ -6,35 +6,56 @@
       <section class="detail-hero">
         <section class="hero-left">
           <div class="media-card">
-            <div class="detail-thumb-wrap" v-if="activeImage">
+            <div class="media-view-tabs" v-if="hasVideo || images.length">
               <button
-                v-if="images.length > 1"
                 type="button"
-                class="image-nav image-nav--left"
-                @click.stop="prevImage"
+                class="media-view-tab"
+                :class="{ active: mediaView === 'image' }"
+                @click="mediaView = 'image'"
               >
-                ‹
+                {{ $t("product.viewImages") || "Xem ảnh" }}
               </button>
-              <NuxtImg
-                :src="activeImage"
-                :alt="product.name"
-                class="detail-thumb"
-                loading="lazy"
-              />
               <button
-                v-if="images.length > 1"
+                v-if="hasVideo"
                 type="button"
-                class="image-nav image-nav--right"
-                @click.stop="nextImage"
+                class="media-view-tab"
+                :class="{ active: mediaView === 'video' }"
+                @click="mediaView = 'video'"
               >
-                ›
+                {{ $t("product.viewVideo") || "Xem video" }}
               </button>
-            </div>
-            <div v-else class="detail-thumb placeholder">
-              <span>{{ product.name.charAt(0).toUpperCase() }}</span>
             </div>
 
-            <div v-if="images.length > 1" class="thumb-strip">
+            <template v-if="mediaView === 'image'">
+              <div class="detail-thumb-wrap" v-if="activeImage">
+                <button
+                  v-if="images.length > 1"
+                  type="button"
+                  class="image-nav image-nav--left"
+                  @click.stop="prevImage"
+                >
+                  ‹
+                </button>
+                <NuxtImg
+                  :src="activeImage"
+                  :alt="product.name"
+                  class="detail-thumb"
+                  loading="lazy"
+                />
+                <button
+                  v-if="images.length > 1"
+                  type="button"
+                  class="image-nav image-nav--right"
+                  @click.stop="nextImage"
+                >
+                  ›
+                </button>
+              </div>
+              <div v-else class="detail-thumb placeholder">
+                <span>{{ product.name.charAt(0).toUpperCase() }}</span>
+              </div>
+
+              <div v-if="images.length > 1" class="thumb-strip">
               <button
                 v-for="(img, idx) in images"
                 :key="img + idx"
@@ -51,6 +72,19 @@
                 />
               </button>
             </div>
+            </template>
+
+            <template v-else-if="mediaView === 'video' && youtubeVideoId">
+              <div class="detail-video-wrap">
+                <iframe
+                  :src="`https://www.youtube.com/embed/${youtubeVideoId}?autoplay=0`"
+                  class="detail-video-iframe"
+                  title="Video sản phẩm"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowfullscreen
+                />
+              </div>
+            </template>
           </div>
 
           <section class="detail-panels">
@@ -300,8 +334,35 @@
 
             <div class="buy-price">
               <div class="price">
-                {{ formatVnd(product.price) }}
+                {{ formatVnd(currentPrice) }}
                 <span class="unit">{{ $t("product.points") }}</span>
+              </div>
+              <div class="buy-meta-row">
+                <div class="buy-meta-col">
+                  <label class="buy-duration-label">Loại key</label>
+                  <select
+                    v-model="selectedDuration"
+                    class="buy-duration-select"
+                  >
+                    <option
+                      v-for="opt in durationOptions"
+                      :key="opt"
+                      :value="opt"
+                    >
+                      {{ formatDuration(opt) }}
+                    </option>
+                  </select>
+                </div>
+                <div class="buy-meta-col">
+                  <label class="buy-qty-label">Số lượng</label>
+                  <input
+                    v-model.number="quantity"
+                    type="number"
+                    min="1"
+                    max="100"
+                    class="buy-qty-input"
+                  />
+                </div>
               </div>
             </div>
 
@@ -368,6 +429,8 @@
       v-model="showConfirm"
       :product="product"
       :balance="currentUser?.credit"
+      :quantity="quantity"
+      @update:quantity="(val) => (quantity.value = val)"
       @confirm="doPurchase"
     />
 
@@ -463,7 +526,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { nextTick, watch } from "vue";
 import { defineAsyncComponent } from "vue";
 import SiteHeader from "~/components/SiteHeader.vue";
@@ -476,8 +539,9 @@ const { locale, t } = useI18n();
 const { show: showToast } = useToast();
 const { cart, add } = useCart();
 
-const product = ref(null);
+const product = ref<any | null>(null);
 const currentImageIndex = ref(0);
+const mediaView = ref("image");
 const loading = ref(true);
 const error = ref("");
 const currentUser = ref(null);
@@ -514,6 +578,33 @@ const similarLoading = ref(false);
 const similarProducts = ref([]);
 const adminContact = ref(null);
 const showContactPopup = ref(false);
+
+const selectedDuration = ref<string>("2h");
+const quantity = ref<number>(1);
+
+const durationOptions = computed<string[]>(() => {
+  const map = product.value?.duration_prices || {};
+  const keys = Object.keys(map || {});
+  if (keys.length) return keys;
+  return ["2h", "12h", "1d", "3d", "7d", "10d", "30d", "90d", "lifetime"];
+});
+
+const currentPrice = computed<number>(() => {
+  const map = product.value?.duration_prices || {};
+  const opts = durationOptions.value;
+  if (!opts.length) return Number(product.value?.price || 0);
+  const current = selectedDuration.value && opts.includes(selectedDuration.value)
+    ? selectedDuration.value
+    : opts.includes("2h")
+      ? "2h"
+      : opts[0];
+  if (!selectedDuration.value || selectedDuration.value !== current) {
+    selectedDuration.value = current;
+  }
+  const val = map[current];
+  if (typeof val === "number") return val;
+  return Number(product.value?.price || 0);
+});
 
 async function loadProductChatMessages() {
   if (!productChatThreadId.value) return;
@@ -734,6 +825,11 @@ function formatVnd(v) {
   return (Number(v) || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 }
 
+function formatDuration(v) {
+  if (v === "lifetime") return "Lifetime";
+  return v;
+}
+
 function formatDate(d) {
   if (!d) return "";
   try {
@@ -755,7 +851,23 @@ function inCart(p) {
 
 function addToCart(p) {
   if (!p) return;
-  add(p);
+  const duration = selectedDuration.value || null;
+  const qty = quantity.value || 1;
+  const safeQty =
+    !Number.isFinite(Number(qty)) || Number(qty) <= 0
+      ? 1
+      : Math.min(100, Number(qty));
+
+  add(
+    {
+      ...p,
+      price: currentPrice.value,
+    },
+    {
+      duration,
+      qty: safeQty,
+    },
+  );
   showToast(t("cart.addedToCart"), "success");
 }
 
@@ -766,21 +878,40 @@ function openConfirm(p) {
         ? "Vui lòng đăng nhập để mua sản phẩm"
         : "Please log in to purchase";
     showToast(msg, "info");
-    navigateTo(`/login?next=/products/${p.id}`);
+    navigateTo(`/login?next=/cart`);
     return;
   }
-  showConfirm.value = true;
+  const duration = selectedDuration.value || null;
+  const qty = quantity.value || 1;
+  const safeQty =
+    !Number.isFinite(Number(qty)) || Number(qty) <= 0
+      ? 1
+      : Math.min(100, Number(qty));
+
+  // Nút Mua ngay: thêm vào giỏ và chuyển sang trang giỏ hàng
+  add(
+    {
+      ...p,
+      price: currentPrice.value,
+    },
+    {
+      duration,
+      qty: safeQty,
+    },
+  );
+  navigateTo("/cart");
 }
 
 async function doPurchase(payload) {
   const p = payload?.product || payload;
   const duration = payload?.duration || null;
+  const qty = payload?.quantity || quantity.value || 1;
   if (!p) return;
   buying.value = true;
   try {
     const res = await $fetch("/api/orders/create", {
       method: "POST",
-      body: { product_id: p.id, duration },
+      body: { product_id: p.id, duration, quantity: qty },
     });
     const msg =
       locale.value === "vi"
@@ -812,6 +943,17 @@ const images = computed(() => {
   }
   return list;
 });
+
+function getYoutubeVideoId(url) {
+  if (!url || typeof url !== "string") return "";
+  const u = url.trim();
+  const m = u.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/);
+  return m ? m[1] : "";
+}
+
+const hasVideo = computed(() => !!getYoutubeVideoId(product.value?.youtube_url));
+
+const youtubeVideoId = computed(() => getYoutubeVideoId(product.value?.youtube_url));
 
 const activeImage = computed(() => {
   return images.value[currentImageIndex.value] || "";
@@ -846,6 +988,8 @@ async function fetchProduct() {
       error.value = t("admin.noData");
     } else {
       currentImageIndex.value = 0;
+      // Luôn ưu tiên xem ảnh trước khi vào chi tiết
+      mediaView.value = "image";
     }
   } catch (e) {
     error.value = e?.data?.statusMessage || t("product.loadError");
@@ -987,6 +1131,7 @@ watch(
     showConfirm.value = false;
     buying.value = false;
     currentImageIndex.value = 0;
+    mediaView.value = "image";
     showContactPopup.value = false;
     await Promise.all([fetchProduct(), fetchReviews(), fetchSimilar()]);
   },
@@ -1066,6 +1211,56 @@ watch(
   );
   opacity: 0.9;
 }
+
+.media-view-tabs {
+  display: flex;
+  gap: 0;
+  padding: 0 12px 10px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.media-view-tab {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 10px 10px 0 0;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.media-view-tab:hover {
+  color: var(--text-primary);
+  background: rgba(1, 123, 251, 0.1);
+}
+
+.media-view-tab.active {
+  background: rgba(1, 123, 251, 0.2);
+  color: #bfdbfe;
+  border: 1px solid rgba(1, 123, 251, 0.35);
+  border-bottom-color: transparent;
+  margin-bottom: -1px;
+}
+
+.detail-video-wrap {
+  position: relative;
+  width: 100%;
+  padding-bottom: 56.25%;
+  height: 0;
+  overflow: hidden;
+  background: #000;
+}
+
+.detail-video-iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
 .detail-thumb-wrap {
   border-radius: 0;
   overflow: hidden;
@@ -1275,7 +1470,10 @@ watch(
   opacity: 0.7;
 }
 .buy-price {
-  margin-bottom: 12px;
+  margin-bottom: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 .buy-price .price {
   font-size: 1.7rem;
@@ -1286,6 +1484,43 @@ watch(
   margin-left: 6px;
   font-size: 0.9rem;
   color: var(--text-muted);
+}
+
+.buy-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.buy-meta-col {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.buy-duration-label,
+.buy-qty-label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.buy-duration-select,
+.buy-qty-input {
+  min-width: 140px;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.6);
+  background: rgba(15, 23, 42, 0.95);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+}
+
+.buy-duration-select:focus,
+.buy-qty-input:focus {
+  outline: none;
+  border-color: rgba(59, 130, 246, 0.9);
+  box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.65);
 }
 .detail-actions {
   display: flex;

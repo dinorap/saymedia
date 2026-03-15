@@ -11,18 +11,30 @@
           {{ $t("product.confirmText") }}
           <strong class="cpm-name">{{ product.name }}</strong>
           {{ $t("product.confirmWithPrice") }}
-          <strong class="cpm-price">{{ formatVnd(product.price) }} {{ $t("product.points") }}</strong>?
+          <strong class="cpm-price">
+            {{ formatVnd(totalPrice) }} {{ $t("product.points") }}
+          </strong>?
         </p>
         <p v-if="balance != null" class="cpm-balance">
           {{ $t("product.balance") }}: {{ formatVnd(balance) }} {{ $t("product.points") }}
         </p>
         <div class="cpm-duration">
-          <label class="cpm-duration-label">Thời lượng sử dụng</label>
+          <label class="cpm-duration-label">Loại key</label>
           <select v-model="selectedDuration" class="cpm-duration-select">
             <option v-for="opt in durationOptions" :key="opt" :value="opt">
               {{ opt === "lifetime" ? "Lifetime" : opt }}
             </option>
           </select>
+        </div>
+        <div class="cpm-qty">
+          <label class="cpm-qty-label">Số lượng</label>
+          <input
+            v-model.number="selectedQuantity"
+            type="number"
+            min="1"
+            max="100"
+            class="cpm-qty-input"
+          />
         </div>
         <footer class="cpm-footer">
           <button type="button" class="cpm-btn-cancel" @click="$emit('update:modelValue', false)">
@@ -42,11 +54,12 @@ const props = defineProps({
   modelValue: { type: Boolean, default: false },
   product: { type: Object, default: null },
   balance: { type: Number, default: null },
+  quantity: { type: Number, default: 1 },
 });
 
-const emit = defineEmits(["update:modelValue", "confirm"]);
+const emit = defineEmits(["update:modelValue", "update:quantity", "confirm"]);
 
-const durationOptions = [
+const baseDurationOptions = [
   "2h",
   "12h",
   "1d",
@@ -58,13 +71,32 @@ const durationOptions = [
   "lifetime",
 ];
 
-const selectedDuration = ref("30d");
+const durationOptions = computed(() => {
+  const map = props.product?.duration_prices || {};
+  const keys = Object.keys(map || {});
+  return keys.length ? keys : baseDurationOptions;
+});
+
+function getDefaultDuration() {
+  const opts = durationOptions.value;
+  if (!opts.length) return "2h";
+  // Ưu tiên duration hiện tại của sản phẩm (ví dụ lấy từ giỏ hàng)
+  if (props.product?.duration && opts.includes(props.product.duration)) {
+    return props.product.duration;
+  }
+  if (opts.includes("2h")) return "2h";
+  return opts[0];
+}
+
+const selectedDuration = ref(getDefaultDuration());
+const selectedQuantity = ref(Math.max(1, props.quantity || 1));
 
 watch(
   () => props.modelValue,
   (val) => {
     if (val) {
-      selectedDuration.value = "30d";
+      selectedDuration.value = getDefaultDuration();
+      selectedQuantity.value = Math.max(1, props.quantity || 1);
     }
   },
 );
@@ -73,12 +105,29 @@ function formatVnd(v) {
   return (Number(v) || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 }
 
+const unitPrice = computed(() => {
+  const map = props.product?.duration_prices || {};
+  const d = selectedDuration.value;
+  if (d && typeof map[d] === "number") {
+    return Number(map[d] || 0);
+  }
+  return Number(props.product?.price || 0);
+});
+
+const totalPrice = computed(() => {
+  const q = selectedQuantity.value && selectedQuantity.value > 0 ? selectedQuantity.value : 1;
+  return unitPrice.value * q;
+});
+
 function confirm() {
   if (!props.product) return;
+  const qty = selectedQuantity.value && selectedQuantity.value > 0 ? selectedQuantity.value : 1;
   emit("update:modelValue", false);
+  emit("update:quantity", qty);
   emit("confirm", {
     product: props.product,
     duration: selectedDuration.value,
+    quantity: qty,
   });
 }
 </script>
@@ -144,6 +193,27 @@ function confirm() {
 .cpm-duration-select {
   flex: 1;
   padding: 0.45rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  background: rgba(15, 23, 42, 0.9);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+}
+
+.cpm-qty {
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.cpm-qty-label {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+.cpm-qty-input {
+  width: 90px;
+  padding: 0.4rem 0.6rem;
   border-radius: 999px;
   border: 1px solid rgba(148, 163, 184, 0.5);
   background: rgba(15, 23, 42, 0.9);

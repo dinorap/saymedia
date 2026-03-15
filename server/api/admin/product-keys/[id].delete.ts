@@ -14,7 +14,18 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'ID không hợp lệ' })
   }
 
-  const [result]: any = await pool.query('DELETE FROM product_keys WHERE id = ? LIMIT 1', [id])
+  const params: any[] = [id]
+  let sql = 'DELETE FROM product_keys WHERE id = ?'
+
+  // admin_1 chỉ được xóa key do mình nhập
+  if (currentUser.role === 'admin_1') {
+    sql += ' AND admin_id = ?'
+    params.push(currentUser.id)
+  }
+
+  sql += ' LIMIT 1'
+
+  const [result]: any = await pool.query(sql, params)
   if (!result?.affectedRows) {
     throw createError({ statusCode: 404, statusMessage: 'Không tìm thấy key' })
   }

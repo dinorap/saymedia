@@ -78,7 +78,7 @@
                   </div>
                 </div>
                 <p class="product-price">
-                  {{ formatVnd(p.price) }}
+                  {{ formatVnd(getPriceForProduct(p)) }}
                   <span class="product-price-unit">
                     {{ $t("product.points") }}
                   </span>
@@ -100,38 +100,53 @@
                     }}{{ (p.description || "").length > 140 ? "…" : "" }}
                   </p>
                   <div class="product-actions">
-                    <div class="product-duration">
-                      <label class="product-duration-label">Thời lượng</label>
-                      <select
-                        class="product-duration-select"
-                        :value="durationByProduct[p.id] || defaultDuration"
-                        @click.stop
-                        @change="onChangeDuration(p.id, $event.target.value)"
-                      >
-                        <option
-                          v-for="opt in durationOptions"
-                          :key="opt"
-                          :value="opt"
+                    <div class="product-meta-row">
+                      <div class="product-meta-col">
+                        <label class="product-duration-label">Loại key</label>
+                        <select
+                          class="product-duration-select"
+                          :value="durationByProduct[p.id] || getDefaultDurationForProduct(p)"
+                          @click.stop
+                          @change="onChangeDuration(p.id, $event.target.value)"
                         >
-                          {{ formatDuration(opt) }}
-                        </option>
-                      </select>
+                          <option
+                            v-for="opt in getDurationOptionsForProduct(p)"
+                            :key="opt"
+                            :value="opt"
+                          >
+                            {{ formatDuration(opt) }}
+                          </option>
+                        </select>
+                      </div>
+                      <div class="product-meta-col">
+                        <label class="product-qty-label">Số lượng</label>
+                        <input
+                          v-model.number="qtyByProduct[p.id]"
+                          type="number"
+                          min="1"
+                          max="100"
+                          class="product-qty-input"
+                          @click.stop
+                        />
+                      </div>
                     </div>
-                    <button
-                      type="button"
-                      class="btn-secondary"
-                      @click.stop="addToCart(p)"
-                    >
-                      {{ $t("product.addToCart") }}
-                    </button>
-                    <button
-                      type="button"
-                      class="btn-primary"
-                      :disabled="buyingId === p.id"
-                      @click.stop="openConfirm(p)"
-                    >
-                      {{ buyingId === p.id ? "..." : $t("auth.getStarted") }}
-                    </button>
+                    <div class="product-actions-row">
+                      <button
+                        type="button"
+                        class="btn-secondary"
+                        @click.stop="addToCart(p)"
+                      >
+                        {{ $t("product.addToCart") }}
+                      </button>
+                      <button
+                        type="button"
+                        class="btn-primary"
+                        :disabled="buyingId === p.id"
+                        @click.stop="openConfirm(p)"
+                      >
+                        {{ buyingId === p.id ? "..." : $t("auth.getStarted") }}
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -150,7 +165,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { defineAsyncComponent } from "vue";
 import { useI18n } from "vue-i18n";
 import SiteHeader from "~/components/SiteHeader.vue";
@@ -164,11 +179,12 @@ const { show: showToast } = useToast();
 const products = ref([]);
 const loading = ref(false);
 const error = ref("");
-const buyingId = ref(null);
+const buyingId = ref<number | null>(null);
 const currentUser = ref(null);
 const showConfirmModal = ref(false);
-const confirmProduct = ref(null);
-const confirmDuration = ref("30d");
+const confirmProduct = ref<any | null>(null);
+const confirmDuration = ref("2h");
+const confirmQuantity = ref(1);
 const { add } = useCart();
 const search = ref("");
 const filterType = ref("");
@@ -184,8 +200,9 @@ const durationOptions = [
   "90d",
   "lifetime",
 ];
-const defaultDuration = "30d";
+const defaultDuration = "2h";
 const durationByProduct = ref({});
+const qtyByProduct = ref<Record<number, number>>({});
 
 const filteredProducts = computed(() => {
   let list = products.value || [];
@@ -210,6 +227,39 @@ function formatVnd(v) {
   return (Number(v) || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 }
 
+function getDurationOptionsForProduct(p) {
+  const map = p?.duration_prices || {};
+  const keys = Object.keys(map || {});
+  if (keys.length) {
+    return keys;
+  }
+  return durationOptions;
+}
+
+function getDefaultDurationForProduct(p) {
+  const opts = getDurationOptionsForProduct(p);
+  if (!opts.length) return defaultDuration;
+  if (opts.includes("2h")) return "2h";
+  return opts[0];
+}
+
+function getPriceForProduct(p) {
+  const map = p?.duration_prices || {};
+  const current =
+    durationByProduct.value[p.id] ||
+    getDefaultDurationForProduct(p);
+  if (typeof map[current] === "number") {
+    return map[current];
+  }
+  const fallback = getDefaultDurationForProduct(p);
+  if (typeof map[fallback] === "number") {
+    return map[fallback];
+  }
+  // fallback bất kỳ giá nào (nếu có)
+  const anyPrice = Object.values(map)[0];
+  return typeof anyPrice === "number" ? anyPrice : 0;
+}
+
 function formatDuration(v) {
   if (v === "lifetime") return "Lifetime";
   return v;
@@ -221,6 +271,13 @@ async function fetchProducts() {
   try {
     const res = await $fetch("/api/products");
     products.value = res?.success && Array.isArray(res.data) ? res.data : [];
+    // Gán mặc định số lượng = 1 cho các sản phẩm chưa có
+    for (const p of products.value as any[]) {
+      const id = p?.id;
+      if (id != null && qtyByProduct.value[id] == null) {
+        qtyByProduct.value[id] = 1;
+      }
+    }
   } catch (e) {
     error.value =
       e?.data?.statusMessage ||
@@ -250,24 +307,49 @@ async function initUser() {
 }
 
 function openConfirm(p) {
-  if (!currentUser.value) {
-    const msg =
-      locale.value === "vi"
-        ? "Vui lòng đăng nhập để mua sản phẩm"
-        : "Please log in to purchase";
-    showToast(msg, "info");
-    navigateTo(`/login?next=/products`);
-    return;
-  }
-  confirmProduct.value = p;
-  confirmDuration.value =
-    durationByProduct.value[p.id] || defaultDuration;
-  showConfirmModal.value = true;
+  // Mua ngay: thêm vào giỏ và chuyển sang trang giỏ hàng
+  if (!p) return;
+  const duration =
+    durationByProduct.value[p.id] || getDefaultDurationForProduct(p);
+  const qty = qtyByProduct.value[p.id] ?? 1;
+  const safeQty =
+    !Number.isFinite(Number(qty)) || Number(qty) <= 0
+      ? 1
+      : Math.min(100, Number(qty));
+
+  add(
+    {
+      ...p,
+      price: getPriceForProduct(p),
+    },
+    {
+      duration,
+      qty: safeQty,
+    },
+  );
+  navigateTo("/cart");
 }
 
 function addToCart(p) {
   if (!p) return;
-  add(p);
+  const duration =
+    durationByProduct.value[p.id] || getDefaultDurationForProduct(p);
+  const qty = qtyByProduct.value[p.id] ?? 1;
+  const safeQty =
+    !Number.isFinite(Number(qty)) || Number(qty) <= 0
+      ? 1
+      : Math.min(100, Number(qty));
+
+  add(
+    {
+      ...p,
+      price: getPriceForProduct(p),
+    },
+    {
+      duration,
+      qty: safeQty,
+    },
+  );
   showToast(t("cart.addedToCart"), "success");
 }
 
@@ -276,7 +358,11 @@ async function doPurchase(payload) {
   const duration =
     payload?.duration ||
     durationByProduct.value[product.id] ||
-    defaultDuration;
+    getDefaultDurationForProduct(product);
+  const quantity =
+    payload?.quantity ||
+    qtyByProduct.value[product.id] ||
+    1;
   if (!product) return;
   buyingId.value = product.id;
   try {
@@ -285,6 +371,7 @@ async function doPurchase(payload) {
       body: {
         product_id: product.id,
         duration,
+        quantity,
       },
     });
     const successMsg =
@@ -295,6 +382,11 @@ async function doPurchase(payload) {
     if (currentUser.value && typeof res?.newCredit === "number") {
       currentUser.value.credit = res.newCredit;
     }
+    // reset qty về 1 sau khi mua
+    qtyByProduct.value = {
+      ...qtyByProduct.value,
+      [product.id]: 1,
+    };
   } catch (e) {
     const msg =
       e?.data?.statusMessage ||
@@ -575,8 +667,66 @@ onMounted(async () => {
 .product-actions {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   align-items: flex-end;
+}
+
+.product-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.product-meta-col {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.product-duration-label {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.product-duration-select {
+  min-width: 150px;
+  padding: 0.3rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid rgba(1, 123, 251, 0.55);
+  background: rgba(15, 23, 42, 0.9);
+  color: var(--text-primary);
+  font-size: 0.86rem;
+  outline: none;
+}
+
+.product-duration-select:focus {
+  border-color: rgba(59, 130, 246, 0.9);
+  box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.6);
+}
+
+.product-actions-row {
+  display: flex;
+  gap: 8px;
+}
+
+.product-actions-row .btn-secondary,
+.product-actions-row .btn-primary {
+  min-width: 130px;
+}
+
+.product-qty-label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.product-qty-input {
+  width: 80px;
+  padding: 0.3rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.6);
+  background: rgba(15, 23, 42, 0.9);
+  color: var(--text-primary);
+  font-size: 0.85rem;
 }
 
 @media (max-width: 1024px) {

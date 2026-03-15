@@ -1,6 +1,35 @@
 <template>
   <div class="products-page">
-    <div class="list-toolbar">
+    <div class="subtabs">
+      <button
+        type="button"
+        class="subtab-btn"
+        :class="{ 'subtab-btn--active': activeTab === 'products' }"
+        @click="activeTab = 'products'"
+      >
+        {{ $t("admin.productTabMain") }}
+      </button>
+      <button
+        v-if="isSuperAdmin"
+        type="button"
+        class="subtab-btn"
+        :class="{ 'subtab-btn--active': activeTab === 'owner-sellers' }"
+        @click="activeTab = 'owner-sellers'"
+      >
+        {{ $t("admin.productTabOwnerSellers") }}
+      </button>
+      <button
+        v-else
+        type="button"
+        class="subtab-btn"
+        :class="{ 'subtab-btn--active': activeTab === 'my-seller-list' }"
+        @click="activeTab = 'my-seller-list'"
+      >
+        {{ $t("admin.productTabMySellers") }}
+      </button>
+    </div>
+
+    <div v-if="activeTab === 'products'" class="list-toolbar">
       <div class="search-group">
         <label>{{ $t("admin.search") }}</label>
         <input
@@ -28,15 +57,21 @@
           <option value="inactive">{{ $t("admin.blocked") }}</option>
         </select>
       </div>
-      <button
-        type="button"
-        class="btn-add btn-add--right"
-        @click="openModal()"
-      >
+      <div class="filter-group">
+        <label>Sắp xếp</label>
+        <select v-model="sortMode" class="input input--sm">
+          <option value="created_desc">Mới nhất</option>
+          <option value="created_asc">Cũ nhất</option>
+          <option value="name_asc">Tên A → Z</option>
+          <option value="name_desc">Tên Z → A</option>
+          <option value="status_active_first">Ưu tiên đang hoạt động</option>
+        </select>
+      </div>
+      <button type="button" class="btn-add btn-add--right" @click="openModal()">
         + {{ $t("admin.add") }}
       </button>
     </div>
-    <div class="table-wrap card">
+    <div v-if="activeTab === 'products'" class="table-wrap card">
       <AppLoading v-if="loading" />
       <div v-else-if="!hasItems" class="table-empty">
         {{ $t("admin.noData") }}
@@ -49,12 +84,13 @@
             <th>{{ $t("admin.thumbnail") || "Ảnh" }}</th>
             <th>{{ $t("admin.adminId") }}</th>
             <th>{{ $t("admin.description") || "Mô tả" }}</th>
-            <th>{{ $t("admin.price") || "Giá" }}</th>
             <th>{{ $t("admin.productType") || "Loại" }}</th>
             <th>{{ $t("admin.downloadUrl") || "Link tải" }}</th>
             <th>{{ $t("admin.status") }}</th>
             <th>{{ $t("admin.createdAt") }}</th>
-            <th v-if="isSuperAdmin" class="th-actions">{{ $t("admin.actions") }}</th>
+            <th v-if="isSuperAdmin" class="th-actions">
+              {{ $t("admin.actions") }}
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -73,7 +109,6 @@
             </td>
             <td>{{ item.admin_username || "-" }}</td>
             <td>{{ item.description || "-" }}</td>
-            <td>{{ formatVnd(item.price) }}</td>
             <td>{{ item.type || "other" }}</td>
             <td class="col-url">
               <a
@@ -91,9 +126,7 @@
                 class="badge"
                 :class="item.is_active ? 'badge--success' : 'badge--muted'"
               >
-                {{
-                  item.is_active ? $t("admin.active") : $t("admin.blocked")
-                }}
+                {{ item.is_active ? $t("admin.active") : $t("admin.blocked") }}
               </span>
             </td>
             <td>{{ formatDate(item.created_at) }}</td>
@@ -122,10 +155,90 @@
       </table>
     </div>
 
+    <div
+      v-if="activeTab === 'owner-sellers' && isSuperAdmin"
+      class="table-wrap card"
+    >
+      <AppLoading v-if="loading" />
+      <div v-else-if="!hasItems" class="table-empty">
+        {{ $t("admin.noData") }}
+      </div>
+      <table v-else class="data-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>{{ $t("admin.productName") }}</th>
+            <th>{{ $t("admin.adminId") }}</th>
+            <th>{{ $t("admin.productSellerManage") }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="(item, idx) in ownerProducts" :key="item.id">
+            <td>{{ idx + 1 }}</td>
+            <td>{{ item.name }}</td>
+            <td>{{ item.admin_username || "-" }}</td>
+            <td>
+              <button
+                type="button"
+                class="btn-primary btn-primary--sm"
+                @click="openSellerModal(item)"
+              >
+                {{ $t("admin.productSellerManage") }}
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div
+      v-if="activeTab === 'my-seller-list' && !isSuperAdmin"
+      class="table-wrap card"
+    >
+      <AppLoading v-if="sellerLoading" />
+      <div v-else-if="mySellerList.length === 0" class="table-empty">
+        {{ $t("admin.productMySellersEmpty") }}
+      </div>
+      <table v-else class="data-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>{{ $t("admin.productName") }}</th>
+            <th>{{ $t("admin.adminId") }}</th>
+            <th>{{ $t("admin.productRefCode") }}</th>
+            <th>{{ $t("admin.actions") }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="(row, idx) in mySellerList" :key="row.id">
+            <td>{{ idx + 1 }}</td>
+            <td>{{ row.product_name }}</td>
+            <td>{{ row.owner_username || "-" }}</td>
+            <td>
+              <code class="ref-code">{{ row.ref_code }}</code>
+            </td>
+            <td>
+              <button
+                type="button"
+                class="btn-primary btn-primary--sm"
+                @click="copyListingRef(row)"
+              >
+                {{ $t("admin.productSellerCopyRef") }}
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
     <div v-if="pagination.total > 0" class="pagination">
       <div class="page-left">
         <label>{{ $t("admin.records") }} / page</label>
-        <select v-model.number="pageSize" class="input input--sm" @change="changePageSize">
+        <select
+          v-model.number="pageSize"
+          class="input input--sm"
+          @change="changePageSize"
+        >
           <option :value="10">10</option>
           <option :value="25">25</option>
           <option :value="50">50</option>
@@ -157,10 +270,18 @@
     </div>
 
     <Teleport to="body">
-      <div v-if="modalOpen" class="modal-overlay" @click.self="modalOpen = false">
+      <div
+        v-if="modalOpen"
+        class="modal-overlay"
+        @click.self="modalOpen = false"
+      >
         <div class="modal">
           <h3 class="modal-title">
-            {{ editing ? $t("admin.edit") : ($t("admin.addProduct") || "Thêm sản phẩm") }}
+            {{
+              editing
+                ? $t("admin.edit")
+                : $t("admin.addProduct") || "Thêm sản phẩm"
+            }}
           </h3>
           <form class="modal-form" @submit.prevent="save">
             <div class="modal-grid">
@@ -187,7 +308,9 @@
                   />
                 </div>
                 <div class="form-row">
-                  <label>{{ $t("admin.downloadUrl") || 'Link tải (nếu có)' }}</label>
+                  <label>{{
+                    $t("admin.downloadUrl") || "Link tải (nếu có)"
+                  }}</label>
                   <input
                     v-model="form.download_url"
                     type="text"
@@ -195,25 +318,25 @@
                     placeholder="https://..."
                   />
                 </div>
-                <div class="form-row inline">
-                  <div class="inline-half">
-                    <label>{{ $t("admin.price") || "Giá" }}</label>
-                    <input
-                      v-model.number="form.price"
-                      type="number"
-                      class="input"
-                      min="0"
-                    />
-                  </div>
-                  <div class="inline-half">
-                    <label>{{ $t("admin.productType") || "Loại" }}</label>
-                    <select v-model="form.type" class="input">
-                      <option value="tool">tool</option>
-                      <option value="account">account</option>
-                      <option value="service">service</option>
-                      <option value="other">other</option>
-                    </select>
-                  </div>
+                <div class="form-row">
+                  <label>{{
+                    $t("admin.youtubeUrl") || "Link YouTube (nếu có)"
+                  }}</label>
+                  <input
+                    v-model="form.youtube_url"
+                    type="text"
+                    class="input"
+                    placeholder="https://www.youtube.com/watch?v=... hoặc https://youtu.be/..."
+                  />
+                </div>
+                <div class="form-row">
+                  <label>{{ $t("admin.productType") || "Loại" }}</label>
+                  <select v-model="form.type" class="input">
+                    <option value="tool">tool</option>
+                    <option value="account">account</option>
+                    <option value="service">service</option>
+                    <option value="other">other</option>
+                  </select>
                 </div>
                 <div v-if="editing" class="form-row">
                   <label>{{ $t("admin.status") }}</label>
@@ -244,16 +367,26 @@
                       class="input-file-hidden"
                       @change="onUploadThumbnail"
                     />
-                    <button type="button" class="btn-upload" @click="openThumbPicker">
+                    <button
+                      type="button"
+                      class="btn-upload"
+                      @click="openThumbPicker"
+                    >
                       {{ $t("admin.upload") || "Upload" }}
                     </button>
                   </div>
                   <div v-if="form.thumbnail_url" class="thumb-preview-wrap">
-                    <NuxtImg :src="form.thumbnail_url" alt="thumbnail preview" class="thumb-preview" />
+                    <NuxtImg
+                      :src="form.thumbnail_url"
+                      alt="thumbnail preview"
+                      class="thumb-preview"
+                    />
                   </div>
                 </div>
                 <div class="form-row">
-                  <label>{{ $t("admin.images") || "Danh sách ảnh (mỗi dòng 1 URL)" }}</label>
+                  <label>{{
+                    $t("admin.images") || "Danh sách ảnh (mỗi dòng 1 URL)"
+                  }}</label>
                   <div class="input-upload-row">
                     <textarea
                       v-model="form.images_text"
@@ -269,7 +402,11 @@
                       class="input-file-hidden"
                       @change="onUploadImages"
                     />
-                    <button type="button" class="btn-upload" @click="openImagesPicker">
+                    <button
+                      type="button"
+                      class="btn-upload"
+                      @click="openImagesPicker"
+                    >
                       {{ $t("admin.upload") || "Upload" }}
                     </button>
                   </div>
@@ -287,14 +424,21 @@
                     v-model="form.long_description"
                     class="input input--textarea preview-textarea"
                     rows="6"
-                    :placeholder="$t('admin.longDescription') || 'Mô tả chi tiết sản phẩm...'"
+                    :placeholder="
+                      $t('admin.longDescription') ||
+                      'Mô tả chi tiết sản phẩm...'
+                    "
                   />
                 </div>
               </section>
             </div>
             <p v-if="error" class="error-msg">{{ error }}</p>
             <div class="modal-actions">
-              <button type="button" class="btn-secondary" @click="modalOpen = false">
+              <button
+                type="button"
+                class="btn-secondary"
+                @click="modalOpen = false"
+              >
                 {{ $t("admin.cancel") }}
               </button>
               <button type="submit" class="btn-primary" :disabled="saving">
@@ -305,10 +449,131 @@
         </div>
       </div>
     </Teleport>
+
+    <Teleport to="body">
+      <div
+        v-if="sellerModal.open"
+        class="modal-overlay"
+        @click.self="sellerModal.open = false"
+      >
+        <div class="modal">
+          <h3 class="modal-title">
+            {{ $t("admin.productOwnerSellersTitle") }} –
+            {{ sellerModal.product?.name || "" }}
+          </h3>
+          <div class="modal-form">
+            <section class="modal-section">
+              <h4 class="modal-section-title">
+                {{ $t("admin.productSellerAddTitle") }}
+              </h4>
+              <div class="form-row inline">
+                <div class="inline-half">
+                  <select
+                    v-model.number="sellerModal.selectedShopId"
+                    class="input"
+                  >
+                    <option :value="0">
+                      {{ $t("admin.productSellerChooseShop") }}
+                    </option>
+                    <option
+                      v-for="s in sellerModal.shops"
+                      :key="s.id"
+                      :value="s.id"
+                    >
+                      {{ s.username }} ({{ s.role }})
+                    </option>
+                  </select>
+                </div>
+                <div class="inline-half">
+                  <button
+                    type="button"
+                    class="btn-primary"
+                    :disabled="addingSeller"
+                    @click="addSellerForCurrentProduct"
+                  >
+                    {{
+                      addingSeller
+                        ? $t("admin.loading")
+                        : $t("admin.productSellerAdd")
+                    }}
+                  </button>
+                </div>
+              </div>
+            </section>
+
+            <section class="modal-section">
+              <h4 class="modal-section-title">
+                {{ $t("admin.productOwnerSellersTitle") }}
+              </h4>
+              <AppLoading v-if="sellerModal.loading" />
+              <div
+                v-else-if="sellerModal.items.length === 0"
+                class="table-empty"
+              >
+                {{ $t("admin.productSellerListEmpty") }}
+              </div>
+              <table v-else class="data-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Shop</th>
+                    <th>{{ $t("admin.productRefCode") }}</th>
+                    <th>{{ $t("admin.status") }}</th>
+                    <th>{{ $t("admin.actions") }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(row, idx) in sellerModal.items" :key="row.id">
+                    <td>{{ idx + 1 }}</td>
+                    <td>{{ row.seller_username }} ({{ row.seller_role }})</td>
+                    <td>
+                      <code class="ref-code">{{ row.ref_code }}</code>
+                    </td>
+                    <td>
+                      <span
+                        class="badge"
+                        :class="
+                          row.is_active ? 'badge--success' : 'badge--muted'
+                        "
+                      >
+                        {{
+                          row.is_active
+                            ? $t("admin.productSellerStatusActive")
+                            : $t("admin.productSellerStatusInactive")
+                        }}
+                      </span>
+                    </td>
+                    <td>
+                      <button
+                        type="button"
+                        class="btn-primary btn-primary--sm"
+                        @click="copyListingRef(row)"
+                      >
+                        {{ $t("admin.productSellerCopyRef") }}
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </section>
+
+            <div class="modal-actions">
+              <button
+                type="button"
+                class="btn-secondary"
+                @click="sellerModal.open = false"
+              >
+                {{ $t("admin.close") }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 definePageMeta({ layout: "admin", middleware: ["admin"] });
 
 const { t, locale } = useI18n();
@@ -316,11 +581,13 @@ const { show: showToast } = useToast();
 const { confirm: askConfirm } = useConfirm();
 const roleCookie = useCookie("user_role", { path: "/" });
 const isSuperAdmin = computed(() => roleCookie.value === "admin_0");
+const activeTab = ref("products");
 const items = ref([]);
 const loading = ref(false);
 const search = ref("");
 const filterType = ref("");
 const filterStatus = ref("");
+const sortMode = ref("created_desc");
 const modalOpen = ref(false);
 const editing = ref(null);
 const currentAdminId = ref(null);
@@ -331,19 +598,33 @@ const form = reactive({
   description: "",
   long_description: "",
   download_url: "",
+  youtube_url: "",
   thumbnail_url: "",
   images_text: "",
-  price: 0,
   type: "other",
   is_active: true,
 });
 const error = ref("");
 const saving = ref(false);
+const mySellerList = ref([]);
+const sellerLoading = ref(false);
+const addingSeller = ref(false);
+const sellerModal = reactive({
+  open: false,
+  loading: false,
+  product: null,
+  items: [],
+  shops: [],
+  selectedShopId: 0,
+});
 
-const hasItems = computed(() => Array.isArray(items.value) && items.value.length > 0);
+const hasItems = computed(
+  () => Array.isArray(items.value) && items.value.length > 0,
+);
 let searchTimer = null;
 const pagination = ref({ page: 1, limit: 10, total: 0, totalPages: 1 });
 const pageSize = ref(10);
+let autoRefreshTimer = null;
 const imagesCount = computed(() => {
   if (!form.images_text) return 0;
   return form.images_text
@@ -352,20 +633,22 @@ const imagesCount = computed(() => {
     .filter((s) => !!s).length;
 });
 
+const ownerProducts = computed(() => {
+  if (!isSuperAdmin.value) return [];
+  if (!Array.isArray(items.value)) return [];
+  if (!currentAdminId.value) return items.value;
+  return items.value.filter((p: any) => p.admin_id === currentAdminId.value);
+});
+
 function validateForm() {
   const name = form.name?.trim();
-  const price = Number(form.price || 0);
   const download = form.download_url?.trim();
 
   if (!name) {
-    error.value = t("admin.productName") + " " + (locale.value === "vi" ? "không được để trống" : "is required");
-    return false;
-  }
-  if (price <= 0) {
     error.value =
-      locale.value === "vi"
-        ? "Giá sản phẩm phải lớn hơn 0"
-        : "Product price must be greater than 0";
+      t("admin.productName") +
+      " " +
+      (locale.value === "vi" ? "không được để trống" : "is required");
     return false;
   }
   if (download && !/^https?:\/\//i.test(download)) {
@@ -401,13 +684,31 @@ function formatDate(val) {
   });
 }
 
-async function fetchList() {
-  loading.value = true;
+async function fetchList(opts = { silent: false }) {
+  if (!opts?.silent) {
+    loading.value = true;
+  }
   try {
     const query = new URLSearchParams();
     if (search.value.trim()) query.set("search", search.value.trim());
     if (filterType.value) query.set("type", filterType.value);
     if (filterStatus.value) query.set("status", filterStatus.value);
+    if (sortMode.value === "created_asc") {
+      query.set("sort_field", "created_at");
+      query.set("sort_dir", "asc");
+    } else if (sortMode.value === "created_desc") {
+      query.set("sort_field", "created_at");
+      query.set("sort_dir", "desc");
+    } else if (sortMode.value === "name_asc") {
+      query.set("sort_field", "name");
+      query.set("sort_dir", "asc");
+    } else if (sortMode.value === "name_desc") {
+      query.set("sort_field", "name");
+      query.set("sort_dir", "desc");
+    } else if (sortMode.value === "status_active_first") {
+      query.set("sort_field", "is_active");
+      query.set("sort_dir", "desc");
+    }
     query.set("page", String(pagination.value.page));
     query.set("limit", String(pageSize.value));
     const suffix = `?${query.toString()}`;
@@ -417,7 +718,23 @@ async function fetchList() {
   } catch (e) {
     items.value = [];
   } finally {
-    loading.value = false;
+    if (!opts?.silent) {
+      loading.value = false;
+    }
+  }
+}
+
+async function fetchMySellerList() {
+  if (isSuperAdmin.value) return;
+  sellerLoading.value = true;
+  try {
+    const res = await $fetch("/api/admin/product-sellers");
+    mySellerList.value =
+      res?.success && Array.isArray(res.data) ? res.data : [];
+  } catch {
+    mySellerList.value = [];
+  } finally {
+    sellerLoading.value = false;
   }
 }
 
@@ -452,6 +769,87 @@ async function initAdmin() {
     }
   } catch {
     currentAdminId.value = null;
+  }
+}
+
+async function openSellerModal(product: any) {
+  sellerModal.product = product;
+  sellerModal.open = true;
+  sellerModal.loading = true;
+  sellerModal.items = [];
+  sellerModal.shops = [];
+  sellerModal.selectedShopId = 0;
+  try {
+    const [detailRes, adminsRes]: any = await Promise.all([
+      $fetch("/api/admin/product-sellers", {
+        query: { product_id: product.id },
+      }),
+      $fetch("/api/admin/admins"),
+    ]);
+    if (detailRes?.success) {
+      sellerModal.items = Array.isArray(detailRes.sellers)
+        ? detailRes.sellers
+        : [];
+    }
+    if (adminsRes?.success && Array.isArray(adminsRes.data)) {
+      sellerModal.shops = adminsRes.data.filter(
+        (x: any) => x.role === "admin_1" && x.is_active,
+      );
+    }
+  } catch (e) {
+    showToast(
+      e?.data?.statusMessage || "Không tải được danh sách đối tác",
+      "error",
+    );
+  } finally {
+    sellerModal.loading = false;
+  }
+}
+
+async function addSellerForCurrentProduct() {
+  if (!sellerModal.product || !sellerModal.selectedShopId) return;
+  addingSeller.value = true;
+  try {
+    const res: any = await $fetch("/api/admin/product-sellers", {
+      method: "POST",
+      body: {
+        product_id: sellerModal.product.id,
+        seller_admin_id: sellerModal.selectedShopId,
+      },
+    });
+    if (res?.success) {
+      showToast("Đã thêm/ cập nhật đối tác cho sản phẩm", "success");
+      // Refresh list
+      await openSellerModal(sellerModal.product);
+    }
+  } catch (e) {
+    showToast(
+      e?.data?.statusMessage || "Không thể thêm đối tác cho sản phẩm này",
+      "error",
+    );
+  } finally {
+    addingSeller.value = false;
+  }
+}
+
+function buildListingRefUrl(refCode: string) {
+  if (!refCode) return "";
+  if (import.meta.client) {
+    return `${window.location.origin}/products?ref=${encodeURIComponent(
+      refCode,
+    )}`;
+  }
+  return `/products?ref=${encodeURIComponent(refCode)}`;
+}
+
+async function copyListingRef(row: any) {
+  const url = buildListingRefUrl(row.ref_code);
+  if (!url) return;
+  try {
+    await navigator.clipboard.writeText(url);
+    showToast("Đã copy link ref sản phẩm", "success");
+  } catch {
+    showToast("Không thể copy, vui lòng thử lại", "error");
   }
 }
 
@@ -520,6 +918,7 @@ function openModal(item = null) {
   form.description = item?.description ?? "";
   form.long_description = item?.long_description ?? "";
   form.download_url = item?.download_url ?? "";
+  form.youtube_url = item?.youtube_url ?? "";
   form.thumbnail_url = item?.thumbnail_url ?? "";
   form.images_text = "";
   if (item?.images_json) {
@@ -532,7 +931,6 @@ function openModal(item = null) {
       form.images_text = "";
     }
   }
-  form.price = Number(item?.price ?? 0);
   form.type = item?.type || "other";
   form.is_active = item ? !!item.is_active : true;
   error.value = "";
@@ -556,9 +954,9 @@ async function save() {
       description: form.description?.trim(),
       long_description: form.long_description?.trim(),
       download_url: form.download_url?.trim(),
+      youtube_url: form.youtube_url?.trim(),
       thumbnail_url: form.thumbnail_url?.trim(),
       images,
-      price: Number(form.price || 0),
       type: form.type || "other",
       is_active:
         form.is_active === true ||
@@ -618,6 +1016,19 @@ function canDelete(item) {
 onMounted(async () => {
   await initAdmin();
   await fetchList();
+  if (!isSuperAdmin.value) {
+    await fetchMySellerList();
+  }
+  autoRefreshTimer = setInterval(() => {
+    fetchList({ silent: true });
+  }, 5000);
+});
+
+onUnmounted(() => {
+  if (autoRefreshTimer) {
+    clearInterval(autoRefreshTimer);
+    autoRefreshTimer = null;
+  }
 });
 </script>
 
@@ -628,6 +1039,46 @@ onMounted(async () => {
   gap: 1rem;
   width: 100%;
   max-width: none;
+}
+.subtabs {
+  display: inline-flex;
+  align-self: flex-start;
+  margin-bottom: 0.5rem;
+  border-radius: 999px;
+  padding: 3px;
+  background: radial-gradient(circle at top left, rgba(59, 130, 246, 0.35), rgba(15, 23, 42, 0.95));
+  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.8), 0 0 20px rgba(15, 23, 42, 0.9);
+}
+.subtab-btn {
+  position: relative;
+  min-width: 160px;
+  padding: 0.45rem 1rem;
+  border-radius: 999px;
+  border: none;
+  background: transparent;
+  color: rgba(226, 232, 240, 0.7);
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    color 0.18s ease,
+    background 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.12s ease;
+}
+.subtab-btn--active {
+  background: linear-gradient(135deg, #1d4ed8, #38bdf8);
+  color: #f9fafb;
+  box-shadow:
+    0 0 0 1px rgba(191, 219, 254, 0.3),
+    0 8px 18px rgba(37, 99, 235, 0.45);
+}
+.subtab-btn:not(.subtab-btn--active):hover {
+  background: rgba(15, 23, 42, 0.9);
+  color: #e5e7eb;
+}
+.subtab-btn:active {
+  transform: translateY(1px);
 }
 .list-toolbar {
   display: flex;

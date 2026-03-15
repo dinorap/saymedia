@@ -101,9 +101,10 @@ const userIdFilter = ref("");
 const pagination = ref({ page: 1, limit: 10, total: 0, totalPages: 1 });
 const pageSize = ref(10);
 let timer = null;
+let autoRefreshTimer = null;
 
-async function fetchLedger(page = 1) {
-  loading.value = true;
+async function fetchLedger(page = 1, opts = { silent: false }) {
+  if (!opts?.silent) loading.value = true;
   try {
     const params = new URLSearchParams();
     params.set("page", String(page));
@@ -118,7 +119,7 @@ async function fetchLedger(page = 1) {
     items.value = [];
     pagination.value = { page: 1, limit: 10, total: 0, totalPages: 1 };
   } finally {
-    loading.value = false;
+    if (!opts?.silent) loading.value = false;
   }
 }
 
@@ -167,7 +168,19 @@ function typeLabel(type) {
   return type || "-";
 }
 
-onMounted(() => fetchLedger(1));
+onMounted(() => {
+  fetchLedger(1);
+  autoRefreshTimer = setInterval(
+    () => fetchLedger(pagination.value.page || 1, { silent: true }),
+    5000,
+  );
+});
+onUnmounted(() => {
+  if (autoRefreshTimer) {
+    clearInterval(autoRefreshTimer);
+    autoRefreshTimer = null;
+  }
+});
 </script>
 
 <style scoped>

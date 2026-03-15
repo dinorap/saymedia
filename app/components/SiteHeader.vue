@@ -8,7 +8,7 @@
       <NuxtLink to="/products">{{ $t("nav.services") }}</NuxtLink>
       <NuxtLink to="/pricing">{{ $t("nav.pricing") }}</NuxtLink>
       <NuxtLink to="/contact">{{ $t("nav.contact") }}</NuxtLink>
-      <NuxtLink to="/announcements">Thông báo</NuxtLink>
+      <NuxtLink to="/announcements">{{ $t("admin.announcements") }}</NuxtLink>
     </nav>
     <div class="site-auth-buttons">
       <div class="site-lang-switcher">
@@ -97,25 +97,78 @@
   </header>
   <Teleport to="body">
     <div
-      v-if="showAnnouncementPopup && popupAnnouncement"
+      v-if="showAnnouncementPopup && popupAnnouncements.length"
       class="announcement-popup-overlay"
       @click.self="closeAnnouncementPopup"
     >
       <div class="announcement-popup">
+        <div v-if="popupAnnouncements.length > 1" class="announcement-popup-topnav">
+          <button
+            type="button"
+            class="ann-nav-btn"
+            :disabled="activeAnnouncementIndex <= 0"
+            @click="prevAnnouncement"
+          >
+            ‹
+          </button>
+          <div class="ann-nav-dots" aria-label="ann-dots">
+            <button
+              v-for="(a, idx) in popupAnnouncements"
+              :key="a.id"
+              type="button"
+              class="ann-dot"
+              :class="{ active: idx === activeAnnouncementIndex }"
+              @click="activeAnnouncementIndex = idx"
+              :aria-label="`ann-${idx + 1}`"
+            />
+          </div>
+          <button
+            type="button"
+            class="ann-nav-btn"
+            :disabled="activeAnnouncementIndex >= popupAnnouncements.length - 1"
+            @click="nextAnnouncement"
+          >
+            ›
+          </button>
+        </div>
+
         <h3 class="announcement-popup-title">
-          {{ popupAnnouncement.title }}
+          {{ activeAnnouncement?.title }}
         </h3>
         <p class="announcement-popup-meta">
-          <span>{{ popupAnnouncement.authorName || "Admin" }}</span>
+          <span>{{ activeAnnouncement?.authorName || $t("admin.profileName") }}</span>
           <span>•</span>
-          <span>{{ formatPopupDate(popupAnnouncement.createdAt) }}</span>
+          <span>{{ formatPopupDate(activeAnnouncement?.updatedAt || activeAnnouncement?.createdAt) }}</span>
         </p>
-        <pre class="announcement-popup-content">
-{{ popupAnnouncement.content }}
-        </pre>
+
+        <div v-if="activeImages.length" class="announcement-popup-thumb-wrap">
+          <button
+            v-if="activeImages.length > 1"
+            type="button"
+            class="popup-image-nav popup-image-nav--left"
+            @click.stop="prevPopupImage"
+          >
+            ‹
+          </button>
+          <NuxtImg
+            :src="activeImages[activeImageIndex]"
+            alt="Ảnh thông báo"
+            class="announcement-popup-thumb"
+          />
+          <button
+            v-if="activeImages.length > 1"
+            type="button"
+            class="popup-image-nav popup-image-nav--right"
+            @click.stop="nextPopupImage"
+          >
+            ›
+          </button>
+        </div>
+
+        <pre class="announcement-popup-content">{{ activeAnnouncement?.content }}</pre>
         <div class="announcement-popup-actions">
           <button type="button" class="announcement-popup-btn" @click="closeAnnouncementPopup">
-            Đã hiểu
+            {{ $t("announcements.popupButton") }}
           </button>
         </div>
       </div>
@@ -133,8 +186,31 @@ const showDropdown = ref(false);
 const currentUser = ref(null);
 let closeTimeout = null;
 
-const popupAnnouncement = ref(null);
+const popupAnnouncements = ref([]);
 const showAnnouncementPopup = ref(false);
+const activeAnnouncementIndex = ref(0);
+const activeImageIndex = ref(0);
+
+// Dùng chung cookie role cho menu; popup thông báo dùng /api/auth/me (vì auth_token là httpOnly, client không đọc được)
+const roleCookie = useCookie("user_role", { path: "/" });
+
+const activeAnnouncement = computed(() => {
+  return popupAnnouncements.value[activeAnnouncementIndex.value] || null;
+});
+
+const activeImages = computed(() => {
+  const a = activeAnnouncement.value;
+  if (!a) return [];
+  const imgs = Array.isArray(a.images) ? a.images : [];
+  const legacy = a.imageUrl ? [a.imageUrl] : [];
+  const merged = [...imgs, ...legacy].map((s) => String(s || "").trim()).filter((s) => !!s);
+  // unique, keep order
+  const out = [];
+  for (const u of merged) {
+    if (!out.includes(u)) out.push(u);
+  }
+  return out.slice(0, 10);
+});
 
 function openDropdown() {
   if (closeTimeout) {
@@ -158,10 +234,11 @@ function cancelClose() {
   }
 }
 
+const route = useRoute();
+
 onMounted(async () => {
-  const role = useCookie("user_role", { path: "/" }).value;
+  const role = roleCookie.value;
   // Hiển thị tên + menu tài khoản cho mọi role không phải admin dashboard
-  // (user thường + admin_2 dùng giao diện khách)
   if (role && role !== "admin_0" && role !== "admin_1") {
     try {
       const data = await $fetch("/api/auth/me");
@@ -172,15 +249,43 @@ onMounted(async () => {
   } else {
     currentUser.value = null;
   }
-
+  // Chạy kiểm tra popup ngay sau khi mount (chỉ chạy trên client, sau hydration)
   await maybeShowAnnouncementPopup();
 });
+
+// Chạy lại khi chuyển trang (client-side navigation) để bắt thêm/sửa thông báo, qua ngày mới
+watch(
+  () => route.path,
+  () => { maybeShowAnnouncementPopup(); },
+  { immediate: false },
+);
 
 async function doLogout() {
   try {
     await $fetch("/api/auth/logout", { method: "POST" });
   } catch {}
   clearCart();
+  // Xóa localStorage liên quan popup thông báo khi đăng xuất
+  if (import.meta.client) {
+    try {
+      const keys = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (!k) continue;
+        if (
+          k.startsWith("announcement_popup_") ||
+          k.startsWith("announcements_popup_") ||
+          k === "announcements_popup_lastSeenUpdatedAt" ||
+          k === "announcements_popup_lastShownDay"
+        ) {
+          keys.push(k);
+        }
+      }
+      keys.forEach((k) => localStorage.removeItem(k));
+    } catch {
+      // ignore
+    }
+  }
   currentUser.value = null;
   showDropdown.value = false;
   return navigateTo("/");
@@ -205,39 +310,114 @@ function formatPopupDate(val) {
 
 async function maybeShowAnnouncementPopup() {
   if (!import.meta.client) return;
+
   try {
+    // Kiểm tra đăng nhập bằng API (auth_token là httpOnly nên client không đọc được cookie)
+    const me = await $fetch("/api/auth/me").catch(() => null);
+    const user = me?.user;
+    // Chỉ hiển thị popup cho khách hàng (role user), không hiện cho admin
+    if (!user || user.role !== "user") return;
+
     const res = await $fetch("/api/announcements?popup=1");
     const list = Array.isArray(res?.data) ? res.data : [];
-    const item = list[0];
-    if (!item) return;
+    if (!list.length) return;
 
-    const today = new Date().toISOString().slice(0, 10);
-    const storageKey = `announcement_popup_${item.id}_lastShown`;
-    const lastShown = localStorage.getItem(storageKey);
-    if (lastShown === today) return;
+    // reset theo 0:00 local time
+    const now = new Date();
+    const today =
+      String(now.getFullYear()) +
+      "-" +
+      String(now.getMonth() + 1).padStart(2, "0") +
+      "-" +
+      String(now.getDate()).padStart(2, "0");
 
-    popupAnnouncement.value = item;
+    const lastShownDay = localStorage.getItem("announcements_popup_lastShownDay") || "";
+    const lastSeenUpdatedAt = Number(localStorage.getItem("announcements_popup_lastSeenUpdatedAt") || 0) || 0;
+
+    const items = list
+      .map((a) => ({
+        ...a,
+        updatedAt: a.updatedAt || a.createdAt,
+      }))
+      .filter((a) => !!a.id);
+
+    const maxUpdatedAt = Math.max(
+      0,
+      ...items.map((a) => new Date(a.updatedAt || a.createdAt || 0).getTime() || 0),
+    );
+
+    const changed = items.filter((a) => {
+      const t = new Date(a.updatedAt || a.createdAt || 0).getTime() || 0;
+      return t > lastSeenUpdatedAt;
+    });
+
+    // Ưu tiên hiển thị các thông báo mới/sửa (ngay cả khi hôm nay đã xem)
+    if (changed.length) {
+      popupAnnouncements.value = changed;
+      activeAnnouncementIndex.value = 0;
+      activeImageIndex.value = 0;
+      showAnnouncementPopup.value = true;
+      return;
+    }
+
+    // Không có thay đổi => mỗi ngày hiển thị 1 lần
+    if (lastShownDay === today) return;
+    popupAnnouncements.value = items;
+    activeAnnouncementIndex.value = 0;
+    activeImageIndex.value = 0;
     showAnnouncementPopup.value = true;
-  } catch {
-    // ignore errors
+  } catch (err) {
+    if (import.meta.dev) {
+      console.warn("[announcement popup] fetch or check failed:", err);
+    }
   }
 }
 
 function closeAnnouncementPopup() {
-  if (!popupAnnouncement.value) {
-    showAnnouncementPopup.value = false;
-    return;
-  }
   if (import.meta.client) {
-    const today = new Date().toISOString().slice(0, 10);
-    const storageKey = `announcement_popup_${popupAnnouncement.value.id}_lastShown`;
+    const now = new Date();
+    const today =
+      String(now.getFullYear()) +
+      "-" +
+      String(now.getMonth() + 1).padStart(2, "0") +
+      "-" +
+      String(now.getDate()).padStart(2, "0");
     try {
-      localStorage.setItem(storageKey, today);
+      localStorage.setItem("announcements_popup_lastShownDay", today);
+
+      const maxUpdatedAt = Math.max(
+        0,
+        ...popupAnnouncements.value.map((a) => {
+          const t = new Date(a.updatedAt || a.createdAt || 0).getTime() || 0;
+          return t;
+        }),
+      );
+      localStorage.setItem("announcements_popup_lastSeenUpdatedAt", String(maxUpdatedAt));
     } catch {
       // ignore
     }
   }
   showAnnouncementPopup.value = false;
+}
+
+function prevAnnouncement() {
+  if (activeAnnouncementIndex.value <= 0) return;
+  activeAnnouncementIndex.value -= 1;
+  activeImageIndex.value = 0;
+}
+function nextAnnouncement() {
+  if (activeAnnouncementIndex.value >= popupAnnouncements.value.length - 1) return;
+  activeAnnouncementIndex.value += 1;
+  activeImageIndex.value = 0;
+}
+function prevPopupImage() {
+  if (!activeImages.value.length) return;
+  activeImageIndex.value =
+    (activeImageIndex.value - 1 + activeImages.value.length) % activeImages.value.length;
+}
+function nextPopupImage() {
+  if (!activeImages.value.length) return;
+  activeImageIndex.value = (activeImageIndex.value + 1) % activeImages.value.length;
 }
 </script>
 
@@ -496,8 +676,11 @@ function closeAnnouncementPopup() {
 .announcement-popup-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(4px);
+  background:
+    radial-gradient(circle at 20% 10%, rgba(56, 189, 248, 0.18), transparent 35%),
+    radial-gradient(circle at 80% 90%, rgba(37, 99, 235, 0.18), transparent 40%),
+    rgba(2, 6, 23, 0.74);
+  backdrop-filter: blur(10px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -506,23 +689,48 @@ function closeAnnouncementPopup() {
 }
 
 .announcement-popup {
-  max-width: 520px;
+  max-width: 640px;
   width: 100%;
-  background: radial-gradient(circle at 0 0, rgba(56, 189, 248, 0.2), transparent 55%),
-    rgba(5, 15, 35, 0.97);
-  border-radius: 16px;
-  border: 1px solid rgba(56, 189, 248, 0.6);
+  background:
+    radial-gradient(circle at 10% 0%, rgba(56, 189, 248, 0.18), transparent 45%),
+    radial-gradient(circle at 90% 100%, rgba(34, 197, 94, 0.1), transparent 42%),
+    rgba(5, 15, 35, 0.92);
+  border-radius: 18px;
+  border: 1px solid rgba(56, 189, 248, 0.38);
   box-shadow:
-    0 0 30px rgba(56, 189, 248, 0.45),
-    0 24px 70px rgba(15, 23, 42, 0.95);
-  padding: 20px 22px 18px;
+    0 0 0 1px rgba(15, 23, 42, 0.6),
+    0 22px 80px rgba(2, 6, 23, 0.85);
+  padding: 18px 18px 16px;
   color: var(--text-primary);
+  position: relative;
+  overflow: hidden;
+}
+
+.announcement-popup::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  background: linear-gradient(
+    135deg,
+    rgba(56, 189, 248, 0.22),
+    rgba(37, 99, 235, 0.14),
+    rgba(34, 197, 94, 0.12)
+  );
+  filter: blur(18px);
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.announcement-popup > * {
+  position: relative;
 }
 
 .announcement-popup-title {
-  margin: 0 0 6px;
-  font-size: 1.1rem;
-  font-weight: 600;
+  margin: 2px 40px 6px 0;
+  font-size: 1.15rem;
+  font-weight: 750;
+  letter-spacing: 0.01em;
+  line-height: 1.25;
 }
 
 .announcement-popup-meta {
@@ -536,14 +744,117 @@ function closeAnnouncementPopup() {
 
 .announcement-popup-content {
   margin: 0;
-  max-height: 260px;
+  max-height: min(42vh, 380px);
   overflow: auto;
   white-space: pre-wrap;
   font-size: 0.9rem;
-  background: rgba(15, 23, 42, 0.9);
-  border-radius: 8px;
-  padding: 10px 12px;
+  line-height: 1.55;
+  background: rgba(2, 6, 23, 0.35);
+  border-radius: 14px;
+  padding: 12px 14px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.announcement-popup-thumb-wrap {
+  margin: 10px 0 10px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  background: rgba(2, 6, 23, 0.5);
+}
+
+.announcement-popup-thumb {
+  width: 100%;
+  max-height: 320px;
+  border-radius: 0;
+  object-fit: cover;
+  border: none;
+  box-shadow: none;
+}
+
+.announcement-popup-topnav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 12px;
+  padding: 6px 10px;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  background: rgba(2, 6, 23, 0.25);
+}
+
+.ann-nav-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
   border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(2, 6, 23, 0.25);
+  color: rgba(226, 232, 240, 0.95);
+  cursor: pointer;
+}
+
+.ann-nav-btn:hover:not(:disabled) {
+  border-color: rgba(56, 189, 248, 0.55);
+  background: rgba(2, 6, 23, 0.55);
+}
+
+.ann-nav-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.ann-nav-dots {
+  flex: 1;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+}
+
+.ann-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: rgba(148, 163, 184, 0.12);
+  cursor: pointer;
+}
+
+.ann-dot.active {
+  background: rgba(56, 189, 248, 0.92);
+  border-color: rgba(56, 189, 248, 0.95);
+  box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.12);
+}
+
+.popup-image-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(2, 6, 23, 0.55);
+  color: #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 0 18px rgba(15, 23, 42, 0.95);
+}
+
+.popup-image-nav:hover {
+  border-color: rgba(56, 189, 248, 0.6);
+  background: rgba(2, 6, 23, 0.75);
+}
+.popup-image-nav--left {
+  left: 10px;
+}
+.popup-image-nav--right {
+  right: 10px;
 }
 
 .announcement-popup-actions {

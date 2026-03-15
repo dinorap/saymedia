@@ -2,13 +2,13 @@
   <div class="announcements-admin-page">
     <div class="list-toolbar">
       <div class="search-group">
-        <label for="search-announcements">Tìm kiếm</label>
+        <label for="search-announcements">{{ $t("admin.search") }}</label>
         <input
           id="search-announcements"
           v-model="search"
           type="text"
           class="input--sm"
-          placeholder="Tiêu đề, nội dung, người đăng..."
+          :placeholder="$t('admin.annSearchPlaceholder')"
         />
       </div>
       <button
@@ -16,25 +16,27 @@
         class="btn-add btn-add--right"
         @click="openModal()"
       >
-        + Viết thông báo
+        + {{ $t("admin.annWriteButton") }}
       </button>
     </div>
 
     <div class="table-wrap card">
-      <div v-if="loading" class="table-loading">Đang tải...</div>
+      <div v-if="loading" class="table-loading">
+        {{ $t("admin.annLoading") }}
+      </div>
       <div v-else-if="!items.length" class="table-empty">
-        Chưa có thông báo nào.
+        {{ $t("admin.annListEmpty") }}
       </div>
       <table v-else class="data-table">
         <thead>
           <tr>
-            <th style="width: 60px">ID</th>
-            <th>Tiêu đề</th>
-            <th>Nội dung</th>
-            <th>Người đăng</th>
-            <th>Thời gian</th>
-            <th>Pop-up</th>
-            <th class="th-actions">Thao tác</th>
+            <th style="width: 60px">{{ $t("admin.annId") }}</th>
+            <th>{{ $t("admin.annTitle") }}</th>
+            <th>{{ $t("admin.annContent") }}</th>
+            <th>{{ $t("admin.annAuthor") }}</th>
+            <th>{{ $t("admin.annTime") }}</th>
+            <th>{{ $t("admin.annPopup") }}</th>
+            <th class="th-actions">{{ $t("admin.actions") }}</th>
           </tr>
         </thead>
         <tbody>
@@ -48,14 +50,16 @@
                 {{ a.content }}
               </div>
             </td>
-            <td>{{ a.authorName || "Admin" }}</td>
+            <td>{{ a.authorName || $t("admin.profileName") }}</td>
             <td>{{ formatDate(a.createdAt) }}</td>
             <td>
               <span
                 class="badge"
                 :class="a.isPopup ? 'badge--popup' : 'badge--muted'"
               >
-                {{ a.isPopup ? "Bật" : "Tắt" }}
+                {{
+                  a.isPopup ? $t("admin.annPopupOn") : $t("admin.annPopupOff")
+                }}
               </span>
             </td>
             <td class="td-actions">
@@ -95,10 +99,9 @@
         </select>
       </div>
       <span class="page-info">
-        Trang {{ pagination.page }} / {{ pagination.totalPages }} ({{
-          pagination.total
-        }}
-        bản ghi)
+        {{ $t("admin.page") }} {{ pagination.page }} /
+        {{ pagination.totalPages }} ({{ pagination.total }}
+        {{ $t("admin.records") }})
       </span>
       <div class="page-right">
         <button
@@ -107,7 +110,7 @@
           :disabled="pagination.page <= 1"
           @click="goToPage(pagination.page - 1)"
         >
-          Trước
+          {{ $t("admin.prev") }}
         </button>
         <button
           type="button"
@@ -115,7 +118,7 @@
           :disabled="pagination.page >= pagination.totalPages"
           @click="goToPage(pagination.page + 1)"
         >
-          Sau
+          {{ $t("admin.next") }}
         </button>
       </div>
     </div>
@@ -128,33 +131,69 @@
       >
         <div class="modal">
           <h3 class="modal-title">
-            {{ editing ? "Sửa thông báo" : "Viết thông báo mới" }}
+            {{ editing ? $t("admin.annEdit") : $t("admin.annCreate") }}
           </h3>
           <form class="modal-form" @submit.prevent="save">
             <div class="form-row">
-              <label>Tiêu đề</label>
+              <label>{{ $t("admin.annTitle") }}</label>
               <input
                 v-model="form.title"
                 type="text"
                 class="input"
-                placeholder="Tiêu đề thông báo"
+                :placeholder="$t('admin.annTitle')"
                 required
               />
             </div>
             <div class="form-row">
-              <label>Nội dung</label>
+              <label>{{ $t("admin.annContent") }}</label>
               <textarea
                 v-model="form.content"
                 class="input input--textarea"
                 rows="5"
-                placeholder="Nội dung chi tiết..."
+                :placeholder="$t('admin.annContent')"
                 required
               />
+            </div>
+            <div class="form-row">
+              <label>{{ $t("admin.annImagesLabel") }}</label>
+              <div class="input-upload-row">
+                <textarea
+                  v-model="form.images_text"
+                  class="input input--textarea"
+                  rows="3"
+                  :placeholder="$t('admin.annImagesPlaceholder')"
+                  readonly
+                />
+                <input
+                  ref="imageFileInput"
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  class="input-file-hidden"
+                  @change="onUploadAnnouncementImage"
+                />
+                <button
+                  type="button"
+                  class="btn-upload"
+                  @click="openImagePicker"
+                >
+                  {{ $t("admin.annImagesChoose") }}
+                </button>
+              </div>
+              <div v-if="imagesCount" class="ann-thumb-grid">
+                <div
+                  v-for="(img, idx) in imagesPreview"
+                  :key="img + idx"
+                  class="thumb-preview-wrap"
+                >
+                  <NuxtImg :src="img" alt="preview" class="thumb-preview" />
+                </div>
+              </div>
             </div>
             <div v-if="isSuperAdmin" class="form-row form-row-inline">
               <label class="checkbox-label">
                 <input v-model="form.is_popup" type="checkbox" />
-                Hiển thị dạng pop-up cho khách (tối đa 1 lần/ngày mỗi khách)
+                {{ $t("admin.annPopupCheckbox") }}
               </label>
             </div>
             <p v-if="error" class="error-msg">{{ error }}</p>
@@ -164,10 +203,12 @@
                 class="btn-secondary"
                 @click="modalOpen = false"
               >
-                Hủy
+                {{ $t("admin.annCancel") }}
               </button>
               <button type="submit" class="btn-primary" :disabled="saving">
-                {{ saving ? "Đang lưu..." : "Lưu thông báo" }}
+                {{
+                  saving ? $t("admin.loading") : $t("admin.annSave")
+                }}
               </button>
             </div>
           </form>
@@ -194,12 +235,29 @@ const form = reactive({
   id: null,
   title: "",
   content: "",
+  images_text: "",
   is_popup: false,
 });
 const error = ref("");
 const saving = ref(false);
 const pagination = ref({ page: 1, limit: 10, total: 0, totalPages: 1 });
 const pageSize = ref(10);
+const imageFileInput = ref(null);
+const imagesCount = computed(() => {
+  if (!form.images_text) return 0;
+  return form.images_text
+    .split("\n")
+    .map((s) => s.trim())
+    .filter((s) => !!s).length;
+});
+const imagesPreview = computed(() => {
+  if (!form.images_text) return [];
+  return form.images_text
+    .split("\n")
+    .map((s) => s.trim())
+    .filter((s) => !!s)
+    .slice(0, 10);
+});
 
 let searchTimer = null;
 
@@ -216,8 +274,8 @@ function formatDate(val) {
   });
 }
 
-async function fetchList(page = 1) {
-  loading.value = true;
+async function fetchList(page = 1, opts = { silent: false }) {
+  if (!opts?.silent) loading.value = true;
   try {
     const params = new URLSearchParams();
     params.set("page", String(page));
@@ -234,7 +292,46 @@ async function fetchList(page = 1) {
     items.value = [];
     pagination.value = { page: 1, limit: 10, total: 0, totalPages: 1 };
   } finally {
-    loading.value = false;
+    if (!opts?.silent) loading.value = false;
+  }
+}
+
+async function uploadAnnouncementImageFiles(fileList) {
+  if (!fileList || !fileList.length) return [];
+  const formData = new FormData();
+  Array.from(fileList).forEach((file) => {
+    formData.append("file", file);
+  });
+  const res = await $fetch("/api/admin/upload/product-image", {
+    method: "POST",
+    body: formData,
+  });
+  return res && res.success && Array.isArray(res.urls) ? res.urls : [];
+}
+
+async function onUploadAnnouncementImage(event) {
+  const input = event.target;
+  try {
+    const urls = await uploadAnnouncementImageFiles(input.files);
+    if (urls.length) {
+      const existing = form.images_text ? form.images_text.split("\n") : [];
+      const merged = [...existing, ...urls]
+        .map((s) => String(s || "").trim())
+        .filter((s) => !!s);
+      form.images_text = merged.slice(0, 10).join("\n");
+    }
+  } catch (e) {
+    error.value =
+      e?.data?.statusMessage || e?.message || "Upload ảnh thông báo thất bại";
+    showToast(error.value, "error");
+  } finally {
+    if (input) input.value = "";
+  }
+}
+
+function openImagePicker() {
+  if (imageFileInput.value) {
+    imageFileInput.value.click();
   }
 }
 
@@ -253,6 +350,11 @@ function openModal(item = null) {
   form.id = item?.id ?? null;
   form.title = item?.title ?? "";
   form.content = item?.content ?? "";
+  const imgs = Array.isArray(item?.images) ? item.images : [];
+  const legacy =
+    item?.imageUrl || item?.image_url ? [item.imageUrl || item.image_url] : [];
+  const merged = [...imgs, ...legacy].filter((x) => !!x);
+  form.images_text = merged.slice(0, 10).join("\n");
   form.is_popup = isSuperAdmin.value ? !!item?.isPopup : false;
   error.value = "";
   modalOpen.value = true;
@@ -262,10 +364,19 @@ async function save() {
   error.value = "";
   saving.value = true;
   try {
+    const images =
+      form.images_text
+        ?.split("\n")
+        .map((s) => s.trim())
+        .filter((s) => !!s)
+        .slice(0, 10) || [];
+
     const body = {
       id: form.id,
       title: form.title,
       content: form.content,
+      images,
+      image_url: images[0] || null,
       is_popup: isSuperAdmin.value ? !!form.is_popup : false,
     };
     await $fetch("/api/admin/announcements", {
@@ -274,7 +385,7 @@ async function save() {
     });
     modalOpen.value = false;
     await fetchList(pagination.value.page || 1);
-    showToast("Đã lưu thông báo.", "success");
+    showToast($t("admin.annSaved"), "success");
   } catch (e) {
     error.value = e?.data?.statusMessage || e?.message || "Lỗi";
     showToast(error.value, "error");
@@ -285,10 +396,10 @@ async function save() {
 
 async function deleteItem(item) {
   const ok = await askConfirm({
-    title: "Xóa thông báo",
-    message: `Bạn chắc chắn muốn xóa?\n${item.title}`,
-    confirmText: "Xóa",
-    cancelText: "Hủy",
+    title: $t("admin.annDeleteTitle"),
+    message: `${$t("admin.annDeleteConfirm")}\n${item.title}`,
+    confirmText: $t("admin.delete"),
+    cancelText: $t("admin.cancel"),
   });
   if (!ok) return;
   try {
@@ -296,7 +407,7 @@ async function deleteItem(item) {
       method: "DELETE",
     });
     await fetchList(pagination.value.page || 1);
-    showToast("Đã xóa thông báo.", "success");
+    showToast($t("admin.annDeleted"), "success");
   } catch (e) {
     showToast(e?.data?.statusMessage || "Lỗi", "error");
   }
@@ -312,7 +423,20 @@ function changePageSize() {
   fetchList(1);
 }
 
-onMounted(() => fetchList(1));
+let autoRefreshTimer = null;
+onMounted(() => {
+  fetchList(1);
+  autoRefreshTimer = setInterval(
+    () => fetchList(pagination.value.page || 1, { silent: true }),
+    5000,
+  );
+});
+onUnmounted(() => {
+  if (autoRefreshTimer) {
+    clearInterval(autoRefreshTimer);
+    autoRefreshTimer = null;
+  }
+});
 </script>
 
 <style scoped>
@@ -591,5 +715,54 @@ onMounted(() => fetchList(1));
   border-radius: 8px;
   font-weight: 500;
   cursor: pointer;
+}
+
+.input-upload-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: stretch;
+  margin-top: 0.35rem;
+}
+
+.input-upload-row .input {
+  flex: 1;
+}
+
+.input-file-hidden {
+  display: none;
+}
+
+.btn-upload {
+  padding: 0.55rem 0.9rem;
+  border-radius: 8px;
+  border: 1px solid rgba(1, 123, 251, 0.5);
+  background: rgba(15, 23, 42, 0.9);
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.thumb-preview-wrap {
+  margin-top: 0.6rem;
+}
+
+.ann-thumb-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 0.6rem;
+}
+
+.ann-thumb-grid .thumb-preview-wrap {
+  margin-top: 0;
+}
+
+.thumb-preview {
+  width: 96px;
+  height: 96px;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  object-fit: cover;
 }
 </style>

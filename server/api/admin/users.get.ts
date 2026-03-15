@@ -17,6 +17,19 @@ export default defineEventHandler(async (event) => {
   limit = Math.min(50, Math.max(5, limit))
   const offset = (page - 1) * limit
 
+  const sortFieldRaw = String(queryParams.sort_field || '').trim()
+  const sortDirRaw = String(queryParams.sort_dir || '').trim().toLowerCase()
+  const allowedSortFields = new Set([
+    'created_at',
+    'last_login',
+    'credit',
+    'total_deposit_amount',
+  ])
+  const sortField = allowedSortFields.has(sortFieldRaw)
+    ? sortFieldRaw
+    : 'created_at'
+  const sortDir = sortDirRaw === 'asc' ? 'ASC' : 'DESC'
+
   const conditions: string[] = []
   const params: any[] = []
 
@@ -48,6 +61,15 @@ export default defineEventHandler(async (event) => {
   `
   const [[{ total }]]: any = await pool.query(countQuery, params)
 
+  const orderExpression =
+    sortField === 'last_login'
+      ? 'u.last_login'
+      : sortField === 'credit'
+        ? 'u.credit'
+        : sortField === 'total_deposit_amount'
+          ? 'COALESCE(SUM_SUCCESS.totalAmount, 0)'
+          : 'u.created_at'
+
   const dataQuery = `
     SELECT
       u.id,
@@ -57,11 +79,22 @@ export default defineEventHandler(async (event) => {
       u.status,
       u.created_at,
       u.credit,
+      u.last_login,
+      COALESCE(SUM_SUCCESS.totalAmount, 0) AS total_deposit_amount,
       a.username AS admin_username
     FROM users u
     LEFT JOIN admins a ON u.admin_id = a.id
+    LEFT JOIN (
+      SELECT
+        pt.user_id,
+        SUM(COALESCE(pt.actual_amount, pt.amount)) AS totalAmount
+      FROM payment_transactions pt
+      WHERE pt.status = 'success'
+      GROUP BY pt.user_id
+    ) AS SUM_SUCCESS
+      ON SUM_SUCCESS.user_id = u.id
     ${whereClause}
-    ORDER BY u.id ASC
+    ORDER BY ${orderExpression} ${sortDir}, u.id ASC
     LIMIT ? OFFSET ?
   `
   const [users]: any = await pool.query(dataQuery, [...params, limit, offset])

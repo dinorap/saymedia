@@ -5,6 +5,7 @@ import { consumeOtp } from '../../utils/otpStore'
 import { checkLoginRateLimit, recordLoginFailure, clearLoginFailure } from '../../utils/rateLimit'
 import { addAuditLog } from '../../utils/audit'
 import { loginSchema, parseBodyOrThrow } from '../../utils/schemas'
+import { ensureUserStatsSchema } from '../../utils/userStats'
 
 export default defineEventHandler(async (event) => {
   const raw = await readBody(event)
@@ -46,6 +47,8 @@ export default defineEventHandler(async (event) => {
         throw createError({ statusCode: 403, statusMessage: 'Tài khoản đã bị khóa!' })
       }
       clearLoginFailure(event)
+      await ensureUserStatsSchema()
+      await pool.query('UPDATE users SET last_login = NOW() WHERE id = ?', [user.id])
       const token = jwt.sign(
         { id: user.id, username: user.username, role: 'user', admin_id: user.admin_id },
         jwtSecret,
@@ -112,6 +115,8 @@ export default defineEventHandler(async (event) => {
       
       if (isValid) {
         clearLoginFailure(event)
+        await ensureUserStatsSchema()
+        await pool.query('UPDATE users SET last_login = NOW() WHERE id = ?', [user.id])
         const token = jwt.sign(
           { id: user.id, username: user.username, role: 'user', admin_id: user.admin_id },
           jwtSecret,

@@ -18,6 +18,14 @@ export default defineEventHandler(async (event) => {
   limit = Math.min(50, Math.max(5, limit))
   const offset = (page - 1) * limit
 
+  const sortFieldRaw = String(query.sort_field || '').trim()
+  const sortDirRaw = String(query.sort_dir || '').trim().toLowerCase()
+  const allowedSortFields = new Set(['created_at', 'amount', 'status'])
+  const sortField = allowedSortFields.has(sortFieldRaw)
+    ? sortFieldRaw
+    : 'created_at'
+  const sortDir = sortDirRaw === 'asc' ? 'ASC' : 'DESC'
+
   const conditions: string[] = []
   const params: any[] = []
 
@@ -53,6 +61,13 @@ export default defineEventHandler(async (event) => {
   `
   const [[{ total }]]: any = await pool.query(countQuery, params)
 
+  const orderExpression =
+    sortField === 'amount'
+      ? 'pt.amount'
+      : sortField === 'status'
+        ? 'pt.status'
+        : 'pt.created_at'
+
   const dataQuery = `
     SELECT
       pt.id,
@@ -64,14 +79,18 @@ export default defineEventHandler(async (event) => {
       pt.credit_amount,
       pt.status,
       pt.memo,
+      pt.promo_code,
+      pt.promo_bonus_credit,
       pt.created_at,
       u.username AS user_username,
       u.email AS user_email,
-      u.admin_id
+      u.admin_id,
+      a.username AS admin_username
     FROM payment_transactions pt
     JOIN users u ON pt.user_id = u.id
+    LEFT JOIN admins a ON u.admin_id = a.id
     ${whereClause}
-    ORDER BY pt.created_at DESC
+    ORDER BY ${orderExpression} ${sortDir}, pt.id DESC
     LIMIT ? OFFSET ?
   `
   const [rows]: any = await pool.query(dataQuery, [...params, limit, offset])

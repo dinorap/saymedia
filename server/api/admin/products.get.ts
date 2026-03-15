@@ -10,6 +10,8 @@ export default defineEventHandler(async (event) => {
   const search = query.search ? String(query.search).trim() : "";
   const type = query.type ? String(query.type).trim() : "";
   const status = query.status ? String(query.status).trim() : "";
+  const sortFieldRaw = String(query.sort_field || "").trim();
+  const sortDirRaw = String(query.sort_dir || "").trim().toLowerCase();
 
   let page = parseInt(String(query.page || 1), 10);
   if (!Number.isFinite(page) || page < 1) page = 1;
@@ -45,6 +47,26 @@ export default defineEventHandler(async (event) => {
 
   const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
 
+  const allowedSortFields = new Set([
+    "created_at",
+    "price",
+    "name",
+    "is_active",
+  ]);
+  const sortField = allowedSortFields.has(sortFieldRaw)
+    ? sortFieldRaw
+    : "created_at";
+  const sortDir = sortDirRaw === "asc" ? "ASC" : "DESC";
+
+  const orderExpression =
+    sortField === "price"
+      ? "p.price"
+      : sortField === "name"
+        ? "p.name"
+        : sortField === "is_active"
+          ? "p.is_active"
+          : "p.created_at";
+
   const [[{ total }]]: any = await pool.query(
     `
       SELECT COUNT(*) AS total
@@ -75,7 +97,7 @@ export default defineEventHandler(async (event) => {
       FROM products p
       LEFT JOIN admins a ON p.admin_id = a.id
       ${whereSql}
-      ORDER BY p.created_at DESC
+      ORDER BY ${orderExpression} ${sortDir}, p.id DESC
       LIMIT ? OFFSET ?
     `,
     [...params, limit, offset],
