@@ -495,7 +495,9 @@
     "inCart": "In cart",
     "gallery": "Gallery",
     "longDescriptionTitle": "Details",
-    "loadError": "Failed to load product"
+    "loadError": "Failed to load product",
+    "outOfStock": "Out of stock",
+    "stockRemaining": "In stock"
   },
   "cart": {
     "title": "Cart",

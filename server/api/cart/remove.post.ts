@@ -29,6 +29,10 @@ export default defineEventHandler(async (event) => {
 
   const body = await readBody(event);
   const productId = Number(body?.product_id || 0);
+  const duration =
+    body?.duration === undefined || body?.duration === null
+      ? null
+      : String(body.duration);
 
   if (!Number.isInteger(productId) || productId <= 0) {
     throw createError({
@@ -37,9 +41,10 @@ export default defineEventHandler(async (event) => {
     });
   }
 
+  // Xóa đúng 1 dòng: user_id + product_id + duration (tránh xóa nhầm cùng sản phẩm khác loại key)
   await pool.query(
-    "DELETE FROM user_cart_items WHERE user_id = ? AND product_id = ?",
-    [decoded.id, productId],
+    "DELETE FROM user_cart_items WHERE user_id = ? AND product_id = ? AND (duration <=> ?)",
+    [decoded.id, productId, duration],
   );
 
   return { success: true };

@@ -68,15 +68,30 @@ function formatDate(val) {
   });
 }
 
-onMounted(async () => {
-  loading.value = true;
+async function loadAnnouncements(opts) {
+  const silent = !!opts?.silent;
+  if (!silent) loading.value = true;
   try {
     const res = await $fetch("/api/announcements");
     items.value = Array.isArray(res?.data) ? res.data : [];
   } catch {
-    items.value = [];
+    if (!silent) items.value = [];
   } finally {
-    loading.value = false;
+    if (!silent) loading.value = false;
+  }
+}
+
+let autoRefreshTimer = null;
+
+onMounted(async () => {
+  await loadAnnouncements({});
+  autoRefreshTimer = setInterval(() => loadAnnouncements({ silent: true }), 5000);
+});
+
+onUnmounted(() => {
+  if (autoRefreshTimer) {
+    clearInterval(autoRefreshTimer);
+    autoRefreshTimer = null;
   }
 });
 </script>

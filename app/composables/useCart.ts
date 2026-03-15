@@ -78,15 +78,15 @@ export function useCart() {
     }
   }
 
-  async function removeAndSync(id: number) {
-    store.remove(id);
+  async function removeAndSync(id: number, duration?: string | null) {
+    store.remove(id, duration);
     if (process.client) {
       const role = useCookie("user_role", { path: "/" }).value;
       if (role === "user") {
         try {
           await $fetch("/api/cart/remove", {
             method: "POST",
-            body: { product_id: id },
+            body: { product_id: id, duration: duration ?? null },
           });
         } catch {
           // ignore

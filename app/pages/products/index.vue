@@ -64,6 +64,12 @@
               class="product-card"
               @click="goDetail(p.id)"
             >
+              <p
+                v-if="getStockForProduct(p) != null"
+                class="product-stock-badge"
+              >
+                {{ $t("product.stockRemaining") || "Còn dư" }}: {{ getStockForProduct(p) }}
+              </p>
               <div class="product-left">
                 <div class="product-thumb-wrap">
                   <NuxtImg
@@ -89,6 +95,12 @@
                 <div class="product-header-row">
                   <span class="badge-type">
                     {{ p.type || "tool" }}
+                  </span>
+                  <span
+                    v-if="getTotalStock(p) <= 0"
+                    class="badge-out-of-stock"
+                  >
+                    {{ $t("product.outOfStock") || "Hết hàng" }}
                   </span>
                   <h2 class="product-name">
                     {{ p.name }}
@@ -123,10 +135,11 @@
                         <input
                           v-model.number="qtyByProduct[p.id]"
                           type="number"
-                          min="1"
-                          max="100"
+                          :min="1"
+                          :max="getMaxQtyForProduct(p)"
                           class="product-qty-input"
                           @click.stop
+                          @input="clampQtyForProduct(p.id)"
                         />
                       </div>
                     </div>
@@ -134,6 +147,7 @@
                       <button
                         type="button"
                         class="btn-secondary"
+                        :disabled="getStockForProduct(p) <= 0 || buyingId === p.id"
                         @click.stop="addToCart(p)"
                       >
                         {{ $t("product.addToCart") }}
@@ -141,7 +155,7 @@
                       <button
                         type="button"
                         class="btn-primary"
-                        :disabled="buyingId === p.id"
+                        :disabled="buyingId === p.id || getStockForProduct(p) <= 0"
                         @click.stop="openConfirm(p)"
                       >
                         {{ buyingId === p.id ? "..." : $t("auth.getStarted") }}
@@ -260,18 +274,54 @@ function getPriceForProduct(p) {
   return typeof anyPrice === "number" ? anyPrice : 0;
 }
 
+function getStockForProduct(p) {
+  const stock = p?.duration_stock || {};
+  const current =
+    durationByProduct.value[p.id] || getDefaultDurationForProduct(p);
+  const n = stock[current];
+  return typeof n === "number" ? n : 0;
+}
+
+function getTotalStock(p) {
+  const stock = p?.duration_stock || {};
+  return Object.values(stock).reduce((sum, n) => sum + (Number(n) || 0), 0);
+}
+
+function getMaxQtyForProduct(p) {
+  const s = getStockForProduct(p);
+  if (s <= 0) return 0;
+  return Math.min(100, s);
+}
+
+function clampQtyForProduct(productId) {
+  const p = (products.value || []).find((x) => x.id === productId);
+  if (!p) return;
+  const max = getMaxQtyForProduct(p);
+  const q = qtyByProduct.value[productId];
+  if (typeof q !== "number" || !Number.isFinite(q) || q < 0) {
+    qtyByProduct.value = { ...qtyByProduct.value, [productId]: max >= 1 ? 1 : 0 };
+    return;
+  }
+  if (q > max) {
+    qtyByProduct.value = { ...qtyByProduct.value, [productId]: max };
+  }
+}
+
 function formatDuration(v) {
   if (v === "lifetime") return "Lifetime";
   return v;
 }
 
-async function fetchProducts() {
-  loading.value = true;
-  error.value = "";
+async function fetchProducts(opts?: { silent?: boolean }) {
+  const silent = !!opts?.silent;
+  if (!silent) {
+    loading.value = true;
+    error.value = "";
+  }
   try {
-    const res = await $fetch("/api/products");
+    const url = silent ? "/api/products?refresh=1" : "/api/products";
+    const res = await $fetch(url);
     products.value = res?.success && Array.isArray(res.data) ? res.data : [];
-    // Gán mặc định số lượng = 1 cho các sản phẩm chưa có
     for (const p of products.value as any[]) {
       const id = p?.id;
       if (id != null && qtyByProduct.value[id] == null) {
@@ -279,12 +329,14 @@ async function fetchProducts() {
       }
     }
   } catch (e) {
-    error.value =
-      e?.data?.statusMessage ||
-      t("admin.noData") ||
-      "Không tải được danh sách sản phẩm";
+    if (!silent) {
+      error.value =
+        e?.data?.statusMessage ||
+        t("admin.noData") ||
+        "Không tải được danh sách sản phẩm";
+    }
   } finally {
-    loading.value = false;
+    if (!silent) loading.value = false;
   }
 }
 
@@ -307,15 +359,15 @@ async function initUser() {
 }
 
 function openConfirm(p) {
-  // Mua ngay: thêm vào giỏ và chuyển sang trang giỏ hàng
   if (!p) return;
+  clampQtyForProduct(p.id);
   const duration =
     durationByProduct.value[p.id] || getDefaultDurationForProduct(p);
   const qty = qtyByProduct.value[p.id] ?? 1;
   const safeQty =
     !Number.isFinite(Number(qty)) || Number(qty) <= 0
       ? 1
-      : Math.min(100, Number(qty));
+      : Math.min(getMaxQtyForProduct(p), 100, Number(qty));
 
   add(
     {
@@ -332,13 +384,14 @@ function openConfirm(p) {
 
 function addToCart(p) {
   if (!p) return;
+  clampQtyForProduct(p.id);
   const duration =
     durationByProduct.value[p.id] || getDefaultDurationForProduct(p);
   const qty = qtyByProduct.value[p.id] ?? 1;
   const safeQty =
     !Number.isFinite(Number(qty)) || Number(qty) <= 0
       ? 1
-      : Math.min(100, Number(qty));
+      : Math.min(getMaxQtyForProduct(p), 100, Number(qty));
 
   add(
     {
@@ -413,8 +466,20 @@ function onChangeDuration(id, value) {
   };
 }
 
+let autoRefreshTimer: ReturnType<typeof setInterval> | null = null;
+
 onMounted(async () => {
   await Promise.all([fetchProducts(), initUser()]);
+  autoRefreshTimer = setInterval(() => {
+    fetchProducts({ silent: true });
+  }, 5000);
+});
+
+onUnmounted(() => {
+  if (autoRefreshTimer) {
+    clearInterval(autoRefreshTimer);
+    autoRefreshTimer = null;
+  }
 });
 </script>
 
@@ -541,6 +606,7 @@ onMounted(async () => {
 }
 
 .product-card {
+  position: relative;
   color: var(--text-primary);
   border-radius: 16px;
   padding: 14px 16px;
@@ -552,6 +618,16 @@ onMounted(async () => {
   gap: 16px;
   cursor: pointer;
   background: rgba(5, 15, 35, 0.95);
+}
+
+.product-stock-badge {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
 }
 
 .product-left {
@@ -623,6 +699,16 @@ onMounted(async () => {
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
+}
+.badge-out-of-stock {
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(239, 68, 68, 0.5);
+  color: #fca5a5;
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-left: 6px;
 }
 
 .product-name {

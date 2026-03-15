@@ -56,22 +56,22 @@
               </div>
 
               <div v-if="images.length > 1" class="thumb-strip">
-              <button
-                v-for="(img, idx) in images"
-                :key="img + idx"
-                type="button"
-                class="thumb-btn"
-                :class="{ active: idx === currentImageIndex }"
-                @click="setActiveImage(img)"
-                :aria-label="`thumb-${idx + 1}`"
-              >
-                <NuxtImg
-                  :src="img"
-                  :alt="product.name + ' thumb ' + (idx + 1)"
-                  loading="lazy"
-                />
-              </button>
-            </div>
+                <button
+                  v-for="(img, idx) in images"
+                  :key="img + idx"
+                  type="button"
+                  class="thumb-btn"
+                  :class="{ active: idx === currentImageIndex }"
+                  @click="setActiveImage(img)"
+                  :aria-label="`thumb-${idx + 1}`"
+                >
+                  <NuxtImg
+                    :src="img"
+                    :alt="product.name + ' thumb ' + (idx + 1)"
+                    loading="lazy"
+                  />
+                </button>
+              </div>
             </template>
 
             <template v-else-if="mediaView === 'video' && youtubeVideoId">
@@ -80,7 +80,14 @@
                   :src="`https://www.youtube.com/embed/${youtubeVideoId}?autoplay=0`"
                   class="detail-video-iframe"
                   title="Video sản phẩm"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allow="
+                    accelerometer;
+                    autoplay;
+                    clipboard-write;
+                    encrypted-media;
+                    gyroscope;
+                    picture-in-picture;
+                  "
                   allowfullscreen
                 />
               </div>
@@ -298,6 +305,9 @@
               <span class="detail-badge-type">
                 {{ (product.type || "tool").toUpperCase() }}
               </span>
+              <span v-if="isOutOfStock" class="detail-badge-out-of-stock">
+                {{ $t("product.outOfStock") || "Hết hàng" }}
+              </span>
             </div>
 
             <h1 class="detail-title">{{ product.name }}</h1>
@@ -337,6 +347,10 @@
                 {{ formatVnd(currentPrice) }}
                 <span class="unit">{{ $t("product.points") }}</span>
               </div>
+              <p v-if="stockForSelected != null" class="buy-stock-hint">
+                {{ $t("product.stockRemaining") || "Còn dư" }}:
+                {{ stockForSelected }}
+              </p>
               <div class="buy-meta-row">
                 <div class="buy-meta-col">
                   <label class="buy-duration-label">Loại key</label>
@@ -358,9 +372,10 @@
                   <input
                     v-model.number="quantity"
                     type="number"
-                    min="1"
-                    max="100"
+                    :min="maxQty >= 1 ? 1 : 0"
+                    :max="maxQty"
                     class="buy-qty-input"
+                    @input="clampQuantity"
                   />
                 </div>
               </div>
@@ -370,6 +385,7 @@
               <button
                 type="button"
                 class="btn-ghost"
+                :disabled="isOutOfStock || buying"
                 @click="addToCart(product)"
               >
                 {{
@@ -381,7 +397,7 @@
               <button
                 type="button"
                 class="btn-primary"
-                :disabled="buying"
+                :disabled="buying || isOutOfStock"
                 @click="openConfirm(product)"
               >
                 {{ buying ? "..." : $t("product.buyNow") }}
@@ -593,11 +609,12 @@ const currentPrice = computed<number>(() => {
   const map = product.value?.duration_prices || {};
   const opts = durationOptions.value;
   if (!opts.length) return Number(product.value?.price || 0);
-  const current = selectedDuration.value && opts.includes(selectedDuration.value)
-    ? selectedDuration.value
-    : opts.includes("2h")
-      ? "2h"
-      : opts[0];
+  const current =
+    selectedDuration.value && opts.includes(selectedDuration.value)
+      ? selectedDuration.value
+      : opts.includes("2h")
+        ? "2h"
+        : opts[0];
   if (!selectedDuration.value || selectedDuration.value !== current) {
     selectedDuration.value = current;
   }
@@ -605,6 +622,41 @@ const currentPrice = computed<number>(() => {
   if (typeof val === "number") return val;
   return Number(product.value?.price || 0);
 });
+
+const durationStock = computed<Record<string, number>>(
+  () => product.value?.duration_stock || {},
+);
+const stockForSelected = computed<number>(() => {
+  const d = selectedDuration.value;
+  if (!d) return 0;
+  const stock = durationStock.value[d];
+  return typeof stock === "number" ? stock : 0;
+});
+const totalStock = computed<number>(() => {
+  const s = durationStock.value;
+  return Object.values(s).reduce((sum, n) => sum + (Number(n) || 0), 0);
+});
+const isOutOfStock = computed<boolean>(
+  () => totalStock.value <= 0 || stockForSelected.value <= 0,
+);
+const maxQty = computed<number>(() => {
+  const s = stockForSelected.value;
+  if (s <= 0) return 0;
+  return Math.min(100, s);
+});
+
+function clampQuantity() {
+  const max = maxQty.value;
+  const q = quantity.value;
+  if (typeof q !== "number" || !Number.isFinite(q) || q < 0) {
+    quantity.value = max >= 1 ? 1 : 0;
+    return;
+  }
+  if (q > max) quantity.value = max;
+}
+
+watch(selectedDuration, () => clampQuantity());
+watch(maxQty, () => clampQuantity());
 
 async function loadProductChatMessages() {
   if (!productChatThreadId.value) return;
@@ -851,12 +903,13 @@ function inCart(p) {
 
 function addToCart(p) {
   if (!p) return;
+  clampQuantity();
   const duration = selectedDuration.value || null;
   const qty = quantity.value || 1;
   const safeQty =
     !Number.isFinite(Number(qty)) || Number(qty) <= 0
       ? 1
-      : Math.min(100, Number(qty));
+      : Math.min(maxQty.value, 100, Number(qty));
 
   add(
     {
@@ -881,12 +934,13 @@ function openConfirm(p) {
     navigateTo(`/login?next=/cart`);
     return;
   }
+  clampQuantity();
   const duration = selectedDuration.value || null;
   const qty = quantity.value || 1;
   const safeQty =
     !Number.isFinite(Number(qty)) || Number(qty) <= 0
       ? 1
-      : Math.min(100, Number(qty));
+      : Math.min(maxQty.value, 100, Number(qty));
 
   // Nút Mua ngay: thêm vào giỏ và chuyển sang trang giỏ hàng
   add(
@@ -947,13 +1001,19 @@ const images = computed(() => {
 function getYoutubeVideoId(url) {
   if (!url || typeof url !== "string") return "";
   const u = url.trim();
-  const m = u.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/);
+  const m = u.match(
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
+  );
   return m ? m[1] : "";
 }
 
-const hasVideo = computed(() => !!getYoutubeVideoId(product.value?.youtube_url));
+const hasVideo = computed(
+  () => !!getYoutubeVideoId(product.value?.youtube_url),
+);
 
-const youtubeVideoId = computed(() => getYoutubeVideoId(product.value?.youtube_url));
+const youtubeVideoId = computed(() =>
+  getYoutubeVideoId(product.value?.youtube_url),
+);
 
 const activeImage = computed(() => {
   return images.value[currentImageIndex.value] || "";
@@ -977,24 +1037,29 @@ function ratingPercent(star) {
   return Math.max(0, Math.min(100, (c / total) * 100));
 }
 
-async function fetchProduct() {
-  loading.value = true;
-  error.value = "";
+async function fetchProduct(opts?: { silent?: boolean }) {
+  const id = Number(route.params.id);
+  const silent = !!opts?.silent;
+  if (!silent) {
+    loading.value = true;
+    error.value = "";
+  }
   try {
-    const id = Number(route.params.id);
-    const res = await $fetch(`/api/products/${id}`);
+    const url = silent ? `/api/products/${id}?refresh=1` : `/api/products/${id}`;
+    const res = await $fetch(url);
     product.value = res?.success ? res.data : null;
-    if (!product.value) {
-      error.value = t("admin.noData");
-    } else {
-      currentImageIndex.value = 0;
-      // Luôn ưu tiên xem ảnh trước khi vào chi tiết
-      mediaView.value = "image";
+    if (!silent) {
+      if (!product.value) {
+        error.value = t("admin.noData");
+      } else {
+        currentImageIndex.value = 0;
+        mediaView.value = "image";
+      }
     }
   } catch (e) {
-    error.value = e?.data?.statusMessage || t("product.loadError");
+    if (!silent) error.value = e?.data?.statusMessage || t("product.loadError");
   } finally {
-    loading.value = false;
+    if (!silent) loading.value = false;
   }
 }
 
@@ -1106,6 +1171,8 @@ async function initUser() {
   }
 }
 
+let autoRefreshTimer: ReturnType<typeof setInterval> | null = null;
+
 onMounted(async () => {
   await Promise.all([
     fetchProduct(),
@@ -1113,6 +1180,9 @@ onMounted(async () => {
     fetchReviews(),
     fetchSimilar(),
   ]);
+  autoRefreshTimer = setInterval(() => {
+    fetchProduct({ silent: true });
+  }, 5000);
   try {
     const res = await $fetch("/api/users/my-admin-contact");
     if (res?.success && res.data) {
@@ -1122,6 +1192,13 @@ onMounted(async () => {
     }
   } catch {
     adminContact.value = null;
+  }
+});
+
+onUnmounted(() => {
+  if (autoRefreshTimer) {
+    clearInterval(autoRefreshTimer);
+    autoRefreshTimer = null;
   }
 });
 
@@ -1227,7 +1304,9 @@ watch(
   color: var(--text-secondary);
   font-size: 0.9rem;
   cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
 }
 
 .media-view-tab:hover {
@@ -1421,6 +1500,16 @@ watch(
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
+.detail-badge-out-of-stock {
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(239, 68, 68, 0.5);
+  color: #fca5a5;
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-left: 8px;
+}
 .detail-title {
   margin: 0 0 8px;
   font-size: 1.55rem;
@@ -1503,6 +1592,10 @@ watch(
 .buy-qty-label {
   font-size: 0.8rem;
   color: var(--text-muted);
+}
+.buy-stock-hint {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
 }
 
 .buy-duration-select,

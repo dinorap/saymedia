@@ -495,7 +495,9 @@
     "inCart": "Đã trong giỏ",
     "gallery": "Ảnh sản phẩm",
     "longDescriptionTitle": "Mô tả chi tiết",
-    "loadError": "Không tải được thông tin sản phẩm"
+    "loadError": "Không tải được thông tin sản phẩm",
+    "outOfStock": "Hết hàng",
+    "stockRemaining": "Còn dư"
   },
   "cart": {
     "title": "Giỏ hàng",

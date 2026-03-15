@@ -49,9 +49,9 @@ export default defineEventHandler(async (event) => {
   const productIds = rows.map((r: any) => r.id).filter((id: any) => id != null);
 
   let durationPricesByProduct: Record<number, Record<string, number>> = {};
+  let durationStockByProduct: Record<number, Record<string, number>> = {};
 
   if (productIds.length) {
-    // Đảm bảo schema bảng product_keys đã tồn tại
     await ensureProductKeySchema();
 
     const [keyRows]: any = await pool.query(
@@ -59,7 +59,8 @@ export default defineEventHandler(async (event) => {
         SELECT
           pk.product_id,
           pk.valid_duration,
-          MIN(pk.price) AS price
+          MIN(pk.price) AS price,
+          COUNT(*) AS stock
         FROM product_keys pk
         WHERE pk.product_id IN (?)
         GROUP BY pk.product_id, pk.valid_duration
@@ -67,15 +68,15 @@ export default defineEventHandler(async (event) => {
       [productIds],
     );
 
-    durationPricesByProduct = keyRows.reduce(
-      (acc: Record<number, Record<string, number>>, row: any) => {
-        const pid = Number(row.product_id);
-        if (!acc[pid]) acc[pid] = {};
-        acc[pid][row.valid_duration] = Number(row.price || 0);
-        return acc;
-      },
-      {},
-    );
+    for (const row of keyRows || []) {
+      const pid = Number(row.product_id);
+      if (!durationPricesByProduct[pid]) {
+        durationPricesByProduct[pid] = {};
+        durationStockByProduct[pid] = {};
+      }
+      durationPricesByProduct[pid][row.valid_duration] = Number(row.price || 0);
+      durationStockByProduct[pid][row.valid_duration] = Number(row.stock || 0);
+    }
   }
 
   const items = rows.map((r: any) => ({
@@ -87,6 +88,7 @@ export default defineEventHandler(async (event) => {
     qty: Number(r.qty || 1),
     duration: r.duration || null,
     duration_prices: durationPricesByProduct[r.id] || {},
+    duration_stock: durationStockByProduct[r.id] || {},
   }));
 
   return {

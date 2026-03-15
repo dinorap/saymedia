@@ -11,6 +11,8 @@ export interface CartItem {
   duration?: string | null;
   /** Bảng giá theo loại key, ví dụ: { "2h": 1000, "1d": 5000 } */
   duration_prices?: Record<string, number>;
+  /** Số key còn theo từng duration (từ API cart/my), ví dụ: { "2h": 30, "12h": 12 } */
+  duration_stock?: Record<string, number>;
 }
 
 export const useCartStore = defineStore("cart", {
@@ -68,8 +70,12 @@ export const useCartStore = defineStore("cart", {
         duration,
       });
     },
-    remove(id: number) {
-      this.items = this.items.filter((p) => p.id !== id);
+    /** Xóa một dòng giỏ: theo id + duration để không xóa nhầm sản phẩm cùng id khác loại key. */
+    remove(id: number, duration?: string | null) {
+      const d = duration ?? null;
+      this.items = this.items.filter(
+        (p) => !(p.id === id && (p.duration ?? null) === d),
+      );
     },
     clear() {
       this.items = [];

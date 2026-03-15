@@ -76,6 +76,12 @@
               </NuxtLink>
               <div class="meta">
                 <span class="type">{{ item.type || "tool" }}</span>
+                <span
+                  v-if="isItemOutOfStock(item)"
+                  class="cart-item-out-of-stock"
+                >
+                  {{ $t("product.outOfStock") || "Hết hàng" }}
+                </span>
               </div>
             </div>
             <div class="price">
@@ -83,10 +89,15 @@
               <span class="unit">{{ $t("product.points") }}</span>
             </div>
             <div class="actions">
+              <p v-if="getItemStock(item) != null" class="actions-stock-hint">
+                {{ $t("product.stockRemaining") || "Còn dư" }}:
+                {{ getItemStock(item) }}
+              </p>
               <label class="actions-label">Loại key</label>
               <select
                 class="actions-select"
                 v-model="item.duration"
+                @change="onChangeQty(item)"
               >
                 <option
                   v-for="opt in getDurationOptions(item)"
@@ -101,9 +112,10 @@
               <input
                 v-model.number="item.qty"
                 type="number"
-                min="1"
-                max="100"
+                :min="getItemMaxQty(item) >= 1 ? 1 : 0"
+                :max="getItemMaxQty(item)"
                 class="actions-qty-input"
+                @input="clampItemQty(item)"
                 @change="onChangeQty(item)"
                 @blur="onChangeQty(item)"
               />
@@ -111,13 +123,14 @@
               <button
                 type="button"
                 class="btn-danger"
-                @click="remove(item.id)"
+                @click="remove(item.id, item.duration)"
               >
                 {{ $t("cart.remove") }}
               </button>
               <button
                 type="button"
                 class="btn-primary"
+                :disabled="isItemOutOfStock(item)"
                 @click="buySingle(item)"
               >
                 {{ $t("auth.getStarted") }}
@@ -143,7 +156,7 @@
           <button
             type="button"
             class="btn-primary summary-btn"
-            :disabled="!selectedItems.length"
+            :disabled="!selectedItems.length || hasSelectedOutOfStock"
             @click="checkoutSelected"
           >
             {{ $t("cart.checkoutSelected") }}
@@ -208,6 +221,7 @@
 <script setup>
 import { defineAsyncComponent } from "vue";
 import SiteHeader from "~/components/SiteHeader.vue";
+import { useCartStore } from "~/stores/cart";
 const ConfirmPurchaseModal = defineAsyncComponent(
   () => import("~/components/product/ConfirmPurchaseModal.vue"),
 );
@@ -215,6 +229,7 @@ const ConfirmPurchaseModal = defineAsyncComponent(
 const { locale, t } = useI18n();
 const { show: showToast } = useToast();
 const { cart, remove, clear, total } = useCart();
+const cartStore = useCartStore();
 
 const currentUser = ref(null);
 const showConfirm = ref(false);
@@ -231,6 +246,10 @@ function itemKey(item) {
 
 const selectedItems = computed(() =>
   cart.value.filter((item) => selected.value[itemKey(item)]),
+);
+
+const hasSelectedOutOfStock = computed(() =>
+  selectedItems.value.some((item) => isItemOutOfStock(item)),
 );
 
 function getCurrentDuration(item) {
@@ -348,19 +367,52 @@ function formatDuration(v) {
   return v;
 }
 
+function getItemStock(item) {
+  const stock = item?.duration_stock?.[item?.duration];
+  return typeof stock === "number" ? stock : null;
+}
+
+function getItemMaxQty(item) {
+  const stock = item?.duration_stock?.[item?.duration];
+  if (typeof stock !== "number") return 100;
+  if (stock <= 0) return 0;
+  return Math.min(100, stock);
+}
+
+function isItemOutOfStock(item) {
+  const stock = item?.duration_stock?.[item?.duration];
+  if (typeof stock !== "number") return false;
+  return stock <= 0;
+}
+
+function clampItemQty(item) {
+  const max = getItemMaxQty(item);
+  let q = Number(item.qty);
+  if (typeof q !== "number" || !Number.isFinite(q) || q < 0) {
+    item.qty = max >= 1 ? 1 : 0;
+    return;
+  }
+  if (q > max) item.qty = max;
+}
+
 async function onChangeQty(item) {
-  let q = Number(item.qty || 1);
-  if (!Number.isFinite(q) || q <= 0) q = 1;
-  if (q > 100) q = 100;
-  item.qty = q;
+  clampItemQty(item);
+  const q = Number(item.qty ?? 0);
+  const max = getItemMaxQty(item);
+  const safeQty = max >= 1 ? Math.max(1, Math.min(q, max)) : 0;
+  item.qty = safeQty;
 
   if (process.client) {
     const role = useCookie("user_role", { path: "/" }).value;
-    if (role === "user") {
+    if (role === "user" && safeQty >= 1) {
       try {
         await $fetch("/api/cart/add", {
           method: "POST",
-          body: { product_id: item.id, qty: q, duration: item.duration || null },
+          body: {
+            product_id: item.id,
+            qty: safeQty,
+            duration: item.duration || null,
+          },
         });
       } catch {
         // ignore sync error
@@ -448,7 +500,7 @@ async function confirmCheckoutAll() {
           },
         });
         ok++;
-        remove(item.id);
+        remove(item.id, item.duration);
         if (currentUser.value && typeof res?.newCredit === "number") {
           currentUser.value.credit = res.newCredit;
         }
@@ -481,7 +533,7 @@ async function doPurchase(payload) {
       body: { product_id: p.id, duration, quantity },
     });
     showToast(t("cart.purchaseSuccessHistory"), "success");
-    remove(p.id);
+    remove(p.id, p.duration ?? duration);
     if (currentUser.value && typeof res?.newCredit === "number") {
       currentUser.value.credit = res.newCredit;
     }
@@ -490,7 +542,30 @@ async function doPurchase(payload) {
   }
 }
 
-onMounted(initUser);
+let autoRefreshTimer: ReturnType<typeof setInterval> | null = null;
+
+onMounted(() => {
+  initUser();
+  autoRefreshTimer = setInterval(async () => {
+    const role = useCookie("user_role", { path: "/" }).value;
+    if (role !== "user") return;
+    try {
+      const res = await $fetch("/api/cart/my");
+      if (res?.success && Array.isArray(res.items)) {
+        cartStore.setItems(res.items);
+      }
+    } catch {
+      // silent
+    }
+  }, 5000);
+});
+
+onUnmounted(() => {
+  if (autoRefreshTimer) {
+    clearInterval(autoRefreshTimer);
+    autoRefreshTimer = null;
+  }
+});
 </script>
 
 <style scoped>
@@ -571,7 +646,7 @@ onMounted(initUser);
 }
 .cart-item {
   display: grid;
-  grid-template-columns: 32px 64px minmax(0, 1fr) 160px 380px;
+  grid-template-columns: 32px 64px minmax(0, 1fr) 160px 420px;
   gap: 14px;
   align-items: center;
   padding: 14px;
@@ -641,6 +716,17 @@ onMounted(initUser);
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
+.cart-item-out-of-stock {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(239, 68, 68, 0.5);
+  color: #fca5a5;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
 .price {
   font-weight: 700;
   font-size: 1rem;
@@ -663,6 +749,11 @@ onMounted(initUser);
   font-size: 0.8rem;
   color: var(--text-muted);
   white-space: nowrap;
+}
+.actions-stock-hint {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
 }
 
 .actions-select {

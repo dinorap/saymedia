@@ -102,9 +102,12 @@ const toDate = ref("");
 const exporting = ref(false);
 let filterTimer = null;
 
-async function loadHistory() {
-  loading.value = true;
-  error.value = "";
+async function loadHistory(opts) {
+  const silent = !!opts?.silent;
+  if (!silent) {
+    loading.value = true;
+    error.value = "";
+  }
   try {
     const params = new URLSearchParams();
     params.set("limit", "200");
@@ -118,12 +121,14 @@ async function loadHistory() {
       items.value = [];
     }
   } catch (e) {
-    error.value =
-      e?.data?.statusMessage ||
-      t("payment.history.loadError") ||
-      "Không lấy được lịch sử nạp";
+    if (!silent) {
+      error.value =
+        e?.data?.statusMessage ||
+        t("payment.history.loadError") ||
+        "Không lấy được lịch sử nạp";
+    }
   } finally {
-    loading.value = false;
+    if (!silent) loading.value = false;
   }
 }
 
@@ -158,14 +163,29 @@ async function exportCsv() {
   }
 }
 
+let autoRefreshTimer = null;
+
 watch(
   () => props.modelValue,
   (val) => {
     if (val) {
-      loadHistory();
+      loadHistory({});
+      autoRefreshTimer = setInterval(() => loadHistory({ silent: true }), 5000);
+    } else {
+      if (autoRefreshTimer) {
+        clearInterval(autoRefreshTimer);
+        autoRefreshTimer = null;
+      }
     }
   },
 );
+
+onUnmounted(() => {
+  if (autoRefreshTimer) {
+    clearInterval(autoRefreshTimer);
+    autoRefreshTimer = null;
+  }
+});
 
 watch(
   () => [fromDate.value, toDate.value],
@@ -392,4 +412,3 @@ function formatDate(val) {
   font-size: 0.9rem;
 }
 </style>
-

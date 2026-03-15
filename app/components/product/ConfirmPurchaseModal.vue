@@ -31,9 +31,10 @@
           <input
             v-model.number="selectedQuantity"
             type="number"
-            min="1"
-            max="100"
+            :min="1"
+            :max="maxQuantity"
             class="cpm-qty-input"
+            @input="clampQuantity"
           />
         </div>
         <footer class="cpm-footer">
@@ -91,15 +92,37 @@ function getDefaultDuration() {
 const selectedDuration = ref(getDefaultDuration());
 const selectedQuantity = ref(Math.max(1, props.quantity || 1));
 
+const maxQuantity = computed(() => {
+  const stock = props.product?.duration_stock?.[selectedDuration.value];
+  if (typeof stock !== "number") return 100;
+  if (stock <= 0) return 1;
+  return Math.min(100, stock);
+});
+
+function clampQuantity() {
+  let q = selectedQuantity.value;
+  if (typeof q !== "number" || !Number.isFinite(q) || q < 1) {
+    selectedQuantity.value = 1;
+    return;
+  }
+  if (q > maxQuantity.value) selectedQuantity.value = maxQuantity.value;
+}
+
 watch(
   () => props.modelValue,
   (val) => {
     if (val) {
-      selectedDuration.value = getDefaultDuration();
-      selectedQuantity.value = Math.max(1, props.quantity || 1);
+      const defDur = getDefaultDuration();
+      selectedDuration.value = defDur;
+      const stock = props.product?.duration_stock?.[defDur];
+      const max =
+        typeof stock === "number" && stock > 0 ? Math.min(100, stock) : 1;
+      const q = Math.max(1, props.quantity || 1);
+      selectedQuantity.value = Math.min(q, max);
     }
   },
 );
+watch([selectedDuration, maxQuantity], () => clampQuantity());
 
 function formatVnd(v) {
   return (Number(v) || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
@@ -121,13 +144,15 @@ const totalPrice = computed(() => {
 
 function confirm() {
   if (!props.product) return;
+  clampQuantity();
   const qty = selectedQuantity.value && selectedQuantity.value > 0 ? selectedQuantity.value : 1;
+  const safeQty = Math.min(qty, maxQuantity.value);
   emit("update:modelValue", false);
-  emit("update:quantity", qty);
+  emit("update:quantity", safeQty);
   emit("confirm", {
     product: props.product,
     duration: selectedDuration.value,
-    quantity: qty,
+    quantity: safeQty,
   });
 }
 </script>

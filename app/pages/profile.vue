@@ -194,16 +194,16 @@ import { defineAsyncComponent } from "vue";
 import { useI18n } from "vue-i18n";
 import SiteHeader from "~/components/SiteHeader.vue";
 const PaymentModal = defineAsyncComponent(
-  () => import("~/components/payment/PaymentModal.vue")
+  () => import("~/components/payment/PaymentModal.vue"),
 );
 const PaymentHistoryModal = defineAsyncComponent(
-  () => import("~/components/payment/PaymentHistoryModal.vue")
+  () => import("~/components/payment/PaymentHistoryModal.vue"),
 );
 const OrderHistoryModal = defineAsyncComponent(
-  () => import("~/components/OrderHistoryModal.vue")
+  () => import("~/components/OrderHistoryModal.vue"),
 );
 const CreditLedgerModal = defineAsyncComponent(
-  () => import("~/components/CreditLedgerModal.vue")
+  () => import("~/components/CreditLedgerModal.vue"),
 );
 const { t, locale, setLocale } = useI18n();
 const { show: showToast } = useToast();
@@ -229,21 +229,25 @@ const pwForm = reactive({
 const pwError = ref("");
 const pwSaving = ref(false);
 
-async function loadProfile() {
+async function loadProfile(opts) {
+  const silent = !!opts?.silent;
+  if (!silent) loading.value = true;
   try {
     const data = await $fetch("/api/auth/me");
     if (data?.success && data.user) {
       user.value = data.user;
     } else {
-      errorMessage.value = t("auth.unauthorized") || "Vui lòng đăng nhập lại";
+      if (!silent) errorMessage.value = t("auth.unauthorized") || "Vui lòng đăng nhập lại";
     }
   } catch (e) {
-    errorMessage.value =
-      e?.data?.statusMessage ||
-      t("auth.unauthorized") ||
-      "Vui lòng đăng nhập lại";
+    if (!silent) {
+      errorMessage.value =
+        e?.data?.statusMessage ||
+        t("auth.unauthorized") ||
+        "Vui lòng đăng nhập lại";
+    }
   } finally {
-    loading.value = false;
+    if (!silent) loading.value = false;
   }
 }
 
@@ -265,9 +269,24 @@ async function loadQuickStats() {
   }
 }
 
+let autoRefreshTimer = null;
+
 onMounted(async () => {
-  await loadProfile();
+  await loadProfile({});
   await loadQuickStats();
+  autoRefreshTimer = setInterval(async () => {
+    if (user.value) {
+      await loadProfile({ silent: true });
+      await loadQuickStats();
+    }
+  }, 5000);
+});
+
+onUnmounted(() => {
+  if (autoRefreshTimer) {
+    clearInterval(autoRefreshTimer);
+    autoRefreshTimer = null;
+  }
 });
 
 function formatVnd(v) {
@@ -528,7 +547,7 @@ async function submitChangePassword() {
   color: var(--text-primary);
   border-radius: 1rem;
   padding: 2rem;
-   background: rgba(5, 15, 35, 0.96);
+  background: rgba(5, 15, 35, 0.96);
   box-shadow: var(--neon-shadow);
   border: 1px solid rgba(255, 255, 255, 0.06);
 }

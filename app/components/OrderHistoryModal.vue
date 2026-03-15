@@ -51,11 +51,7 @@
                     {{ o.note || "-" }}
                   </td>
                   <td class="history-note">
-                    {{
-                      o.refund_reason ||
-                      o.refund_request_reason ||
-                      "-"
-                    }}
+                    {{ o.refund_reason || o.refund_request_reason || "-" }}
                   </td>
                   <td class="history-link-cell">
                     <a
@@ -92,7 +88,9 @@
 
         <footer class="history-footer">
           <div v-if="refundTarget" class="refund-box">
-            <p class="refund-title">Yêu cầu hoàn tiền đơn #{{ refundTarget.id }}</p>
+            <p class="refund-title">
+              Yêu cầu hoàn tiền đơn #{{ refundTarget.id }}
+            </p>
             <textarea
               v-model="refundReason"
               class="refund-textarea"
@@ -100,13 +98,19 @@
               placeholder="Nhập lý do hoàn tiền"
             />
             <div class="refund-actions">
-              <button type="button" class="btn-secondary" @click="closeRefundModal">
+              <button
+                type="button"
+                class="btn-secondary"
+                @click="closeRefundModal"
+              >
                 {{ $t("admin.cancel") }}
               </button>
               <button
                 type="button"
                 class="btn-secondary refund-confirm"
-                :disabled="requestingId === refundTarget.id || !refundReason.trim()"
+                :disabled="
+                  requestingId === refundTarget.id || !refundReason.trim()
+                "
                 @click="submitRefundRequest"
               >
                 {{ requestingId === refundTarget.id ? "..." : "Gửi yêu cầu" }}
@@ -142,9 +146,12 @@ const refundTarget = ref(null);
 const refundReason = ref("");
 const requestingId = ref(null);
 
-async function loadHistory() {
-  loading.value = true;
-  error.value = "";
+async function loadHistory(opts) {
+  const silent = !!opts?.silent;
+  if (!silent) {
+    loading.value = true;
+    error.value = "";
+  }
   try {
     const res = await $fetch("/api/orders/my");
     if (res?.success && Array.isArray(res.data)) {
@@ -153,23 +160,40 @@ async function loadHistory() {
       items.value = [];
     }
   } catch (e) {
-    error.value =
-      e?.data?.statusMessage ||
-      t("payment.history.loadError") ||
-      "Không lấy được lịch sử đơn hàng";
+    if (!silent) {
+      error.value =
+        e?.data?.statusMessage ||
+        t("payment.history.loadError") ||
+        "Không lấy được lịch sử đơn hàng";
+    }
   } finally {
-    loading.value = false;
+    if (!silent) loading.value = false;
   }
 }
+
+let autoRefreshTimer = null;
 
 watch(
   () => props.modelValue,
   (val) => {
     if (val) {
-      loadHistory();
+      loadHistory({});
+      autoRefreshTimer = setInterval(() => loadHistory({ silent: true }), 5000);
+    } else {
+      if (autoRefreshTimer) {
+        clearInterval(autoRefreshTimer);
+        autoRefreshTimer = null;
+      }
     }
   },
 );
+
+onUnmounted(() => {
+  if (autoRefreshTimer) {
+    clearInterval(autoRefreshTimer);
+    autoRefreshTimer = null;
+  }
+});
 
 function handleClose() {
   emit("update:modelValue", false);
@@ -461,4 +485,3 @@ async function submitRefundRequest() {
   flex-shrink: 0;
 }
 </style>
-

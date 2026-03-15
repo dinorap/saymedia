@@ -10,8 +10,11 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: "Sản phẩm không hợp lệ" });
   }
 
-  const cached = cacheGet<{ success: true; data: any }>(PRODUCT_DETAIL_KEY(id));
-  if (cached) return cached;
+  const skipCache = !!getQuery(event).refresh;
+  if (!skipCache) {
+    const cached = cacheGet<{ success: true; data: any }>(PRODUCT_DETAIL_KEY(id));
+    if (cached) return cached;
+  }
 
   const [rows]: any = await pool.query(
     `
@@ -52,14 +55,15 @@ export default defineEventHandler(async (event) => {
 
   delete product.images_json;
 
-  // Lấy thêm thông tin giá theo từng loại key (thời hạn) của sản phẩm này
+  // Lấy thêm giá và số lượng tồn theo từng loại key (thời hạn)
   await ensureProductKeySchema();
-  const [priceRows]: any = await pool.query(
+  const [keyRows]: any = await pool.query(
     `
       SELECT
         product_id,
         valid_duration,
-        MIN(price) AS price
+        MIN(price) AS price,
+        COUNT(*) AS stock
       FROM product_keys
       WHERE product_id = ?
       GROUP BY product_id, valid_duration
@@ -68,8 +72,11 @@ export default defineEventHandler(async (event) => {
   );
 
   const durationPrices: Record<string, number> = {};
-  for (const row of priceRows || []) {
-    durationPrices[String(row.valid_duration)] = Number(row.price) || 0;
+  const durationStock: Record<string, number> = {};
+  for (const row of keyRows || []) {
+    const d = String(row.valid_duration);
+    durationPrices[d] = Number(row.price) || 0;
+    durationStock[d] = Number(row.stock) || 0;
   }
 
   const result = {
@@ -78,9 +85,10 @@ export default defineEventHandler(async (event) => {
       ...product,
       images,
       duration_prices: durationPrices,
+      duration_stock: durationStock,
     },
   };
-  cacheSet(PRODUCT_DETAIL_KEY(id), result, CACHE_TTL);
+  if (!skipCache) cacheSet(PRODUCT_DETAIL_KEY(id), result, CACHE_TTL);
   return result;
 });
 

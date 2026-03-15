@@ -9,7 +9,9 @@
         <div class="body">
           <div class="toolbar">
             <div class="filter-group">
-              <label>{{ $t("admin.transactionType") || "Loại giao dịch" }}</label>
+              <label>{{
+                $t("admin.transactionType") || "Loại giao dịch"
+              }}</label>
               <select v-model="typeFilter">
                 <option value="">{{ $t("admin.all") || "Tất cả" }}</option>
                 <option value="deposit">Nạp tiền</option>
@@ -28,14 +30,21 @@
               <input v-model="toDate" type="date" />
             </div>
             <div class="actions">
-              <button class="btn btn-export" type="button" @click="exportCsv" :disabled="exporting">
+              <button
+                class="btn btn-export"
+                type="button"
+                @click="exportCsv"
+                :disabled="exporting"
+              >
                 {{ exporting ? "Đang xuất..." : "Xuất CSV" }}
               </button>
             </div>
           </div>
 
           <div v-if="loading" class="state">{{ $t("admin.loading") }}</div>
-          <div v-else-if="!items.length" class="state">{{ $t("admin.noData") }}</div>
+          <div v-else-if="!items.length" class="state">
+            {{ $t("admin.noData") }}
+          </div>
           <table v-else class="data-table">
             <thead>
               <tr>
@@ -51,9 +60,13 @@
                 <td>#{{ row.id }}</td>
                 <td>{{ row.transaction_type }}</td>
                 <td :class="Number(row.delta) >= 0 ? 'up' : 'down'">
-                  {{ Number(row.delta) >= 0 ? "+" : "" }}{{ formatVnd(row.delta) }}
+                  {{ Number(row.delta) >= 0 ? "+" : ""
+                  }}{{ formatVnd(row.delta) }}
                 </td>
-                <td>{{ formatVnd(row.balance_before) }} → {{ formatVnd(row.balance_after) }}</td>
+                <td>
+                  {{ formatVnd(row.balance_before) }} →
+                  {{ formatVnd(row.balance_after) }}
+                </td>
                 <td>{{ formatDate(row.created_at) }}</td>
               </tr>
             </tbody>
@@ -78,17 +91,33 @@ const fromDate = ref("");
 const toDate = ref("");
 let filterTimer = null;
 
+let autoRefreshTimer = null;
+
 watch(
   () => props.modelValue,
   (v) => {
     if (v) {
-      fetchData();
+      fetchData({});
+      autoRefreshTimer = setInterval(() => fetchData({ silent: true }), 5000);
+    } else {
+      if (autoRefreshTimer) {
+        clearInterval(autoRefreshTimer);
+        autoRefreshTimer = null;
+      }
     }
   },
 );
 
-async function fetchData() {
-  loading.value = true;
+onUnmounted(() => {
+  if (autoRefreshTimer) {
+    clearInterval(autoRefreshTimer);
+    autoRefreshTimer = null;
+  }
+});
+
+async function fetchData(opts) {
+  const silent = !!opts?.silent;
+  if (!silent) loading.value = true;
   try {
     const params = new URLSearchParams();
     params.set("limit", "200");
@@ -99,9 +128,9 @@ async function fetchData() {
     const res = await $fetch(`/api/credit-ledger/my?${params.toString()}`);
     items.value = Array.isArray(res?.data) ? res.data : [];
   } catch {
-    items.value = [];
+    if (!silent) items.value = [];
   } finally {
-    loading.value = false;
+    if (!silent) loading.value = false;
   }
 }
 
@@ -158,9 +187,10 @@ function formatVnd(v) {
 
 function formatDate(val) {
   if (!val) return "-";
-  const d = typeof val === "string" && val.includes(" ")
-    ? new Date(val.replace(" ", "T") + "Z")
-    : new Date(val);
+  const d =
+    typeof val === "string" && val.includes(" ")
+      ? new Date(val.replace(" ", "T") + "Z")
+      : new Date(val);
   return d.toLocaleString("vi-VN", {
     timeZone: "Asia/Ho_Chi_Minh",
     year: "numeric",
@@ -173,22 +203,114 @@ function formatDate(val) {
 </script>
 
 <style scoped>
-.overlay { position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 1000; display: flex; justify-content: center; align-items: center; padding: 1rem; }
-.modal { width: min(960px, 95vw); max-height: 88vh; overflow: hidden; display: flex; flex-direction: column; }
-.head { display: flex; justify-content: space-between; align-items: center; padding: 1rem; border-bottom: 1px solid rgba(1,123,251,.2); }
-.head h3 { margin: 0; }
-.close-btn { background: transparent; border: 0; color: var(--text-secondary); font-size: 1.5rem; cursor: pointer; }
-.body { padding: 1rem; overflow: auto; display: flex; flex-direction: column; gap: .75rem; }
-.toolbar { display: flex; flex-wrap: wrap; gap: .5rem .75rem; align-items: flex-end; margin-bottom: .25rem; }
-.filter-group { display: flex; flex-direction: column; gap: .25rem; font-size: .8rem; color: var(--text-secondary); }
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 1000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1rem;
+}
+.modal {
+  width: min(960px, 95vw);
+  max-height: 88vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  border-bottom: 1px solid rgba(1, 123, 251, 0.2);
+}
+.head h3 {
+  margin: 0;
+}
+.close-btn {
+  background: transparent;
+  border: 0;
+  color: var(--text-secondary);
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+.body {
+  padding: 1rem;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+  align-items: flex-end;
+  margin-bottom: 0.25rem;
+}
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
 .filter-group select,
-.filter-group input[type="date"] { min-width: 140px; padding: .35rem .55rem; border-radius: 6px; border: 1px solid var(--input-border); background: var(--input-bg); color: var(--text-primary); font-size: .85rem; }
-.actions { display: flex; gap: .5rem; margin-left: auto; }
-.btn { padding: .4rem .8rem; border-radius: 999px; border: 1px solid rgba(1,123,251,.4); background: rgba(1,123,251,.15); color: #fff; font-size: .8rem; cursor: pointer; }
-.btn-export { background: rgba(34,197,94,.18); border-color: rgba(34,197,94,.5); }
-.state { text-align: center; padding: 2rem; color: var(--text-muted); }
-.data-table { width: 100%; border-collapse: collapse; font-size: .9rem; }
-.data-table th,.data-table td { padding: .65rem .75rem; border-bottom: 1px solid rgba(1,123,251,.15); text-align: left; }
-.data-table th { color: var(--text-secondary); text-transform: uppercase; font-size: .78rem; }
-.up { color: #27ae60; } .down { color: #ff6b6b; }
+.filter-group input[type="date"] {
+  min-width: 140px;
+  padding: 0.35rem 0.55rem;
+  border-radius: 6px;
+  border: 1px solid var(--input-border);
+  background: var(--input-bg);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+}
+.actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+.btn {
+  padding: 0.4rem 0.8rem;
+  border-radius: 999px;
+  border: 1px solid rgba(1, 123, 251, 0.4);
+  background: rgba(1, 123, 251, 0.15);
+  color: #fff;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.btn-export {
+  background: rgba(34, 197, 94, 0.18);
+  border-color: rgba(34, 197, 94, 0.5);
+}
+.state {
+  text-align: center;
+  padding: 2rem;
+  color: var(--text-muted);
+}
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+.data-table th,
+.data-table td {
+  padding: 0.65rem 0.75rem;
+  border-bottom: 1px solid rgba(1, 123, 251, 0.15);
+  text-align: left;
+}
+.data-table th {
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  font-size: 0.78rem;
+}
+.up {
+  color: #27ae60;
+}
+.down {
+  color: #ff6b6b;
+}
 </style>
