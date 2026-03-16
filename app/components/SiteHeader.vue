@@ -432,16 +432,16 @@ function nextPopupImage() {
   justify-content: space-between;
   align-items: center;
   padding: 16px 150px;
-  border-bottom: 1px solid rgba(1, 123, 251, 0.25);
+  border-bottom: 1px solid var(--blue-border);
   background: linear-gradient(
     180deg,
-    rgba(4, 15, 39, 0.65),
-    rgba(4, 15, 39, 0.35)
+    rgba(4, 15, 39, 0.72),
+    rgba(4, 15, 39, 0.4)
   );
   backdrop-filter: blur(18px);
   box-shadow:
     0 8px 32px rgba(0, 0, 0, 0.45),
-    0 0 30px rgba(1, 123, 251, 0.14);
+    0 0 30px var(--blue-glow);
 }
 
 .site-logo {
@@ -476,10 +476,10 @@ function nextPopupImage() {
 
 .site-nav-links a:hover {
   color: var(--blue-bright);
-  background: rgba(1, 123, 251, 0.1);
+  background: var(--blue-soft);
   text-shadow:
     0 0 15px var(--blue-glow),
-    0 0 30px rgba(1, 123, 251, 0.4);
+    0 0 30px var(--blue-glow);
 }
 
 .site-auth-buttons {
@@ -496,15 +496,15 @@ function nextPopupImage() {
   padding: 10px 14px;
   border-radius: 10px;
   text-decoration: none;
-  border: 1px solid rgba(1, 123, 251, 0.35);
+  border: 1px solid var(--blue-border);
   background: rgba(255, 255, 255, 0.04);
   color: var(--text-primary);
   transition: var(--transition-fast);
 }
 
 .site-cart-btn:hover {
-  border-color: rgba(1, 123, 251, 0.55);
-  box-shadow: 0 0 18px rgba(1, 123, 251, 0.18);
+  border-color: var(--blue-bright);
+  box-shadow: 0 0 18px var(--blue-glow);
 }
 
 .site-cart-icon {
@@ -532,7 +532,7 @@ function nextPopupImage() {
   justify-content: center;
   font-size: 12px;
   font-weight: 700;
-  box-shadow: 0 0 14px rgba(1, 123, 251, 0.35);
+  box-shadow: 0 0 14px var(--blue-glow);
 }
 
 .site-lang-switcher {
@@ -561,7 +561,7 @@ function nextPopupImage() {
   color: var(--blue-bright);
   text-shadow:
     0 0 12px var(--blue-glow),
-    0 0 25px rgba(1, 123, 251, 0.5);
+    0 0 25px var(--blue-glow);
 }
 
 .site-lang-sep {
@@ -583,8 +583,8 @@ function nextPopupImage() {
 .site-btn-login {
   background: transparent;
   color: var(--text-primary);
-  border: 1px solid rgba(1, 123, 251, 0.5);
-  box-shadow: 0 0 15px rgba(1, 123, 251, 0.2);
+  border: 1px solid var(--blue-border);
+  box-shadow: 0 0 15px var(--blue-glow);
 }
 
 .site-btn-login:hover {
@@ -593,7 +593,7 @@ function nextPopupImage() {
   color: var(--blue-bright);
   box-shadow:
     0 0 25px var(--blue-glow),
-    0 0 50px rgba(1, 123, 251, 0.25);
+    0 0 50px var(--blue-glow);
 }
 
 .site-user-dropdown {
@@ -603,7 +603,7 @@ function nextPopupImage() {
 .site-btn-user-name {
   background: transparent;
   color: var(--text-primary);
-  border: 1px solid rgba(1, 123, 251, 0.5);
+  border: 1px solid var(--blue-border);
 }
 
 .site-btn-user-name:hover {
@@ -639,11 +639,11 @@ function nextPopupImage() {
 
 .site-user-dropdown-menu-inner {
   background: var(--bg-nav);
-  border: 1px solid rgba(1, 123, 251, 0.5);
+  border: 1px solid var(--blue-border);
   border-radius: 10px;
   box-shadow:
     0 10px 40px rgba(0, 0, 0, 0.45),
-    0 0 20px rgba(1, 123, 251, 0.08);
+    0 0 20px var(--blue-glow);
   overflow: hidden;
 }
 
@@ -669,7 +669,7 @@ function nextPopupImage() {
 }
 
 .site-dropdown-item:hover {
-  background: rgba(1, 123, 251, 0.15);
+  background: var(--blue-soft);
   color: var(--blue-bright);
 }
 

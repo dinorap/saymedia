@@ -282,6 +282,12 @@
     "annDeleted": "Đã xóa thông báo.",
     "productKeys": "Key sản phẩm",
     "supportChat": "Chat hỗ trợ",
+    "theme": "Chủ đề",
+    "themeDefault": "Mặc định",
+    "themeSpring": "Xuân",
+    "themeSummer": "Hạ",
+    "themeAutumn": "Thu",
+    "themeWinter": "Đông",
     "sort": "Sắp xếp",
     "sortNewest": "Mới nhất",
     "sortOldest": "Cũ nhất",
@@ -333,7 +339,6 @@
     "revenueCompletedCount": "Hoàn thành",
     "revenueCompletedRevenue": "Doanh thu hoàn thành",
     "revenueTotalDepositAmount": "Tổng nạp thành công",
-    "revenueRatio": "Tỉ lệ doanh thu",
     "keyDuration": "Thời hạn key"
   },
   "announcements": {

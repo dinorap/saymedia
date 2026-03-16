@@ -282,6 +282,12 @@
     "annDeleted": "Announcement deleted.",
     "productKeys": "Product keys",
     "supportChat": "Support chat",
+    "theme": "Theme",
+    "themeDefault": "Default",
+    "themeSpring": "Spring",
+    "themeSummer": "Summer",
+    "themeAutumn": "Autumn",
+    "themeWinter": "Winter",
     "sort": "Sort",
     "sortNewest": "Newest",
     "sortOldest": "Oldest",
@@ -333,7 +339,6 @@
     "revenueCompletedCount": "Completed",
     "revenueCompletedRevenue": "Completed revenue",
     "revenueTotalDepositAmount": "Total deposits",
-    "revenueRatio": "Revenue ratio",
     "keyDuration": "Key duration"
   },
   "announcements": {

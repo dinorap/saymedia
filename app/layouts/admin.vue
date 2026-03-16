@@ -158,6 +158,42 @@
               VI
             </button>
           </div>
+          <div class="admin-theme-switcher">
+            <button
+              type="button"
+              class="admin-theme-btn"
+              @click="toggleThemeMenu"
+            >
+              <span class="admin-theme-dot" />
+              <span class="admin-theme-label">
+                {{
+                  siteTheme === "spring"
+                    ? t("admin.themeSpring")
+                    : siteTheme === "summer"
+                      ? t("admin.themeSummer")
+                      : siteTheme === "autumn"
+                        ? t("admin.themeAutumn")
+                        : siteTheme === "winter"
+                          ? t("admin.themeWinter")
+                          : t("admin.themeDefault")
+                }}
+              </span>
+              <span class="admin-theme-chevron" aria-hidden="true">▾</span>
+            </button>
+            <div v-if="showThemeMenu" class="admin-theme-menu">
+              <button
+                v-for="opt in themeOptions"
+                :key="opt.value"
+                type="button"
+                class="admin-theme-option"
+                :class="{ active: siteTheme === opt.value }"
+                @click="selectTheme(opt.value)"
+              >
+                <span class="admin-theme-option-dot" :data-theme-dot="opt.value" />
+                <span>{{ opt.label }}</span>
+              </button>
+            </div>
+          </div>
         </div>
       </header>
       <main class="admin-content">
@@ -234,6 +270,15 @@ const { show: showToast } = useToast();
 
 const currentUser = ref(null);
 const sidebarCollapsed = ref(false);
+const siteTheme = ref("default");
+const showThemeMenu = ref(false);
+const themeOptions = computed(() => [
+  { value: "default", label: t("admin.themeDefault") },
+  { value: "spring", label: t("admin.themeSpring") },
+  { value: "summer", label: t("admin.themeSummer") },
+  { value: "autumn", label: t("admin.themeAutumn") },
+  { value: "winter", label: t("admin.themeWinter") },
+]);
 const showChangePassword = ref(false);
 const pwForm = reactive({
   oldPassword: "",
@@ -264,11 +309,51 @@ onMounted(async () => {
       if (res.user.contact_info) {
         contactInfo.value = String(res.user.contact_info || "");
       }
+      const uiTheme = res.user && typeof res.user.ui_theme !== "undefined"
+        ? res.user.ui_theme
+        : null;
+      if (typeof uiTheme === "string" && uiTheme) {
+        siteTheme.value = uiTheme;
+        applyTheme(uiTheme);
+      } else {
+        applyTheme("default");
+      }
     }
   } catch {
     currentUser.value = null;
   }
 });
+
+function toggleThemeMenu() {
+  showThemeMenu.value = !showThemeMenu.value;
+}
+
+function selectTheme(theme) {
+  applyTheme(theme);
+  showThemeMenu.value = false;
+}
+
+function applyTheme(theme) {
+  if (!import.meta.client) return;
+  const v = String(theme || "default");
+  const allowed = new Set(["default", "spring", "summer", "autumn", "winter"]);
+  const finalTheme = allowed.has(v) ? v : "default";
+  siteTheme.value = finalTheme;
+  const el = document.documentElement;
+  if (finalTheme === "default") {
+    delete el.dataset.theme;
+  } else {
+    el.dataset.theme = finalTheme;
+  }
+  try {
+    window.localStorage.setItem("site_theme", finalTheme);
+  } catch {}
+  // Lưu lên server cho admin
+  $fetch("/api/admin/profile/theme", {
+    method: "POST",
+    body: { theme: finalTheme },
+  }).catch(() => {});
+}
 
 function toggleSidebar() {
   sidebarCollapsed.value = !sidebarCollapsed.value;

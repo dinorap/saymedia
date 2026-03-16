@@ -12,7 +12,16 @@ export default defineEventHandler(async (event) => {
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as { id: number; username: string; role: string; admin_id?: number }
-    const user: { id: number; username: string; role: string; admin_id?: number; email?: string; credit?: number; ref_code?: string } = {
+    const user: {
+      id: number;
+      username: string;
+      role: string;
+      admin_id?: number;
+      email?: string;
+      credit?: number;
+      ref_code?: string;
+      ui_theme?: string | null;
+    } = {
       id: decoded.id,
       username: decoded.username,
       role: decoded.role,
@@ -32,12 +41,13 @@ export default defineEventHandler(async (event) => {
     } else if (decoded.role === 'admin_0' || decoded.role === 'admin_1' || decoded.role === 'admin_2') {
       await ensureAdminContactSchema()
       const [rows]: any = await pool.query(
-        'SELECT ref_code, contact_info FROM admins WHERE id = ? LIMIT 1',
+        'SELECT ref_code, contact_info, ui_theme FROM admins WHERE id = ? LIMIT 1',
         [decoded.id],
       )
       if (rows.length > 0) {
         user.ref_code = rows[0].ref_code
         ;(user as any).contact_info = rows[0].contact_info
+        user.ui_theme = rows[0].ui_theme || null
       }
     }
     return { success: true, user }

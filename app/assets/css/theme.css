@@ -36,6 +36,63 @@
   --transition-glow: 0.3s ease;
 }
 
+/**
+ * Theme overrides (áp dụng toàn bộ web)
+ * Set bằng: document.documentElement.dataset.theme = 'spring' | 'summer' | 'autumn' | 'winter'
+ * Mặc định: không set / xóa data-theme để dùng bộ màu gốc.
+ */
+:root[data-theme="spring"] {
+  --blue-bright  : #22c55e; /* green */
+  --blue-electric: #4ade80;
+  --blue-glow    : rgba(34, 197, 94, 0.45);
+  --blue-border  : rgba(34, 197, 94, 0.6);
+  --blue-soft    : rgba(34, 197, 94, 0.14);
+  --neon-shadow  : 0 0 15px rgba(34, 197, 94, 0.4), 0 0 30px rgba(34, 197, 94, 0.18);
+  --btn-primary-bg  : linear-gradient(135deg, #16a34a 0%, #22c55e 100%);
+  --btn-primary-glow: 0 0 20px rgba(34, 197, 94, 0.45), 0 0 40px rgba(34, 197, 94, 0.18);
+  --input-bg        : rgba(10, 60, 25, 0.45);
+  --input-border    : rgba(34, 197, 94, 0.28);
+}
+
+:root[data-theme="summer"] {
+  --blue-bright  : #06b6d4; /* cyan */
+  --blue-electric: #22d3ee;
+  --blue-glow    : rgba(6, 182, 212, 0.45);
+  --blue-border  : rgba(6, 182, 212, 0.6);
+  --blue-soft    : rgba(6, 182, 212, 0.14);
+  --neon-shadow  : 0 0 15px rgba(6, 182, 212, 0.4), 0 0 30px rgba(6, 182, 212, 0.18);
+  --btn-primary-bg  : linear-gradient(135deg, #0891b2 0%, #06b6d4 100%);
+  --btn-primary-glow: 0 0 20px rgba(6, 182, 212, 0.45), 0 0 40px rgba(6, 182, 212, 0.18);
+  --input-bg        : rgba(0, 45, 55, 0.45);
+  --input-border    : rgba(6, 182, 212, 0.28);
+}
+
+:root[data-theme="autumn"] {
+  --blue-bright  : #f97316; /* orange */
+  --blue-electric: #fb923c;
+  --blue-glow    : rgba(249, 115, 22, 0.45);
+  --blue-border  : rgba(249, 115, 22, 0.6);
+  --blue-soft    : rgba(249, 115, 22, 0.14);
+  --neon-shadow  : 0 0 15px rgba(249, 115, 22, 0.4), 0 0 30px rgba(249, 115, 22, 0.18);
+  --btn-primary-bg  : linear-gradient(135deg, #ea580c 0%, #f97316 100%);
+  --btn-primary-glow: 0 0 20px rgba(249, 115, 22, 0.45), 0 0 40px rgba(249, 115, 22, 0.18);
+  --input-bg        : rgba(70, 25, 5, 0.45);
+  --input-border    : rgba(249, 115, 22, 0.28);
+}
+
+:root[data-theme="winter"] {
+  --blue-bright  : #a78bfa; /* violet */
+  --blue-electric: #c4b5fd;
+  --blue-glow    : rgba(167, 139, 250, 0.45);
+  --blue-border  : rgba(167, 139, 250, 0.6);
+  --blue-soft    : rgba(167, 139, 250, 0.14);
+  --neon-shadow  : 0 0 15px rgba(167, 139, 250, 0.4), 0 0 30px rgba(167, 139, 250, 0.18);
+  --btn-primary-bg  : linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%);
+  --btn-primary-glow: 0 0 20px rgba(167, 139, 250, 0.45), 0 0 40px rgba(167, 139, 250, 0.18);
+  --input-bg        : rgba(30, 15, 60, 0.45);
+  --input-border    : rgba(167, 139, 250, 0.28);
+}
+
 body {
   background-color: var(--bg-deep);
   color           : var(--text-primary);

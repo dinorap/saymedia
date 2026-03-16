@@ -14,6 +14,14 @@ export async function ensureAdminContactSchema() {
         "ALTER TABLE admins ADD COLUMN contact_info TEXT NULL DEFAULT NULL",
       );
     }
+    const [themeCol]: any = await pool.query(
+      "SHOW COLUMNS FROM admins LIKE 'ui_theme'",
+    );
+    if (!themeCol || themeCol.length === 0) {
+      await pool.query(
+        "ALTER TABLE admins ADD COLUMN ui_theme VARCHAR(32) NULL DEFAULT NULL",
+      );
+    }
   } catch {
     // ignore, column may already exist on some setups
   }

@@ -122,12 +122,12 @@
 }
 
 .landing-page .highlight {
-  background             : linear-gradient(90deg, #0160e0, #017BFB);
+  background             : linear-gradient(90deg, var(--blue-bright), var(--blue-electric));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip        : text;
   font-weight            : 700;
-  filter                 : drop-shadow(0 0 8px rgba(1, 123, 251, 0.6));
+  filter                 : drop-shadow(0 0 8px var(--blue-glow));
 }
 
 .landing-page .hero-content p {
