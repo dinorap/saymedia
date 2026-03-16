@@ -5,14 +5,14 @@ export default defineNuxtPlugin(() => {
 
   async function applyInitialTheme() {
     let theme: string | null = null;
-    // Ưu tiên đọc từ API (nếu là admin đã đăng nhập)
+    // Ưu tiên đọc theme toàn hệ thống từ server (áp dụng cho cả khách + admin)
     try {
-      const res = await fetch("/api/auth/me", { credentials: "include" });
+      const res = await fetch("/api/theme", { credentials: "include" });
       if (res.ok) {
         const data = await res.json();
-        const uiTheme = data?.user?.ui_theme;
-        if (typeof uiTheme === "string" && uiTheme) {
-          theme = uiTheme;
+        const serverTheme = data?.theme;
+        if (typeof serverTheme === "string" && serverTheme) {
+          theme = serverTheme;
         }
       }
     } catch {

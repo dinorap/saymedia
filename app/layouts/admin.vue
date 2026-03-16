@@ -48,19 +48,15 @@
             {{ $t("admin.productKeys") || "Key sản phẩm" }}
           </span>
         </NuxtLink>
-        <NuxtLink
-          to="/admin/revenue"
-          class="sidebar-item"
-        >
+        <NuxtLink to="/admin/revenue" class="sidebar-item">
           <span class="sidebar-item-icon" aria-hidden="true">📈</span>
           <span class="sidebar-item-label">{{ $t("admin.revenue") }}</span>
         </NuxtLink>
-        <NuxtLink
-          to="/admin/partners"
-          class="sidebar-item"
-        >
+        <NuxtLink to="/admin/partners" class="sidebar-item">
           <span class="sidebar-item-icon" aria-hidden="true">🤝</span>
-          <span class="sidebar-item-label">{{ $t("admin.partners") || "Đối tác & Doanh thu" }}</span>
+          <span class="sidebar-item-label">{{
+            $t("admin.partners") || "Đối tác & Doanh thu"
+          }}</span>
         </NuxtLink>
         <NuxtLink to="/admin/ledger" class="sidebar-item">
           <span class="sidebar-item-icon" aria-hidden="true">📚</span>
@@ -130,11 +126,7 @@
     <!-- Main: header + content -->
     <div class="main-wrap">
       <header class="admin-header">
-        <button
-          type="button"
-          class="sidebar-toggle-btn"
-          @click="toggleSidebar"
-        >
+        <button type="button" class="sidebar-toggle-btn" @click="toggleSidebar">
           <span class="sidebar-toggle-icon" aria-hidden="true">☰</span>
         </button>
         <h1 class="admin-header-title">{{ pageTitle }}</h1>
@@ -189,7 +181,10 @@
                 :class="{ active: siteTheme === opt.value }"
                 @click="selectTheme(opt.value)"
               >
-                <span class="admin-theme-option-dot" :data-theme-dot="opt.value" />
+                <span
+                  class="admin-theme-option-dot"
+                  :data-theme-dot="opt.value"
+                />
                 <span>{{ opt.label }}</span>
               </button>
             </div>
@@ -309,9 +304,10 @@ onMounted(async () => {
       if (res.user.contact_info) {
         contactInfo.value = String(res.user.contact_info || "");
       }
-      const uiTheme = res.user && typeof res.user.ui_theme !== "undefined"
-        ? res.user.ui_theme
-        : null;
+      const uiTheme =
+        res.user && typeof res.user.ui_theme !== "undefined"
+          ? res.user.ui_theme
+          : null;
       if (typeof uiTheme === "string" && uiTheme) {
         siteTheme.value = uiTheme;
         applyTheme(uiTheme);
@@ -425,8 +421,7 @@ const pageTitle = computed(() => {
   if (name.includes("ledger"))
     return t("admin.creditLedger") || "Sổ sao kê tín chỉ";
   if (name.includes("logs")) return t("admin.logs");
-  if (name.includes("support"))
-    return t("admin.supportChat") || "Chat hỗ trợ";
+  if (name.includes("support")) return t("admin.supportChat") || "Chat hỗ trợ";
   if (name.includes("announcements")) return t("admin.announcements");
   return t("admin.profileName");
 });
