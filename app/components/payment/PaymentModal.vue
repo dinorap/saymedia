@@ -27,6 +27,14 @@
               <i class="fab fa-paypal"></i>
               {{ $t("payment.deposit.paypalTab") }}
             </button>
+            <button
+              class="payment-tab"
+              :class="{ active: activePaymentTab === 'usdt' }"
+              @click="activePaymentTab = 'usdt'"
+            >
+              <i class="fas fa-coins"></i>
+              USDT
+            </button>
           </div>
           <div class="header-right">
             <div v-if="qrTimeRemaining > 0" class="qr-time-remaining">
@@ -372,6 +380,35 @@
                     {{ paypalError }}
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- USDT Tab (static contact info) -->
+          <div
+            id="tab-usdt"
+            class="payment-tab-content"
+            :class="{ active: activePaymentTab === 'usdt' }"
+          >
+            <div class="payment-content-grid payment-content-grid--centered">
+              <div class="usdt-card">
+                <h3 class="usdt-title">Thanh toán qua USDT</h3>
+                <p class="usdt-text">
+                  Vui lòng liên hệ qua kênh hỗ trợ để được hướng dẫn thanh toán
+                  USDT và xác nhận nạp điểm.
+                </p>
+                <a
+                  href="https://t.me/saymedia_ai"
+                  target="_blank"
+                  rel="noopener"
+                  class="usdt-link-btn"
+                >
+                  Mở Telegram hỗ trợ
+                </a>
+                <p class="usdt-note">
+                  Sau khi thanh toán, admin sẽ cộng điểm thủ công vào tài khoản
+                  của bạn.
+                </p>
               </div>
             </div>
           </div>
@@ -1021,6 +1058,53 @@ onBeforeUnmount(() => {
 
 .payment-tab-content.active {
   display: block;
+}
+
+.payment-content-grid--centered {
+  align-items: center;
+  justify-content: center;
+}
+
+.usdt-card {
+  max-width: 420px;
+  margin: 0 auto;
+  padding: 1.25rem 1.5rem;
+  background: rgba(15, 23, 42, 0.96);
+  border-radius: 16px;
+  border: 1px solid rgba(52, 211, 153, 0.4);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.8);
+  text-align: center;
+  color: #e5e7eb;
+}
+
+.usdt-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+}
+
+.usdt-text,
+.usdt-note {
+  font-size: 0.9rem;
+  color: #9ca3af;
+  margin-bottom: 0.75rem;
+}
+
+.usdt-link-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.6rem 1.2rem;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: #fff;
+  font-weight: 600;
+  text-decoration: none;
+  margin-bottom: 0.5rem;
+}
+
+.usdt-link-btn:hover {
+  opacity: 0.95;
 }
 
 /* Payment Content Grid */

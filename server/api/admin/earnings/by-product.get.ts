@@ -15,10 +15,16 @@ export default defineEventHandler(async (event) => {
   const toDate = query.to ? String(query.to).trim() : null;
 
   const isSuperAdmin = currentUser.role === "admin_0";
-  const targetAdminId = isSuperAdmin && adminIdRaw && Number.isFinite(adminIdRaw) ? adminIdRaw : currentUser.id;
+  const targetAdminId =
+    isSuperAdmin && adminIdRaw && Number.isFinite(adminIdRaw) ? adminIdRaw : currentUser.id;
   if (!isSuperAdmin && targetAdminId !== currentUser.id) {
     throw createError({ statusCode: 403, statusMessage: "Không có quyền xem doanh thu shop khác" });
   }
+
+  const [[platformAdmin]]: any = await pool.query(
+    "SELECT id FROM admins WHERE role = 'admin_0' LIMIT 1",
+  );
+  const platformAdminId: number | null = platformAdmin?.id || null;
 
   const dateConditions: string[] = [];
   const dateParams: any[] = [];
@@ -34,22 +40,96 @@ export default defineEventHandler(async (event) => {
   const [rows]: any = await pool.query(
     `
     SELECT
-      p.id AS product_id,
+      o.id,
+      o.product_id,
+      o.amount,
+      o.admin_id AS owner_admin_id,
+      o.seller_admin_id,
       p.name AS product_name,
-      COUNT(DISTINCT o.id) AS order_count,
-      COALESCE(SUM(o.paid_part), 0) AS total_paid_part,
-      COALESCE(SUM(o.amount), 0) AS total_amount
+      COALESCE(p.platform_fee_percent, 0) AS platform_fee_percent,
+      owner.role AS owner_role,
+      COALESCE(w.amount_credit, 0) AS wallet_credit
     FROM orders o
     JOIN products p ON o.product_id = p.id
-    WHERE COALESCE(o.seller_admin_id, o.admin_id) = ? AND o.status = 'completed'${dateConditions.join("")}
-    GROUP BY p.id, p.name
-    ORDER BY total_paid_part DESC, order_count DESC
+    JOIN admins owner ON o.admin_id = owner.id
+    LEFT JOIN admin_wallet w
+      ON w.order_id = o.id
+     AND w.admin_id = ?
+     AND w.wallet_type IN ('sale_commission','product_revenue')
+    WHERE o.status = 'completed'${dateConditions.join("")}
     `,
-    [targetAdminId, ...dateParams]
+    [targetAdminId, ...dateParams],
+  );
+
+  const productMap = new Map<
+    number,
+    {
+      product_id: number;
+      product_name: string;
+      order_count: number;
+      total_gross_amount: number;
+      total_credit_share: number;
+    }
+  >();
+
+  for (const row of rows || []) {
+    const productId = Number(row.product_id);
+    if (!productId) continue;
+    const productName = row.product_name || "";
+    const amount = Number(row.amount || 0);
+    const walletCredit = Number(row.wallet_credit || 0);
+    const ownerId = Number(row.owner_admin_id);
+    const sellerAdminId = row.seller_admin_id ? Number(row.seller_admin_id) : null;
+    const ownerRole = String(row.owner_role || "");
+    const platformFeePercent = Number(row.platform_fee_percent || 0);
+
+    const isSelfSale = !sellerAdminId || sellerAdminId === ownerId;
+
+    let creditShare = 0;
+    if (
+      ownerRole === "admin_1" &&
+      isSelfSale &&
+      platformFeePercent > 0 &&
+      ownerId === targetAdminId
+    ) {
+      creditShare = Math.round((amount * (100 - platformFeePercent)) / 100);
+    } else if (
+      ownerRole === "admin_1" &&
+      isSelfSale &&
+      platformFeePercent > 0 &&
+      platformAdminId &&
+      targetAdminId === platformAdminId
+    ) {
+      const platformPart = Math.round((amount * platformFeePercent) / 100);
+      creditShare = walletCredit + platformPart;
+    } else {
+      creditShare = walletCredit;
+    }
+
+    let agg = productMap.get(productId);
+    if (!agg) {
+      agg = {
+        product_id: productId,
+        product_name: productName,
+        order_count: 0,
+        total_gross_amount: 0,
+        total_credit_share: 0,
+      };
+      productMap.set(productId, agg);
+    }
+
+    agg.order_count += 1;
+    agg.total_gross_amount += amount;
+    agg.total_credit_share += creditShare;
+  }
+
+  const result = Array.from(productMap.values()).sort(
+    (a, b) =>
+      b.total_gross_amount - a.total_gross_amount || b.order_count - a.order_count,
   );
 
   return {
     admin_id: targetAdminId,
-    by_product: rows || [],
+    by_product: result,
   };
 });

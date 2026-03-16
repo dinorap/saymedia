@@ -4,8 +4,8 @@ import { ensureAdminWalletSchema } from "../../../utils/adminWallet";
 type KeyStats = {
   duration: string;
   total_keys: number;
-  total_paid_part: number;
-  total_amount: number;
+  total_credit_share: number;
+  total_gross_amount: number;
   unit_price: number;
 };
 
@@ -37,6 +37,11 @@ export default defineEventHandler(async (event) => {
     });
   }
 
+  const [[platformAdmin]]: any = await pool.query(
+    "SELECT id FROM admins WHERE role = 'admin_0' LIMIT 1",
+  );
+  const platformAdminId: number | null = platformAdmin?.id || null;
+
   const dateConditions: string[] = [];
   const dateParams: any[] = [];
   if (fromDate) {
@@ -55,10 +60,20 @@ export default defineEventHandler(async (event) => {
       o.amount,
       o.paid_part,
       o.bonus_part,
-      o.note
+      o.note,
+      o.admin_id AS owner_admin_id,
+      o.seller_admin_id,
+      COALESCE(p.platform_fee_percent, 0) AS platform_fee_percent,
+      owner.role AS owner_role,
+      COALESCE(w.amount_credit, 0) AS wallet_credit
     FROM orders o
-    WHERE COALESCE(o.seller_admin_id, o.admin_id) = ?
-      AND o.product_id = ?
+    JOIN products p ON o.product_id = p.id
+    JOIN admins owner ON o.admin_id = owner.id
+    LEFT JOIN admin_wallet w
+      ON w.order_id = o.id
+     AND w.admin_id = ?
+     AND w.wallet_type IN ('sale_commission','product_revenue')
+    WHERE o.product_id = ?
       AND o.status = 'completed'${dateConditions.join("")}
     ORDER BY o.created_at DESC
     `,
@@ -94,7 +109,34 @@ export default defineEventHandler(async (event) => {
     }
 
     const amount = Number(row.amount || 0);
-    const paidPart = Number(row.paid_part || 0);
+    const walletCredit = Number(row.wallet_credit || 0);
+    const ownerId = Number(row.owner_admin_id);
+    const sellerAdminId = row.seller_admin_id ? Number(row.seller_admin_id) : null;
+    const ownerRole = String(row.owner_role || "");
+    const platformFeePercent = Number(row.platform_fee_percent || 0);
+
+    const isSelfSale = !sellerAdminId || sellerAdminId === ownerId;
+
+    let share = 0;
+    if (
+      ownerRole === "admin_1" &&
+      isSelfSale &&
+      platformFeePercent > 0 &&
+      ownerId === targetAdminId
+    ) {
+      share = Math.round((amount * (100 - platformFeePercent)) / 100);
+    } else if (
+      ownerRole === "admin_1" &&
+      isSelfSale &&
+      platformFeePercent > 0 &&
+      platformAdminId &&
+      targetAdminId === platformAdminId
+    ) {
+      const platformPart = Math.round((amount * platformFeePercent) / 100);
+      share = walletCredit + platformPart;
+    } else {
+      share = walletCredit;
+    }
 
     const key = duration;
     let item = statsMap.get(key);
@@ -102,27 +144,31 @@ export default defineEventHandler(async (event) => {
       item = {
         duration: key,
         total_keys: 0,
-        total_paid_part: 0,
-        total_amount: 0,
+        total_credit_share: 0,
+        total_gross_amount: 0,
         unit_price: 0,
       };
       statsMap.set(key, item);
     }
 
     item.total_keys += quantity;
-    item.total_paid_part += paidPart;
-    item.total_amount += amount;
+    item.total_credit_share += share;
+    item.total_gross_amount += amount;
   }
 
   const items: KeyStats[] = Array.from(statsMap.values()).map((it) => {
     const totalKeys = it.total_keys > 0 ? it.total_keys : 1;
     return {
       ...it,
-      unit_price: Math.round(it.total_amount / totalKeys),
+      unit_price: Math.round(it.total_gross_amount / totalKeys),
     };
   });
 
-  items.sort((a, b) => b.total_paid_part - a.total_paid_part || b.total_amount - a.total_amount);
+  items.sort(
+    (a, b) =>
+      b.total_credit_share - a.total_credit_share ||
+      b.total_gross_amount - a.total_gross_amount,
+  );
 
   return {
     admin_id: targetAdminId,

@@ -21,6 +21,7 @@ export async function ensureCommerceSchema() {
       description TEXT NULL,
       youtube_url VARCHAR(512) NULL,
       type ENUM('tool', 'account', 'service', 'other') NOT NULL DEFAULT 'other',
+      platform_fee_percent INT NULL,
       is_active TINYINT(1) NOT NULL DEFAULT 1,
       download_url TEXT NULL,
       thumbnail_url VARCHAR(512) NULL,
@@ -50,6 +51,9 @@ export async function ensureCommerceSchema() {
   // Và cột admin_id để biết admin nào tạo.
   await addColumnIfMissing(
     "ALTER TABLE products ADD COLUMN admin_id INT NULL AFTER id",
+  );
+  await addColumnIfMissing(
+    "ALTER TABLE products ADD COLUMN platform_fee_percent INT NULL AFTER type",
   );
   await addColumnIfMissing(
     "CREATE INDEX idx_products_admin_id ON products(admin_id)",

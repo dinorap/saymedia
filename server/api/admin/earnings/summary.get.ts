@@ -18,6 +18,7 @@ export default defineEventHandler(async (event) => {
   const adminIdFilter = query.admin_id ? parseInt(String(query.admin_id), 10) : null;
 
   let adminIds: number[] = [];
+  let platformAdminId: number | null = null;
   if (isSuperAdmin) {
     if (adminIdFilter && Number.isFinite(adminIdFilter)) {
       adminIds = [adminIdFilter];
@@ -27,7 +28,10 @@ export default defineEventHandler(async (event) => {
       );
       adminIds = (rows || []).map((r: any) => r.id);
       const [[owner]]: any = await pool.query("SELECT id FROM admins WHERE role = 'admin_0' LIMIT 1");
-      if (owner) adminIds = [owner.id, ...adminIds];
+      if (owner) {
+        platformAdminId = owner.id;
+        adminIds = [owner.id, ...adminIds];
+      }
     }
   } else {
     adminIds = [currentUser.id];
@@ -75,7 +79,10 @@ export default defineEventHandler(async (event) => {
   }
   const [orderCountRows]: any = await pool.query(
     `
-    SELECT COALESCE(o.seller_admin_id, o.admin_id) AS admin_id, COUNT(*) AS order_count
+    SELECT
+      COALESCE(o.seller_admin_id, o.admin_id) AS admin_id,
+      COUNT(*) AS order_count,
+      SUM(o.amount) AS total_gross_amount
     FROM orders o
     WHERE o.status = 'completed' AND COALESCE(o.seller_admin_id, o.admin_id) IN (${placeholders})${orderDateConditions.join("")}
     GROUP BY COALESCE(o.seller_admin_id, o.admin_id)
@@ -84,8 +91,58 @@ export default defineEventHandler(async (event) => {
   );
 
   const orderCountMap = new Map<number, number>();
+  const orderAmountMap = new Map<number, number>();
   for (const r of orderCountRows || []) {
-    orderCountMap.set(Number(r.admin_id), Number(r.order_count || 0));
+    const id = Number(r.admin_id);
+    orderCountMap.set(id, Number(r.order_count || 0));
+    orderAmountMap.set(id, Number(r.total_gross_amount || 0));
+  }
+
+  const platformFeeByOwner = new Map<number, number>();
+  let totalPlatformFeeForPlatformAdmin = 0;
+  if (platformAdminId) {
+    const feeParams: any[] = [];
+    const feeWhere: string[] = [];
+    if (fromDate) {
+      feeWhere.push("AND o.created_at >= ?");
+      feeParams.push(fromDate + " 00:00:00");
+    }
+    if (toDate) {
+      feeWhere.push("AND o.created_at <= ?");
+      feeParams.push(toDate + " 23:59:59");
+    }
+
+    const [feeRows]: any = await pool.query(
+      `
+        SELECT
+          o.admin_id AS owner_admin_id,
+          SUM(
+            CASE
+              WHEN owner.role = 'admin_1'
+                   AND COALESCE(o.seller_admin_id, o.admin_id) = o.admin_id
+                   AND COALESCE(p.platform_fee_percent, 0) > 0
+              THEN ROUND(o.amount * p.platform_fee_percent / 100)
+              ELSE 0
+            END
+          ) AS total_platform_fee
+        FROM orders o
+        JOIN products p ON o.product_id = p.id
+        JOIN admins owner ON o.admin_id = owner.id
+        WHERE o.status = 'completed'
+          AND owner.role = 'admin_1'
+          ${feeWhere.join(" ")}
+        GROUP BY o.admin_id
+      `,
+      feeParams,
+    );
+
+    for (const r of feeRows || []) {
+      const ownerId = Number(r.owner_admin_id);
+      const fee = Number(r.total_platform_fee || 0);
+      if (!fee) continue;
+      platformFeeByOwner.set(ownerId, fee);
+      totalPlatformFeeForPlatformAdmin += fee;
+    }
   }
 
   const [admins]: any = await pool.query(
@@ -111,12 +168,22 @@ export default defineEventHandler(async (event) => {
   const partners = adminIds.map((id) => {
     const admin = adminMap.get(id);
     const wallet = walletMap.get(id) || { balance_credit: 0, total_earned: 0, total_payout: 0 };
+    const grossAmount = orderAmountMap.get(id) || 0;
+    let balanceCredit = wallet.balance_credit;
+    const ownerPlatformFee = platformFeeByOwner.get(id) || 0;
+    if (ownerPlatformFee && id !== platformAdminId) {
+      balanceCredit = Math.max(0, balanceCredit - ownerPlatformFee);
+    }
+    if (platformAdminId && id === platformAdminId && totalPlatformFeeForPlatformAdmin) {
+      balanceCredit += totalPlatformFeeForPlatformAdmin;
+    }
     return {
       admin_id: id,
       username: admin?.username || "",
       role: admin?.role || "",
-      balance_credit: wallet.balance_credit,
-      total_earned: wallet.total_earned,
+      balance_credit: balanceCredit,
+      // Doanh thu (credit): tổng giá trị đơn (chưa trừ hoa hồng)
+      total_earned: grossAmount,
       total_payout: wallet.total_payout,
       balance_vnd: wallet.balance_credit * vndPerCredit,
       order_count: orderCountMap.get(id) || 0,

@@ -24,7 +24,6 @@
             <th>Vai trò</th>
             <th>Số đơn (đã bán)</th>
             <th>Doanh thu (credit)</th>
-            <th>Đã thanh toán (credit)</th>
             <th>Số dư cần chuyển (credit)</th>
             <th>Số dư (VND)</th>
             <th v-if="isSuperAdmin">Thao tác</th>
@@ -38,7 +37,6 @@
             <td>{{ p.role === "admin_0" ? "Chủ" : "Shop" }}</td>
             <td>{{ p.order_count }}</td>
             <td>{{ formatNum(p.total_earned) }}</td>
-            <td>{{ formatNum(p.total_payout) }}</td>
             <td>{{ formatNum(p.balance_credit) }}</td>
             <td>{{ formatVnd(p.balance_vnd) }}</td>
             <td v-if="isSuperAdmin">
@@ -80,8 +78,8 @@
                 <tr>
                   <th>Sản phẩm</th>
                   <th>Số đơn</th>
-                  <th>Tổng paid (credit)</th>
-                  <th>Tổng giá (credit)</th>
+                  <th>Doanh thu (credit)</th>
+                  <th>Số dư cần chuyển (credit)</th>
                   <th>Chi tiết</th>
                 </tr>
               </thead>
@@ -92,8 +90,8 @@
                 >
                   <td>{{ r.product_name }}</td>
                   <td>{{ r.order_count }}</td>
-                  <td>{{ formatNum(r.total_paid_part) }}</td>
-                  <td>{{ formatNum(r.total_amount) }}</td>
+                  <td>{{ formatNum(r.total_gross_amount) }}</td>
+                  <td>{{ formatNum(r.total_credit_share) }}</td>
                   <td>
                     <button
                       type="button"
@@ -138,8 +136,8 @@
                   <th>Loại key</th>
                   <th>Giá/1 key (credit)</th>
                   <th>Số key</th>
-                  <th>Tổng paid (credit)</th>
-                  <th>Tổng giá (credit)</th>
+                  <th>Doanh thu (credit)</th>
+                  <th>Số dư cần chuyển (credit)</th>
                 </tr>
               </thead>
               <tbody>
@@ -150,8 +148,8 @@
                   <td>{{ item.duration }}</td>
                   <td>{{ formatNum(item.unit_price) }}</td>
                   <td>{{ item.total_keys }}</td>
-                  <td>{{ formatNum(item.total_paid_part) }}</td>
-                  <td>{{ formatNum(item.total_amount) }}</td>
+                  <td>{{ formatNum(item.total_gross_amount) }}</td>
+                  <td>{{ formatNum(item.total_credit_share) }}</td>
                 </tr>
               </tbody>
             </table>
@@ -192,6 +190,7 @@ const keyDetailsLoading = ref(false);
 
 const currentUser = ref<any>(null);
 const isSuperAdmin = computed(() => currentUser.value?.role === "admin_0");
+let autoRefreshTimer: any = null;
 
 function formatNum(n: number) {
   return Number(n).toLocaleString("vi-VN");
@@ -308,6 +307,9 @@ onMounted(async () => {
     currentUser.value = null;
   }
   await fetchSummary();
+  autoRefreshTimer = setInterval(() => {
+    fetchSummary({ silent: true });
+  }, 5000);
 });
 
 let summaryTimer: any = null;
@@ -322,6 +324,10 @@ onUnmounted(() => {
   if (summaryTimer) {
     clearTimeout(summaryTimer);
     summaryTimer = null;
+  }
+  if (autoRefreshTimer) {
+    clearInterval(autoRefreshTimer);
+    autoRefreshTimer = null;
   }
 });
 </script>

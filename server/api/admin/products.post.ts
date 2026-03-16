@@ -23,6 +23,14 @@ export default defineEventHandler(async (event) => {
   const thumbnailUrl = (String(body?.thumbnail_url || "").trim() || null)?.slice(0, MAX_THUMBNAIL_URL) || null;
   const longDescription =
     (String(body?.long_description || "").trim() || null)?.slice(0, MAX_LONG_DESCRIPTION) || null;
+  const platformFeePercentRaw = body?.platform_fee_percent;
+  let platformFeePercent: number | null = null;
+  if (currentUser.role === "admin_0") {
+    const n = Number(platformFeePercentRaw);
+    if (Number.isFinite(n) && n >= 0 && n <= 100) {
+      platformFeePercent = Math.round(n);
+    }
+  }
 
   let imagesJson: string | null = null;
   if (Array.isArray(body?.images)) {
@@ -58,9 +66,10 @@ export default defineEventHandler(async (event) => {
         thumbnail_url,
         images_json,
         type,
+        platform_fee_percent,
         is_active
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
     [
       currentUser.id,
@@ -72,6 +81,7 @@ export default defineEventHandler(async (event) => {
       thumbnailUrl || null,
       imagesJson,
       type,
+      platformFeePercent,
       isActive,
     ],
   );

@@ -42,6 +42,15 @@ export default defineEventHandler(async (event) => {
   const thumbnailUrl = (String(body?.thumbnail_url || "").trim() || null)?.slice(0, MAX_THUMBNAIL_URL) || null;
   const longDescription =
     (String(body?.long_description || "").trim() || null)?.slice(0, MAX_LONG_DESCRIPTION) || null;
+  const platformFeePercentRaw = body?.platform_fee_percent;
+  let platformFeePercent: number | null = null;
+  const canEditPlatformFee = currentUser.role === "admin_0";
+  if (canEditPlatformFee) {
+    const n = Number(platformFeePercentRaw);
+    if (Number.isFinite(n) && n >= 0 && n <= 100) {
+      platformFeePercent = Math.round(n);
+    }
+  }
 
   let imagesJson: string | null = null;
   if (Array.isArray(body?.images)) {
@@ -63,33 +72,41 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: "Loại sản phẩm không hợp lệ" });
   }
 
+  const sets: string[] = [
+    "name = ?",
+    "description = ?",
+    "youtube_url = ?",
+    "long_description = ?",
+    "download_url = ?",
+    "thumbnail_url = ?",
+    "images_json = ?",
+    "type = ?",
+    "is_active = ?",
+  ];
+  const params: any[] = [
+    name,
+    description || null,
+    youtubeUrl || null,
+    longDescription || null,
+    downloadUrl || null,
+    thumbnailUrl || null,
+    imagesJson,
+    type,
+    isActive,
+  ];
+  if (canEditPlatformFee) {
+    sets.splice(sets.length - 1, 0, "platform_fee_percent = ?");
+    params.splice(params.length - 1, 0, platformFeePercent);
+  }
+
   const [result]: any = await pool.query(
     `
       UPDATE products
       SET
-        name = ?,
-        description = ?,
-        youtube_url = ?,
-        long_description = ?,
-        download_url = ?,
-        thumbnail_url = ?,
-        images_json = ?,
-        type = ?,
-        is_active = ?
+        ${sets.join(",\n        ")}
       WHERE id = ?
     `,
-    [
-      name,
-      description || null,
-      youtubeUrl || null,
-      longDescription || null,
-      downloadUrl || null,
-      thumbnailUrl || null,
-      imagesJson,
-      type,
-      isActive,
-      id,
-    ],
+    [...params, id],
   );
 
   if (!result?.affectedRows) {

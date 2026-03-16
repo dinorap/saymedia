@@ -95,6 +95,7 @@ CREATE TABLE products (
     description TEXT NULL,
     youtube_url VARCHAR(512) NULL,
     type ENUM('tool', 'account', 'service', 'other') NOT NULL DEFAULT 'other',
+    platform_fee_percent INT NULL,
     is_active TINYINT(1) NOT NULL DEFAULT 1,
     download_url TEXT NULL,
     thumbnail_url VARCHAR(512) NULL,

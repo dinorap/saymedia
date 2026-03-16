@@ -82,6 +82,7 @@ export default defineEventHandler(async (event) => {
       SELECT
         p.id,
         p.admin_id,
+        p.platform_fee_percent,
         p.name,
         p.description,
         p.youtube_url,
@@ -93,7 +94,8 @@ export default defineEventHandler(async (event) => {
         p.images_json,
         p.created_at,
         p.updated_at,
-        a.username AS admin_username
+        a.username AS admin_username,
+        a.role AS admin_role
       FROM products p
       LEFT JOIN admins a ON p.admin_id = a.id
       ${whereSql}

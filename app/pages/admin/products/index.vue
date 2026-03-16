@@ -338,6 +338,25 @@
                     <option value="other">other</option>
                   </select>
                 </div>
+                <div
+                  v-if="
+                    isSuperAdmin &&
+                    editing &&
+                    editing.admin_role === 'admin_1'
+                  "
+                  class="form-row"
+                >
+                  <label>Phí nền tảng % (chủ tự bán)</label>
+                  <input
+                    v-model.number="form.platform_fee_percent"
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="1"
+                    class="input"
+                    placeholder="0 - 100"
+                  />
+                </div>
                 <div v-if="editing" class="form-row">
                   <label>{{ $t("admin.status") }}</label>
                   <select v-model="form.is_active" class="input">
@@ -654,6 +673,7 @@ const form = reactive({
   name: "",
   description: "",
   long_description: "",
+  platform_fee_percent: 0,
   download_url: "",
   youtube_url: "",
   thumbnail_url: "",
@@ -1025,6 +1045,10 @@ function openModal(item = null) {
   form.name = item?.name ?? "";
   form.description = item?.description ?? "";
   form.long_description = item?.long_description ?? "";
+   form.platform_fee_percent =
+    typeof item?.platform_fee_percent === "number"
+      ? item.platform_fee_percent
+      : 0;
   form.download_url = item?.download_url ?? "";
   form.youtube_url = item?.youtube_url ?? "";
   form.thumbnail_url = item?.thumbnail_url ?? "";
@@ -1066,6 +1090,12 @@ async function save() {
       thumbnail_url: form.thumbnail_url?.trim(),
       images,
       type: form.type || "other",
+      platform_fee_percent:
+        typeof form.platform_fee_percent === "number" &&
+        form.platform_fee_percent >= 0 &&
+        form.platform_fee_percent <= 100
+          ? Math.round(form.platform_fee_percent)
+          : 0,
       is_active:
         form.is_active === true ||
         form.is_active === "true" ||
