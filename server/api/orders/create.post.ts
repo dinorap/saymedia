@@ -72,22 +72,6 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 404, statusMessage: "Không tìm thấy sản phẩm" });
     }
 
-    const productOwnerAdminId = product.admin_id ? Number(product.admin_id) : null;
-    let sellerAdminId = productOwnerAdminId;
-    if (sellerRef && productOwnerAdminId) {
-      const [[ps]]: any = await conn.query(
-        `
-          SELECT seller_admin_id
-          FROM product_sellers
-          WHERE product_id = ? AND ref_code = ? AND is_active = 1
-          LIMIT 1
-        `,
-        [productId, sellerRef],
-      );
-      if (ps) sellerAdminId = Number(ps.seller_admin_id);
-    }
-    if (!sellerAdminId) sellerAdminId = user.admin_id;
-
     const [[user]]: any = await conn.query(
       `
         SELECT id, username, credit, paid_credit, bonus_credit, admin_id
@@ -99,6 +83,36 @@ export default defineEventHandler(async (event) => {
     );
     if (!user) {
       throw createError({ statusCode: 404, statusMessage: "Không tìm thấy người dùng" });
+    }
+
+    const productOwnerAdminId = product.admin_id ? Number(product.admin_id) : null;
+    if (!productOwnerAdminId || !Number.isFinite(productOwnerAdminId)) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: "Sản phẩm chưa gắn chủ sở hữu (admin_id)",
+      });
+    }
+
+    // Seller chỉ được set khi có ref hợp lệ (bán hộ). Không có ref => coi là tự bán của owner.
+    let sellerAdminId: number | null = null;
+    let sellerRefUsed: string | null = null;
+    if (sellerRef) {
+      const [[ps]]: any = await conn.query(
+        `
+          SELECT seller_admin_id
+          FROM product_sellers
+          WHERE product_id = ? AND ref_code = ? AND is_active = 1
+          LIMIT 1
+        `,
+        [productId, sellerRef],
+      );
+      if (ps?.seller_admin_id) {
+        const sid = Number(ps.seller_admin_id);
+        if (Number.isFinite(sid) && sid > 0 && sid !== productOwnerAdminId) {
+          sellerAdminId = sid;
+          sellerRefUsed = sellerRef;
+        }
+      }
     }
 
     // Xác định đơn giá và auto phát key nếu là sản phẩm dạng key
@@ -175,12 +189,27 @@ export default defineEventHandler(async (event) => {
     }
 
     const amountInt = Math.round(amount);
+    // Quy ước mới:
+    // - orders.admin_id: admin "được ghi nhận doanh số/đối tác" (nếu có ref => seller; không có ref => owner)
+    // - orders.product_owner_admin_id: chủ sở hữu sản phẩm (luôn là product.admin_id)
+    const reportAdminId = sellerAdminId ?? productOwnerAdminId;
+
     const [result]: any = await conn.query(
       `
         INSERT INTO orders (user_id, product_id, admin_id, seller_admin_id, product_owner_admin_id, amount, paid_part, bonus_part, seller_ref, status, note)
         VALUES (?, ?, ?, ?, ?, ?, NULL, NULL, ?, ?, ?)
       `,
-      [user.id, product.id, user.admin_id, sellerAdminId, productOwnerAdminId, amount, sellerRef, initialStatus, note],
+      [
+        user.id,
+        product.id,
+        reportAdminId,
+        sellerAdminId,
+        productOwnerAdminId,
+        amount,
+        sellerRefUsed,
+        initialStatus,
+        note,
+      ],
     );
     const orderId = result.insertId;
 
@@ -203,10 +232,10 @@ export default defineEventHandler(async (event) => {
       Number(creditResult.paidPart || 0) + Number(creditResult.bonusPart || 0);
 
     // Tạm thời: coi bonus như điểm thường → chia doanh thu theo tổng điểm đã trừ
-    if (totalCreditUsed > 0 && productOwnerAdminId && sellerAdminId) {
+    if (totalCreditUsed > 0 && productOwnerAdminId) {
       await ensureAdminWalletSchema();
       let commissionPercent: number | null = 20;
-      if (sellerAdminId !== productOwnerAdminId) {
+      if (sellerAdminId && sellerAdminId !== productOwnerAdminId) {
         const [[ps]]: any = await conn.query(
           "SELECT commission_percent FROM product_sellers WHERE product_id = ? AND seller_admin_id = ? LIMIT 1",
           [productId, sellerAdminId],
@@ -215,7 +244,7 @@ export default defineEventHandler(async (event) => {
       }
       await recordOrderEarnings(conn, {
         orderId,
-        sellerAdminId,
+        sellerAdminId: sellerAdminId ?? productOwnerAdminId,
         productOwnerAdminId,
         paidPartCredit: totalCreditUsed,
         commissionPercent,

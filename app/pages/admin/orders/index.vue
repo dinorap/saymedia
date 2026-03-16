@@ -69,7 +69,6 @@
             <th>{{ $t("admin.id") }}</th>
             <th>{{ $t("admin.username") }}</th>
             <th v-if="isSuperAdmin">{{ $t("admin.email") }}</th>
-            <th v-if="isSuperAdmin">{{ $t("admin.adminId") }}</th>
             <th>{{ $t("admin.productName") || "Sản phẩm" }}</th>
             <th>Người giới thiệu</th>
             <th>{{ $t("payment.history.amount") }}</th>
@@ -86,7 +85,6 @@
             </td>
             <td>{{ o.user_username }}</td>
             <td v-if="isSuperAdmin">{{ o.user_email }}</td>
-            <td v-if="isSuperAdmin">{{ o.admin_username || "-" }}</td>
             <td>{{ o.product_name || "-" }}</td>
             <td>
               <span

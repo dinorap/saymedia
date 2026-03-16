@@ -83,7 +83,8 @@
             <th>{{ $t("admin.productName") || "Tên sản phẩm" }}</th>
             <th>{{ $t("admin.thumbnail") || "Ảnh" }}</th>
             <th>{{ $t("admin.adminId") }}</th>
-            <th>{{ $t("admin.description") || "Mô tả" }}</th>
+            <th>Tổng key đã bán</th>
+            <th>Tổng điểm đã bán</th>
             <th>{{ $t("admin.productType") || "Loại" }}</th>
             <th>{{ $t("admin.downloadUrl") || "Link tải" }}</th>
             <th>{{ $t("admin.status") }}</th>
@@ -108,7 +109,8 @@
               <span v-else>-</span>
             </td>
             <td>{{ item.admin_username || "-" }}</td>
-            <td>{{ item.description || "-" }}</td>
+            <td>{{ formatVnd(item.total_sold_keys || 0) }}</td>
+            <td>{{ formatVnd(item.total_sold_credit || 0) }}</td>
             <td>{{ item.type || "other" }}</td>
             <td class="col-url">
               <a
@@ -139,6 +141,14 @@
                 @click="canEdit(item) && openModal(item)"
               >
                 ✏️
+              </button>
+              <button
+                type="button"
+                class="btn-icon"
+                title="Thống kê theo loại key"
+                @click="openStatsModal(item)"
+              >
+                📊
               </button>
               <button
                 type="button"
@@ -338,13 +348,8 @@
                     <option value="other">other</option>
                   </select>
                 </div>
-                <div
-                  v-if="
-                    isSuperAdmin && editing && editing.admin_role === 'admin_1'
-                  "
-                  class="form-row"
-                >
-                  <label>Phí nền tảng % (chủ tự bán)</label>
+                <div v-if="isSuperAdmin" class="form-row">
+                  <label>Phí nền tảng % (phí sàn)</label>
                   <input
                     v-model.number="form.platform_fee_percent"
                     type="number"
@@ -644,6 +649,56 @@
         </div>
       </div>
     </Teleport>
+
+    <Teleport to="body">
+      <div
+        v-if="statsModal.open"
+        class="modal-overlay"
+        @click.self="statsModal.open = false"
+      >
+        <div class="modal">
+          <h3 class="modal-title">
+            Thống kê bán theo loại key –
+            {{ statsModal.product?.name || "" }}
+          </h3>
+          <div class="modal-form">
+            <AppLoading v-if="statsModal.loading" />
+            <div v-else-if="!statsModal.items.length" class="table-empty">
+              Chưa có đơn nào cho sản phẩm này
+            </div>
+            <table v-else class="data-table">
+              <thead>
+                <tr>
+                  <th>Loại key</th>
+                  <th>Số key</th>
+                  <th>Giá/1 key (credit)</th>
+                  <th>Doanh thu (credit)</th>
+                  <th>CREDIT chia cho chủ/shop</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="row in statsModal.items" :key="row.duration">
+                  <td>{{ row.duration }}</td>
+                  <td>{{ row.total_keys }}</td>
+                  <td>{{ formatVnd(row.unit_price) }}</td>
+                  <td>{{ formatVnd(row.total_gross_amount) }}</td>
+                  <td>{{ formatVnd(row.total_credit_share) }}</td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="modal-actions">
+              <button
+                type="button"
+                class="btn-secondary"
+                @click="statsModal.open = false"
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -671,7 +726,7 @@ const form = reactive({
   name: "",
   description: "",
   long_description: "",
-  platform_fee_percent: 0,
+  platform_fee_percent: 10,
   download_url: "",
   youtube_url: "",
   thumbnail_url: "",
@@ -696,6 +751,18 @@ const sellerModal = reactive({
 const commissionEditId = ref<number | null>(null);
 const commissionEditValue = ref(20);
 const savingCommissionId = ref<number | null>(null);
+
+const statsModal = reactive<{
+  open: boolean;
+  loading: boolean;
+  product: any | null;
+  items: any[];
+}>({
+  open: false,
+  loading: false,
+  product: null,
+  items: [],
+});
 
 const hasItems = computed(
   () => Array.isArray(items.value) && items.value.length > 0,
@@ -1046,7 +1113,7 @@ function openModal(item = null) {
   form.platform_fee_percent =
     typeof item?.platform_fee_percent === "number"
       ? item.platform_fee_percent
-      : 0;
+      : 10;
   form.download_url = item?.download_url ?? "";
   form.youtube_url = item?.youtube_url ?? "";
   form.thumbnail_url = item?.thumbnail_url ?? "";
@@ -1065,6 +1132,32 @@ function openModal(item = null) {
   form.is_active = item ? !!item.is_active : true;
   error.value = "";
   modalOpen.value = true;
+}
+
+async function openStatsModal(item: any) {
+  if (!item?.id) return;
+  statsModal.product = item;
+  statsModal.open = true;
+  statsModal.loading = true;
+  statsModal.items = [];
+  try {
+    const query: Record<string, string> = { product_id: String(item.id) };
+    if (isSuperAdmin.value && item.admin_id) {
+      query.admin_id = String(item.admin_id);
+    }
+    const res: any = await $fetch("/api/admin/earnings/by-product-keys", {
+      query,
+    });
+    statsModal.items = Array.isArray(res?.items) ? res.items : [];
+  } catch (e: any) {
+    statsModal.items = [];
+    showToast(
+      e?.data?.statusMessage || "Không tải được thống kê key cho sản phẩm",
+      "error",
+    );
+  } finally {
+    statsModal.loading = false;
+  }
 }
 
 async function save() {

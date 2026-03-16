@@ -55,6 +55,21 @@ export async function ensureCommerceSchema() {
   await addColumnIfMissing(
     "ALTER TABLE products ADD COLUMN platform_fee_percent INT NULL AFTER type",
   );
+  // Default phí sàn 10% cho sản phẩm (dùng cho shop tự bán)
+  try {
+    await pool.query(
+      "ALTER TABLE products MODIFY COLUMN platform_fee_percent INT NULL DEFAULT 10",
+    );
+  } catch {
+    // Column type/default may already be correct
+  }
+  try {
+    await pool.query(
+      "UPDATE products SET platform_fee_percent = 10 WHERE platform_fee_percent IS NULL",
+    );
+  } catch {
+    // Ignore
+  }
   await addColumnIfMissing(
     "CREATE INDEX idx_products_admin_id ON products(admin_id)",
   );

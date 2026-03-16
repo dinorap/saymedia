@@ -390,7 +390,7 @@
             class="payment-tab-content"
             :class="{ active: activePaymentTab === 'usdt' }"
           >
-            <div class="payment-content-grid payment-content-grid--centered">
+            <div class="payment-content-grid--centered">
               <div class="usdt-card">
                 <h3 class="usdt-title">Thanh toán qua USDT</h3>
                 <p class="usdt-text">
@@ -860,7 +860,7 @@ const handleClose = () => {
   activePaymentTab.value = "bank";
 };
 
-const isDev = import.meta.env.DEV
+const isDev = import.meta.env.DEV;
 
 const testPayment = async () => {
   if (!qrData.value || !qrData.value.trans_id) {
@@ -1061,8 +1061,10 @@ onBeforeUnmount(() => {
 }
 
 .payment-content-grid--centered {
+  grid-template-columns: 1fr;
   align-items: center;
   justify-content: center;
+  justify-items: center;
 }
 
 .usdt-card {

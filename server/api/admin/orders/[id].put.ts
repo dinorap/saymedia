@@ -1,4 +1,5 @@
 import pool from '../../../utils/db'
+import { addAuditLog } from '../../../utils/audit'
 
 export default defineEventHandler(async (event) => {
   const currentUser = event.context.user
@@ -65,6 +66,20 @@ export default defineEventHandler(async (event) => {
   if (!result?.affectedRows) {
     throw createError({ statusCode: 404, statusMessage: 'Không tìm thấy đơn hàng' })
   }
+
+  // Ghi log audit khi admin sửa đơn (note/status)
+  try {
+    await addAuditLog({
+      actorType: 'admin',
+      actorId: currentUser.id,
+      action: 'order_update',
+      targetType: 'order',
+      targetId: id,
+      metadata: {
+        updatedFields: updates,
+      },
+    })
+  } catch {}
 
   return { success: true }
 })

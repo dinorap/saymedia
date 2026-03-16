@@ -266,6 +266,30 @@
                 </button>
                 <button
                   type="button"
+                  class="btn-icon"
+                  title="Lịch sử đơn hàng"
+                  @click="goToUserOrders(u)"
+                >
+                  🧾
+                </button>
+                <button
+                  type="button"
+                  class="btn-icon"
+                  title="Lịch sử nạp"
+                  @click="goToUserDeposits(u)"
+                >
+                  💰
+                </button>
+                <button
+                  type="button"
+                  class="btn-icon"
+                  title="Lịch sử tín chỉ"
+                  @click="goToUserCreditLedger(u)"
+                >
+                  📊
+                </button>
+                <button
+                  type="button"
                   class="btn-icon btn-icon--danger"
                   :title="$t('admin.delete')"
                   @click="deleteUser(u)"
@@ -315,6 +339,276 @@
         </div>
       </div>
     </div>
+
+    <!-- Modals: user activity history -->
+    <Teleport to="body">
+      <div
+        v-if="showOrdersModal"
+        class="modal-overlay"
+        @click.self="showOrdersModal = false"
+      >
+        <div class="modal modal-wide">
+          <h3 class="modal-title">
+            Lịch sử đơn hàng – {{ historyUser?.username || "" }}
+          </h3>
+          <div class="modal-body">
+            <div v-if="ordersLoading" class="table-loading">
+              Đang tải...
+            </div>
+            <div v-else-if="!ordersHistory.length" class="table-empty">
+              Chưa có đơn hàng nào
+            </div>
+            <template v-else>
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Sản phẩm</th>
+                    <th>Người giới thiệu</th>
+                    <th>Số điểm</th>
+                    <th>Trạng thái</th>
+                    <th>Thời gian</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(o, idx) in ordersHistory" :key="o.id">
+                    <td>{{ (ordersPagination.page - 1) * ordersPagination.limit + idx + 1 }}</td>
+                    <td>{{ o.product_name || "-" }}</td>
+                    <td>
+                      <span
+                        v-if="o.seller_admin_id && o.seller_admin_id !== o.product_owner_admin_id"
+                      >
+                        {{ o.seller_username || "-" }}
+                      </span>
+                      <span v-else>-</span>
+                    </td>
+                    <td>{{ formatVnd(o.amount) }}</td>
+                    <td>
+                      <span class="badge" :class="statusClass(o.status)">
+                        {{ o.status }}
+                      </span>
+                    </td>
+                    <td>{{ formatDate(o.created_at) }}</td>
+                  </tr>
+                </tbody>
+              </table>
+              <div
+                v-if="ordersPagination.totalPages > 1"
+                class="pagination pagination--modal"
+              >
+                <span class="page-info">
+                  Trang {{ ordersPagination.page }}/{{ ordersPagination.totalPages }}
+                  ({{ ordersPagination.total }} bản ghi)
+                </span>
+                <div class="page-right">
+                  <button
+                    type="button"
+                    class="btn-page"
+                    :disabled="ordersPagination.page <= 1"
+                    @click="fetchUserOrders(ordersPagination.page - 1)"
+                  >
+                    {{ $t("admin.prev") }}
+                  </button>
+                  <button
+                    type="button"
+                    class="btn-page"
+                    :disabled="ordersPagination.page >= ordersPagination.totalPages"
+                    @click="fetchUserOrders(ordersPagination.page + 1)"
+                  >
+                    {{ $t("admin.next") }}
+                  </button>
+                </div>
+              </div>
+            </template>
+          </div>
+          <div class="modal-actions">
+            <button
+              type="button"
+              class="btn-secondary"
+              @click="showOrdersModal = false"
+            >
+              {{ $t("admin.close") || "Đóng" }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <Teleport to="body">
+      <div
+        v-if="showDepositsModal"
+        class="modal-overlay"
+        @click.self="showDepositsModal = false"
+      >
+        <div class="modal modal-wide">
+          <h3 class="modal-title">
+            Lịch sử nạp – {{ historyUser?.username || "" }}
+          </h3>
+          <div class="modal-body">
+            <div v-if="depositsLoading" class="table-loading">
+              Đang tải...
+            </div>
+            <div v-else-if="!depositsHistory.length" class="table-empty">
+              Chưa có giao dịch nạp nào
+            </div>
+            <template v-else>
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Mã giao dịch</th>
+                    <th>Số tiền</th>
+                    <th>CREDIT</th>
+                    <th>Trạng thái</th>
+                    <th>Thời gian</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(d, idx) in depositsHistory" :key="d.id">
+                    <td>{{ (depositsPagination.page - 1) * depositsPagination.limit + idx + 1 }}</td>
+                    <td>{{ d.trans_id || "-" }}</td>
+                    <td>{{ formatVnd(d.actual_amount || d.amount) }} đ</td>
+                    <td>{{ formatVnd(d.credit_amount || 0) }}</td>
+                    <td>
+                      <span
+                        class="badge"
+                        :class="d.status === 'success' ? 'badge--success' : 'badge--muted'"
+                      >
+                        {{ d.status }}
+                      </span>
+                    </td>
+                    <td>{{ formatDate(d.created_at) }}</td>
+                  </tr>
+                </tbody>
+              </table>
+              <div
+                v-if="depositsPagination.totalPages > 1"
+                class="pagination pagination--modal"
+              >
+                <span class="page-info">
+                  Trang {{ depositsPagination.page }}/{{ depositsPagination.totalPages }}
+                  ({{ depositsPagination.total }} bản ghi)
+                </span>
+                <div class="page-right">
+                  <button
+                    type="button"
+                    class="btn-page"
+                    :disabled="depositsPagination.page <= 1"
+                    @click="fetchUserDeposits(depositsPagination.page - 1)"
+                  >
+                    {{ $t("admin.prev") }}
+                  </button>
+                  <button
+                    type="button"
+                    class="btn-page"
+                    :disabled="depositsPagination.page >= depositsPagination.totalPages"
+                    @click="fetchUserDeposits(depositsPagination.page + 1)"
+                  >
+                    {{ $t("admin.next") }}
+                  </button>
+                </div>
+              </div>
+            </template>
+          </div>
+          <div class="modal-actions">
+            <button
+              type="button"
+              class="btn-secondary"
+              @click="showDepositsModal = false"
+            >
+              {{ $t("admin.close") || "Đóng" }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <Teleport to="body">
+      <div
+        v-if="showCreditModal"
+        class="modal-overlay"
+        @click.self="showCreditModal = false"
+      >
+        <div class="modal modal-wide">
+          <h3 class="modal-title">
+            Lịch sử tín chỉ – {{ historyUser?.username || "" }}
+          </h3>
+          <div class="modal-body">
+            <div v-if="creditLoading" class="table-loading">
+              Đang tải...
+            </div>
+            <div v-else-if="!creditHistory.length" class="table-empty">
+              Chưa có biến động tín chỉ nào
+            </div>
+            <template v-else>
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Loại giao dịch</th>
+                    <th>Biến động</th>
+                    <th>Trước / Sau</th>
+                    <th>Ghi chú</th>
+                    <th>Thời gian</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(row, idx) in creditHistory" :key="row.id">
+                    <td>{{ (creditPagination.page - 1) * creditPagination.limit + idx + 1 }}</td>
+                    <td>{{ row.transaction_type }}</td>
+                    <td :class="Number(row.delta) >= 0 ? 'text-up' : 'text-down'">
+                      {{ Number(row.delta) >= 0 ? "+" : "" }}{{ formatVnd(row.delta) }}
+                    </td>
+                    <td>
+                      {{ formatVnd(row.balance_before) }} →
+                      {{ formatVnd(row.balance_after) }}
+                    </td>
+                    <td class="note">{{ row.note || "-" }}</td>
+                    <td>{{ formatDate(row.created_at) }}</td>
+                  </tr>
+                </tbody>
+              </table>
+              <div
+                v-if="creditPagination.totalPages > 1"
+                class="pagination pagination--modal"
+              >
+                <span class="page-info">
+                  Trang {{ creditPagination.page }}/{{ creditPagination.totalPages }}
+                  ({{ creditPagination.total }} bản ghi)
+                </span>
+                <div class="page-right">
+                  <button
+                    type="button"
+                    class="btn-page"
+                    :disabled="creditPagination.page <= 1"
+                    @click="fetchUserCredit(creditPagination.page - 1)"
+                  >
+                    {{ $t("admin.prev") }}
+                  </button>
+                  <button
+                    type="button"
+                    class="btn-page"
+                    :disabled="creditPagination.page >= creditPagination.totalPages"
+                    @click="fetchUserCredit(creditPagination.page + 1)"
+                  >
+                    {{ $t("admin.next") }}
+                  </button>
+                </div>
+              </div>
+            </template>
+          </div>
+          <div class="modal-actions">
+            <button
+              type="button"
+              class="btn-secondary"
+              @click="showCreditModal = false"
+            >
+              {{ $t("admin.close") || "Đóng" }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
 
     <!-- Modal: Admin -->
     <Teleport to="body">
@@ -566,6 +860,20 @@ const userSortDirection = ref("desc");
 let userSearchTimer = null;
 let autoRefreshTimer = null;
 
+const historyUser = ref(null);
+const showOrdersModal = ref(false);
+const showDepositsModal = ref(false);
+const showCreditModal = ref(false);
+const ordersHistory = ref([]);
+const depositsHistory = ref([]);
+const creditHistory = ref([]);
+const ordersLoading = ref(false);
+const depositsLoading = ref(false);
+const creditLoading = ref(false);
+const ordersPagination = ref({ page: 1, limit: 50, total: 0, totalPages: 1 });
+const depositsPagination = ref({ page: 1, limit: 50, total: 0, totalPages: 1 });
+const creditPagination = ref({ page: 1, limit: 50, total: 0, totalPages: 1 });
+
 const filteredAdmins = computed(() => {
   const term = adminSearch.value.trim().toLowerCase();
   return admins.value.filter((a) => {
@@ -580,6 +888,101 @@ const filteredAdmins = computed(() => {
     return matchRole && matchSearch;
   });
 });
+
+function goToUserOrders(user) {
+  if (!user?.id) return;
+  historyUser.value = user;
+  showOrdersModal.value = true;
+  fetchUserOrders();
+}
+function goToUserDeposits(user) {
+  if (!user?.id) return;
+  historyUser.value = user;
+  showDepositsModal.value = true;
+  fetchUserDeposits();
+}
+function goToUserCreditLedger(user) {
+  if (!user?.id) return;
+  historyUser.value = user;
+  showCreditModal.value = true;
+  fetchUserCredit();
+}
+
+async function fetchUserOrders(page) {
+  if (!historyUser.value?.id) return;
+  ordersLoading.value = true;
+  try {
+    const params = new URLSearchParams();
+    params.set("user_id", String(historyUser.value.id));
+    params.set("limit", String(ordersPagination.value.limit));
+    if (page && page > 0) {
+      params.set("page", String(page));
+    }
+    const res = await $fetch(`/api/admin/orders?${params.toString()}`);
+    ordersHistory.value = Array.isArray(res?.data) ? res.data : [];
+    if (res?.pagination) {
+      ordersPagination.value = res.pagination;
+    }
+  } catch (e) {
+    console.error("[user orders history]", e);
+    ordersHistory.value = [];
+  } finally {
+    ordersLoading.value = false;
+  }
+}
+
+async function fetchUserDeposits(page) {
+  if (!historyUser.value?.id) return;
+  depositsLoading.value = true;
+  try {
+    const params = new URLSearchParams();
+    params.set("user_id", String(historyUser.value.id));
+    params.set("limit", String(depositsPagination.value.limit));
+    if (page && page > 0) {
+      params.set("page", String(page));
+    }
+    const res = await $fetch(`/api/admin/deposits?${params.toString()}`);
+    depositsHistory.value = Array.isArray(res?.data) ? res.data : [];
+    if (res?.pagination) {
+      depositsPagination.value = res.pagination;
+    }
+  } catch (e) {
+    console.error("[user deposits history]", e);
+    depositsHistory.value = [];
+  } finally {
+    depositsLoading.value = false;
+  }
+}
+
+async function fetchUserCredit(page) {
+  if (!historyUser.value?.id) return;
+  creditLoading.value = true;
+  try {
+    const params = new URLSearchParams();
+    params.set("user_id", String(historyUser.value.id));
+    params.set("limit", String(creditPagination.value.limit));
+    if (page && page > 0) {
+      params.set("page", String(page));
+    }
+    const res = await $fetch(`/api/admin/credit-ledger?${params.toString()}`);
+    creditHistory.value = Array.isArray(res?.data) ? res.data : [];
+    if (res?.pagination) {
+      creditPagination.value = res.pagination;
+    }
+  } catch (e) {
+    console.error("[user credit history]", e);
+    creditHistory.value = [];
+  } finally {
+    creditLoading.value = false;
+  }
+}
+
+function statusClass(status) {
+  if (status === "completed" || status === "success") return "badge--success";
+  if (status === "pending") return "badge--primary";
+  if (status === "cancelled" || status === "expired") return "badge--muted";
+  return "badge--muted";
+}
 
 async function fetchAdmins() {
   loadingAdmins.value = true;
@@ -1240,6 +1643,39 @@ onUnmounted(() => {
   max-width: 420px;
   width: 100%;
   box-shadow: 0 0 40px rgba(1, 123, 251, 0.2);
+}
+
+.modal-wide {
+  max-width: 960px;
+  max-height: 88vh;
+  padding: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-wide .modal-title {
+  margin: 0;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid rgba(1, 123, 251, 0.2);
+}
+
+.modal-body {
+  padding: 1rem 1.25rem;
+  overflow: auto;
+  flex: 1;
+}
+
+.modal-wide .modal-actions {
+  margin-top: 0;
+  padding: 0.85rem 1.25rem 1rem;
+  border-top: 1px solid rgba(1, 123, 251, 0.2);
+}
+
+.pagination--modal {
+  margin-top: 0.75rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.2);
 }
 
 .modal-title {

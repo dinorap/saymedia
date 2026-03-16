@@ -10,6 +10,7 @@ export default defineEventHandler(async (event) => {
   const query = getQuery(event)
   await ensureOrderRefundSchema()
   const adminId = query.admin_id ? parseInt(String(query.admin_id), 10) : null
+  const userId = query.user_id ? parseInt(String(query.user_id), 10) : null
   const status = query.status ? String(query.status) : ''
   const search = query.search ? String(query.search).trim() : ''
   const fromDate = query.from ? String(query.from).trim() : ''
@@ -39,14 +40,24 @@ export default defineEventHandler(async (event) => {
   const params: any[] = []
 
   // Phân quyền:
-  // - admin_1: chỉ xem đơn của khách mình quản lý (orders.admin_id = currentUser.id)
-  // - admin_0: có thể lọc theo admin_id tùy ý
+  // - admin_1:
+  //    + Đơn của KH do mình phụ trách (users.admin_id = currentUser.id)
+  //    + Đơn mà mình là người bán hộ (orders.seller_admin_id = currentUser.id)
+  //    + Đơn của sản phẩm do mình làm chủ (orders.product_owner_admin_id = currentUser.id)
+  // - admin_0: có thể lọc theo admin_id phụ trách user (users.admin_id = admin_id)
   if (currentUser.role === 'admin_1') {
-    conditions.push('o.admin_id = ?')
-    params.push(currentUser.id)
+    conditions.push(
+      '(u.admin_id = ? OR o.seller_admin_id = ? OR o.product_owner_admin_id = ?)',
+    )
+    params.push(currentUser.id, currentUser.id, currentUser.id)
   } else if (adminId && !isNaN(adminId)) {
-    conditions.push('o.admin_id = ?')
+    conditions.push('u.admin_id = ?')
     params.push(adminId)
+  }
+
+  if (userId && !isNaN(userId)) {
+    conditions.push('o.user_id = ?')
+    params.push(userId)
   }
 
   if (status) {
@@ -119,7 +130,7 @@ export default defineEventHandler(async (event) => {
       p.type AS product_type
     FROM orders o
     JOIN users u ON o.user_id = u.id
-    LEFT JOIN admins a ON o.admin_id = a.id
+    LEFT JOIN admins a ON u.admin_id = a.id
     LEFT JOIN admins sa ON o.seller_admin_id = sa.id
     LEFT JOIN admins oa ON o.product_owner_admin_id = oa.id
     LEFT JOIN admins ra ON o.refunded_by_admin_id = ra.id

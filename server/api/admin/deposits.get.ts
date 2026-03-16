@@ -9,6 +9,7 @@ export default defineEventHandler(async (event) => {
 
   const query = getQuery(event)
   const adminId = query.admin_id ? parseInt(String(query.admin_id), 10) : null
+  const userId = query.user_id ? parseInt(String(query.user_id), 10) : null
   const status = query.status ? String(query.status) : ''
   const search = query.search ? String(query.search).trim() : ''
   const fromDate = query.from ? String(query.from).trim() : ''
@@ -44,6 +45,11 @@ export default defineEventHandler(async (event) => {
   } else if (adminId && !isNaN(adminId)) {
     conditions.push('u.admin_id = ?')
     params.push(adminId)
+  }
+
+  if (userId && !isNaN(userId)) {
+    conditions.push('pt.user_id = ?')
+    params.push(userId)
   }
 
   if (status) {

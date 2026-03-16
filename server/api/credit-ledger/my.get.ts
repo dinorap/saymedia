@@ -49,7 +49,11 @@ export default defineEventHandler(async (event) => {
   const conditions: string[] = ["user_id = ?"];
   const params: any[] = [decoded.id];
 
-  if (type) {
+  // Không hiển thị các điều chỉnh do admin/system thực hiện
+  conditions.push("transaction_type <> 'admin_adjust'");
+  conditions.push("transaction_type <> 'system_adjust'");
+
+  if (type && type !== "admin_adjust" && type !== "system_adjust") {
     conditions.push("transaction_type = ?");
     params.push(type);
   }

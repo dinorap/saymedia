@@ -49,7 +49,6 @@
           </span>
         </NuxtLink>
         <NuxtLink
-          v-if="currentUser?.role !== 'admin_1'"
           to="/admin/revenue"
           class="sidebar-item"
         >
@@ -57,7 +56,6 @@
           <span class="sidebar-item-label">{{ $t("admin.revenue") }}</span>
         </NuxtLink>
         <NuxtLink
-          v-if="currentUser?.role !== 'admin_1'"
           to="/admin/partners"
           class="sidebar-item"
         >

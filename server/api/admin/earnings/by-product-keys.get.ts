@@ -7,6 +7,7 @@ type KeyStats = {
   total_credit_share: number;
   total_gross_amount: number;
   unit_price: number;
+  total_platform_fee: number;
 };
 
 export default defineEventHandler(async (event) => {
@@ -61,23 +62,24 @@ export default defineEventHandler(async (event) => {
       o.paid_part,
       o.bonus_part,
       o.note,
-      o.admin_id AS owner_admin_id,
-      o.seller_admin_id,
+      COALESCE(o.product_owner_admin_id, o.admin_id) AS owner_admin_id,
+      COALESCE(o.seller_admin_id, o.admin_id) AS report_admin_id,
       COALESCE(p.platform_fee_percent, 0) AS platform_fee_percent,
       owner.role AS owner_role,
       COALESCE(w.amount_credit, 0) AS wallet_credit
     FROM orders o
     JOIN products p ON o.product_id = p.id
-    JOIN admins owner ON o.admin_id = owner.id
+    JOIN admins owner ON COALESCE(o.product_owner_admin_id, o.admin_id) = owner.id
     LEFT JOIN admin_wallet w
       ON w.order_id = o.id
      AND w.admin_id = ?
      AND w.wallet_type IN ('sale_commission','product_revenue')
     WHERE o.product_id = ?
       AND o.status = 'completed'${dateConditions.join("")}
+      AND COALESCE(o.seller_admin_id, o.admin_id) = ?
     ORDER BY o.created_at DESC
     `,
-    [targetAdminId, productIdRaw, ...dateParams],
+    [targetAdminId, productIdRaw, ...dateParams, targetAdminId],
   );
 
   const statsMap = new Map<string, KeyStats>();
@@ -111,13 +113,14 @@ export default defineEventHandler(async (event) => {
     const amount = Number(row.amount || 0);
     const walletCredit = Number(row.wallet_credit || 0);
     const ownerId = Number(row.owner_admin_id);
-    const sellerAdminId = row.seller_admin_id ? Number(row.seller_admin_id) : null;
+    const reportAdminId = Number(row.report_admin_id);
     const ownerRole = String(row.owner_role || "");
     const platformFeePercent = Number(row.platform_fee_percent || 0);
 
-    const isSelfSale = !sellerAdminId || sellerAdminId === ownerId;
+    const isSelfSale = reportAdminId === ownerId;
 
     let share = 0;
+    let platformFeeForRow = 0;
     if (
       ownerRole === "admin_1" &&
       isSelfSale &&
@@ -125,6 +128,7 @@ export default defineEventHandler(async (event) => {
       ownerId === targetAdminId
     ) {
       share = Math.round((amount * (100 - platformFeePercent)) / 100);
+      platformFeeForRow = Math.round((amount * platformFeePercent) / 100);
     } else if (
       ownerRole === "admin_1" &&
       isSelfSale &&
@@ -134,6 +138,7 @@ export default defineEventHandler(async (event) => {
     ) {
       const platformPart = Math.round((amount * platformFeePercent) / 100);
       share = walletCredit + platformPart;
+      platformFeeForRow = platformPart;
     } else {
       share = walletCredit;
     }
@@ -147,6 +152,7 @@ export default defineEventHandler(async (event) => {
         total_credit_share: 0,
         total_gross_amount: 0,
         unit_price: 0,
+        total_platform_fee: 0,
       };
       statsMap.set(key, item);
     }
@@ -154,6 +160,7 @@ export default defineEventHandler(async (event) => {
     item.total_keys += quantity;
     item.total_credit_share += share;
     item.total_gross_amount += amount;
+    item.total_platform_fee += platformFeeForRow;
   }
 
   const items: KeyStats[] = Array.from(statsMap.values()).map((it) => {

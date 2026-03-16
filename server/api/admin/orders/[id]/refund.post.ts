@@ -1,7 +1,11 @@
 import pool from "../../../../utils/db";
 import { addAuditLog } from "../../../../utils/audit";
-import { applyRefundCredit, ensureCreditLedgerSchema } from "../../../../utils/creditLedger";
+import {
+  applyRefundCredit,
+  ensureCreditLedgerSchema,
+} from "../../../../utils/creditLedger";
 import { ensureOrderRefundSchema } from "../../../../utils/orderRefund";
+import { ensureAdminWalletSchema } from "../../../../utils/adminWallet";
 
 export default defineEventHandler(async (event) => {
   const currentUser = event.context.user;
@@ -22,6 +26,7 @@ export default defineEventHandler(async (event) => {
 
   await ensureCreditLedgerSchema();
   await ensureOrderRefundSchema();
+  await ensureAdminWalletSchema();
 
   const conn = await pool.getConnection();
   let resultCredit = 0;
@@ -81,6 +86,34 @@ export default defineEventHandler(async (event) => {
       `,
       [reason, currentUser.id, id],
     );
+
+    // Hoàn lại doanh thu/hoa hồng cho shop/chủ: ghi bút toán âm vào admin_wallet theo order_id
+    const [walletRows]: any = await conn.query(
+      `
+        SELECT admin_id, amount_credit, wallet_type, note
+        FROM admin_wallet
+        WHERE order_id = ?
+      `,
+      [id],
+    );
+    for (const w of walletRows || []) {
+      const amt = Number(w.amount_credit || 0);
+      if (!amt) continue;
+      await conn.query(
+        `
+          INSERT INTO admin_wallet (admin_id, amount_credit, wallet_type, order_id, reference_type, reference_id, note)
+          VALUES (?, ?, ?, ?, 'order_refund', ?, ?)
+        `,
+        [
+          w.admin_id,
+          -amt,
+          w.wallet_type,
+          id,
+          String(id),
+          `Hoàn lại ${amt} credit từ đơn #${id}: ${reason}`,
+        ],
+      );
+    }
 
     await conn.commit();
   } catch (e) {

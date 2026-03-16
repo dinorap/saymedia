@@ -62,6 +62,12 @@ export async function ensureUserPaidBonusSchema() {
     // Column may already exist
   }
   try {
+    // Đảm bảo credit không âm (MySQL 8+ sẽ tôn trọng CHECK)
+    await pool.query('ALTER TABLE users MODIFY credit BIGINT NOT NULL DEFAULT 0 CHECK (credit >= 0)')
+  } catch {
+    // Bỏ qua nếu CHECK không được hỗ trợ / đã tồn tại
+  }
+  try {
     await pool.query('ALTER TABLE users ADD COLUMN bonus_credit BIGINT NOT NULL DEFAULT 0')
   } catch {
     // Column may already exist
@@ -198,6 +204,13 @@ export async function applyPurchaseCreditDeduction(
   const afterPaid = paidCredit - paidPart
   const afterBonus = bonusCredit - bonusPart
   const afterBalance = afterPaid + afterBonus
+
+  if (afterBalance < 0) {
+    throw createError({
+      statusCode: 500,
+      statusMessage: 'Lỗi nội bộ: số dư âm sau khi trừ credit',
+    })
+  }
 
   await conn.query(
     'UPDATE users SET credit = ?, paid_credit = ?, bonus_credit = ? WHERE id = ?',
@@ -378,6 +391,13 @@ export async function applyCreditChange(
       'UPDATE users SET credit = ?, paid_credit = ?, bonus_credit = ? WHERE id = ?',
       [afterBalance, afterPaid, afterBonus, payload.userId],
     )
+  }
+
+  if (afterBalance < 0) {
+    throw createError({
+      statusCode: 500,
+      statusMessage: 'Lỗi nội bộ: số dư âm sau khi điều chỉnh credit',
+    })
   }
 
   await conn.query(

@@ -24,9 +24,15 @@ export default defineEventHandler(async (event) => {
   const longDescription =
     (String(body?.long_description || "").trim() || null)?.slice(0, MAX_LONG_DESCRIPTION) || null;
   const platformFeePercentRaw = body?.platform_fee_percent;
-  let platformFeePercent: number | null = null;
+  // Mặc định phí sàn 10% cho mọi sản phẩm.
+  // Chỉ admin_0 mới được set giá trị tùy ý; admin_1 luôn giữ mặc định.
+  let platformFeePercent: number | null = 10;
   if (currentUser.role === "admin_0") {
-    const n = Number(platformFeePercentRaw);
+    const n = Number(
+      platformFeePercentRaw === undefined || platformFeePercentRaw === null
+        ? 10
+        : platformFeePercentRaw,
+    );
     if (Number.isFinite(n) && n >= 0 && n <= 100) {
       platformFeePercent = Math.round(n);
     }

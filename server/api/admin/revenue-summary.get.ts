@@ -5,6 +5,11 @@ interface RevenueBucket {
   totalOrders: number;
   completedOrders: number;
   completedAmount: number;
+  selfAmount?: number;
+  affiliateAmount?: number;
+  ownerAmount?: number;
+  shopSelfAmount?: number;
+  platformFeeAmount?: number;
   totalDepositAmount: number;
 }
 
@@ -15,8 +20,14 @@ export default defineEventHandler(async (event) => {
   }
 
   const isSuperAdmin = currentUser.role === "admin_0";
-  const scopeWhere = isSuperAdmin ? "" : " WHERE o.admin_id = ?";
-  const scopeParams = isSuperAdmin ? [] : [currentUser.id];
+  // Scope orders:
+  // - admin_0: toàn hệ thống
+  // - admin_1: đơn được ghi nhận doanh số cho mình (orders.admin_id)
+  //            + đơn của sản phẩm mình sở hữu (orders.product_owner_admin_id)
+  const scopeWhere = isSuperAdmin
+    ? ""
+    : " WHERE (o.admin_id = ? OR o.product_owner_admin_id = ?)";
+  const scopeParams = isSuperAdmin ? [] : [currentUser.id, currentUser.id];
 
   const userWhere = isSuperAdmin ? "" : " WHERE admin_id = ?";
   const userParams = isSuperAdmin ? [] : [currentUser.id];
@@ -25,9 +36,16 @@ export default defineEventHandler(async (event) => {
     `SELECT COUNT(*) AS total_users FROM users${userWhere}`,
     userParams,
   );
-  const [[adminsRow]]: any = await pool.query(
-    "SELECT COUNT(*) AS total_admins FROM admins WHERE role = 'admin_1'",
-  );
+  let totalAdmins = 0;
+  if (isSuperAdmin) {
+    const [[adminsRow]]: any = await pool.query(
+      "SELECT COUNT(*) AS total_admins FROM admins WHERE role = 'admin_1'",
+    );
+    totalAdmins = Number(adminsRow?.total_admins || 0);
+  } else {
+    // Với admin_1 chỉ cần quan tâm tới chính shop của mình
+    totalAdmins = 1;
+  }
 
   const [[ordersRow]]: any = await pool.query(
     `
@@ -66,9 +84,11 @@ export default defineEventHandler(async (event) => {
         o.created_at,
         u.username AS user_username,
         o.seller_ref,
-        sa.username AS seller_username
+        sa.username AS seller_username,
+        p.name AS product_name
       FROM orders o
       JOIN users u ON o.user_id = u.id
+      LEFT JOIN products p ON o.product_id = p.id
       LEFT JOIN admins sa ON o.seller_admin_id = sa.id
       ${scopeWhere}
       ORDER BY o.created_at DESC
@@ -108,6 +128,11 @@ export default defineEventHandler(async (event) => {
         totalOrders: 0,
         completedOrders: 0,
         completedAmount: 0,
+        selfAmount: 0,
+        affiliateAmount: 0,
+        ownerAmount: 0,
+        shopSelfAmount: 0,
+        platformFeeAmount: 0,
         totalDepositAmount: 0,
       });
     }
@@ -116,19 +141,40 @@ export default defineEventHandler(async (event) => {
 
   // Orders by day (last 7 days), month (last 6 months), year (last 3 years)
   const [ordersByDay]: any = await pool.query(
-    `
-      SELECT
-        DATE(o.created_at) AS period,
-        COUNT(*) AS total_orders,
-        SUM(CASE WHEN o.status = 'completed' THEN 1 ELSE 0 END) AS completed_orders,
-        SUM(CASE WHEN o.status = 'completed' THEN o.amount ELSE 0 END) AS completed_amount
-      FROM orders o
-      ${scopeWhere}
-        ${scopeWhere ? "AND" : "WHERE"} o.created_at >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)
-      GROUP BY DATE(o.created_at)
-      ORDER BY period ASC
-    `,
-    scopeParams,
+    isSuperAdmin
+      ? `
+        SELECT
+          DATE(o.created_at) AS period,
+          COUNT(*) AS total_orders,
+          SUM(CASE WHEN o.status = 'completed' THEN 1 ELSE 0 END) AS completed_orders,
+          SUM(CASE WHEN o.status = 'completed' THEN o.amount ELSE 0 END) AS completed_amount,
+          -- Doanh thu "chủ": chỉ tính đơn trực tiếp (không qua ref/bán hộ)
+          SUM(CASE WHEN o.status = 'completed' AND owner.role = 'admin_0' AND o.admin_id = o.product_owner_admin_id THEN o.amount ELSE 0 END) AS owner_amount,
+          SUM(CASE WHEN o.status = 'completed' AND owner.role = 'admin_1' AND o.admin_id = o.product_owner_admin_id THEN o.amount ELSE 0 END) AS shop_self_amount,
+          SUM(CASE WHEN o.status = 'completed' AND owner.role = 'admin_1' AND o.admin_id = o.product_owner_admin_id THEN ROUND(o.amount * COALESCE(p.platform_fee_percent,0) / 100) ELSE 0 END) AS platform_fee_amount,
+          SUM(CASE WHEN o.status = 'completed' AND o.seller_admin_id IS NOT NULL AND o.admin_id <> o.product_owner_admin_id THEN o.amount ELSE 0 END) AS affiliate_amount
+        FROM orders o
+        JOIN admins owner ON o.product_owner_admin_id = owner.id
+        LEFT JOIN products p ON o.product_id = p.id
+        WHERE o.created_at >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)
+        GROUP BY DATE(o.created_at)
+        ORDER BY period ASC
+      `
+      : `
+        SELECT
+          DATE(o.created_at) AS period,
+          COUNT(*) AS total_orders,
+          SUM(CASE WHEN o.status = 'completed' THEN 1 ELSE 0 END) AS completed_orders,
+          SUM(CASE WHEN o.status = 'completed' THEN o.amount ELSE 0 END) AS completed_amount,
+          SUM(CASE WHEN o.status = 'completed' AND o.product_owner_admin_id = ? AND o.admin_id = o.product_owner_admin_id THEN o.amount ELSE 0 END) AS self_amount,
+          SUM(CASE WHEN o.status = 'completed' AND o.admin_id = ? AND o.product_owner_admin_id <> ? THEN o.amount ELSE 0 END) AS affiliate_amount
+        FROM orders o
+        ${scopeWhere}
+          AND o.created_at >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)
+        GROUP BY DATE(o.created_at)
+        ORDER BY period ASC
+      `,
+    isSuperAdmin ? [] : [currentUser.id, currentUser.id, currentUser.id, ...scopeParams],
   );
 
   for (const row of ordersByDay || []) {
@@ -137,22 +183,52 @@ export default defineEventHandler(async (event) => {
     bucket.totalOrders += Number(row.total_orders || 0);
     bucket.completedOrders += Number(row.completed_orders || 0);
     bucket.completedAmount += Number(row.completed_amount || 0);
+    if (isSuperAdmin) {
+      bucket.ownerAmount += Number(row.owner_amount || 0);
+      bucket.shopSelfAmount += Number(row.shop_self_amount || 0);
+      bucket.platformFeeAmount += Number(row.platform_fee_amount || 0);
+      bucket.affiliateAmount += Number(row.affiliate_amount || 0);
+    } else {
+      bucket.selfAmount += Number(row.self_amount || 0);
+      bucket.affiliateAmount += Number(row.affiliate_amount || 0);
+    }
   }
 
   const [ordersByMonth]: any = await pool.query(
-    `
-      SELECT
-        DATE_FORMAT(o.created_at, '%Y-%m') AS period,
-        COUNT(*) AS total_orders,
-        SUM(CASE WHEN o.status = 'completed' THEN 1 ELSE 0 END) AS completed_orders,
-        SUM(CASE WHEN o.status = 'completed' THEN o.amount ELSE 0 END) AS completed_amount
-      FROM orders o
-      ${scopeWhere}
-        ${scopeWhere ? "AND" : "WHERE"} o.created_at >= DATE_SUB(CURDATE(), INTERVAL 5 MONTH)
-      GROUP BY DATE_FORMAT(o.created_at, '%Y-%m')
-      ORDER BY period ASC
-    `,
-    scopeParams,
+    isSuperAdmin
+      ? `
+        SELECT
+          DATE_FORMAT(o.created_at, '%Y-%m') AS period,
+          COUNT(*) AS total_orders,
+          SUM(CASE WHEN o.status = 'completed' THEN 1 ELSE 0 END) AS completed_orders,
+          SUM(CASE WHEN o.status = 'completed' THEN o.amount ELSE 0 END) AS completed_amount,
+          -- Doanh thu "chủ": chỉ tính đơn trực tiếp (không qua ref/bán hộ)
+          SUM(CASE WHEN o.status = 'completed' AND owner.role = 'admin_0' AND o.admin_id = o.product_owner_admin_id THEN o.amount ELSE 0 END) AS owner_amount,
+          SUM(CASE WHEN o.status = 'completed' AND owner.role = 'admin_1' AND o.admin_id = o.product_owner_admin_id THEN o.amount ELSE 0 END) AS shop_self_amount,
+          SUM(CASE WHEN o.status = 'completed' AND owner.role = 'admin_1' AND o.admin_id = o.product_owner_admin_id THEN ROUND(o.amount * COALESCE(p.platform_fee_percent,0) / 100) ELSE 0 END) AS platform_fee_amount,
+          SUM(CASE WHEN o.status = 'completed' AND o.seller_admin_id IS NOT NULL AND o.admin_id <> o.product_owner_admin_id THEN o.amount ELSE 0 END) AS affiliate_amount
+        FROM orders o
+        JOIN admins owner ON o.product_owner_admin_id = owner.id
+        LEFT JOIN products p ON o.product_id = p.id
+        WHERE o.created_at >= DATE_SUB(CURDATE(), INTERVAL 5 MONTH)
+        GROUP BY DATE_FORMAT(o.created_at, '%Y-%m')
+        ORDER BY period ASC
+      `
+      : `
+        SELECT
+          DATE_FORMAT(o.created_at, '%Y-%m') AS period,
+          COUNT(*) AS total_orders,
+          SUM(CASE WHEN o.status = 'completed' THEN 1 ELSE 0 END) AS completed_orders,
+          SUM(CASE WHEN o.status = 'completed' THEN o.amount ELSE 0 END) AS completed_amount,
+          SUM(CASE WHEN o.status = 'completed' AND o.product_owner_admin_id = ? AND o.admin_id = o.product_owner_admin_id THEN o.amount ELSE 0 END) AS self_amount,
+          SUM(CASE WHEN o.status = 'completed' AND o.admin_id = ? AND o.product_owner_admin_id <> ? THEN o.amount ELSE 0 END) AS affiliate_amount
+        FROM orders o
+        ${scopeWhere}
+          AND o.created_at >= DATE_SUB(CURDATE(), INTERVAL 5 MONTH)
+        GROUP BY DATE_FORMAT(o.created_at, '%Y-%m')
+        ORDER BY period ASC
+      `,
+    isSuperAdmin ? [] : [currentUser.id, currentUser.id, currentUser.id, ...scopeParams],
   );
 
   for (const row of ordersByMonth || []) {
@@ -161,22 +237,52 @@ export default defineEventHandler(async (event) => {
     bucket.totalOrders += Number(row.total_orders || 0);
     bucket.completedOrders += Number(row.completed_orders || 0);
     bucket.completedAmount += Number(row.completed_amount || 0);
+    if (isSuperAdmin) {
+      bucket.ownerAmount += Number(row.owner_amount || 0);
+      bucket.shopSelfAmount += Number(row.shop_self_amount || 0);
+      bucket.platformFeeAmount += Number(row.platform_fee_amount || 0);
+      bucket.affiliateAmount += Number(row.affiliate_amount || 0);
+    } else {
+      bucket.selfAmount += Number(row.self_amount || 0);
+      bucket.affiliateAmount += Number(row.affiliate_amount || 0);
+    }
   }
 
   const [ordersByYear]: any = await pool.query(
-    `
-      SELECT
-        YEAR(o.created_at) AS period,
-        COUNT(*) AS total_orders,
-        SUM(CASE WHEN o.status = 'completed' THEN 1 ELSE 0 END) AS completed_orders,
-        SUM(CASE WHEN o.status = 'completed' THEN o.amount ELSE 0 END) AS completed_amount
-      FROM orders o
-      ${scopeWhere}
-        ${scopeWhere ? "AND" : "WHERE"} YEAR(o.created_at) >= YEAR(CURDATE()) - 2
-      GROUP BY YEAR(o.created_at)
-      ORDER BY period ASC
-    `,
-    scopeParams,
+    isSuperAdmin
+      ? `
+        SELECT
+          YEAR(o.created_at) AS period,
+          COUNT(*) AS total_orders,
+          SUM(CASE WHEN o.status = 'completed' THEN 1 ELSE 0 END) AS completed_orders,
+          SUM(CASE WHEN o.status = 'completed' THEN o.amount ELSE 0 END) AS completed_amount,
+          -- Doanh thu "chủ": chỉ tính đơn trực tiếp (không qua ref/bán hộ)
+          SUM(CASE WHEN o.status = 'completed' AND owner.role = 'admin_0' AND o.admin_id = o.product_owner_admin_id THEN o.amount ELSE 0 END) AS owner_amount,
+          SUM(CASE WHEN o.status = 'completed' AND owner.role = 'admin_1' AND o.admin_id = o.product_owner_admin_id THEN o.amount ELSE 0 END) AS shop_self_amount,
+          SUM(CASE WHEN o.status = 'completed' AND owner.role = 'admin_1' AND o.admin_id = o.product_owner_admin_id THEN ROUND(o.amount * COALESCE(p.platform_fee_percent,0) / 100) ELSE 0 END) AS platform_fee_amount,
+          SUM(CASE WHEN o.status = 'completed' AND o.seller_admin_id IS NOT NULL AND o.admin_id <> o.product_owner_admin_id THEN o.amount ELSE 0 END) AS affiliate_amount
+        FROM orders o
+        JOIN admins owner ON o.product_owner_admin_id = owner.id
+        LEFT JOIN products p ON o.product_id = p.id
+        WHERE YEAR(o.created_at) >= YEAR(CURDATE()) - 2
+        GROUP BY YEAR(o.created_at)
+        ORDER BY period ASC
+      `
+      : `
+        SELECT
+          YEAR(o.created_at) AS period,
+          COUNT(*) AS total_orders,
+          SUM(CASE WHEN o.status = 'completed' THEN 1 ELSE 0 END) AS completed_orders,
+          SUM(CASE WHEN o.status = 'completed' THEN o.amount ELSE 0 END) AS completed_amount,
+          SUM(CASE WHEN o.status = 'completed' AND o.product_owner_admin_id = ? AND o.admin_id = o.product_owner_admin_id THEN o.amount ELSE 0 END) AS self_amount,
+          SUM(CASE WHEN o.status = 'completed' AND o.admin_id = ? AND o.product_owner_admin_id <> ? THEN o.amount ELSE 0 END) AS affiliate_amount
+        FROM orders o
+        ${scopeWhere}
+          AND YEAR(o.created_at) >= YEAR(CURDATE()) - 2
+        GROUP BY YEAR(o.created_at)
+        ORDER BY period ASC
+      `,
+    isSuperAdmin ? [] : [currentUser.id, currentUser.id, currentUser.id, ...scopeParams],
   );
 
   for (const row of ordersByYear || []) {
@@ -185,6 +291,15 @@ export default defineEventHandler(async (event) => {
     bucket.totalOrders += Number(row.total_orders || 0);
     bucket.completedOrders += Number(row.completed_orders || 0);
     bucket.completedAmount += Number(row.completed_amount || 0);
+    if (isSuperAdmin) {
+      bucket.ownerAmount += Number(row.owner_amount || 0);
+      bucket.shopSelfAmount += Number(row.shop_self_amount || 0);
+      bucket.platformFeeAmount += Number(row.platform_fee_amount || 0);
+      bucket.affiliateAmount += Number(row.affiliate_amount || 0);
+    } else {
+      bucket.selfAmount += Number(row.self_amount || 0);
+      bucket.affiliateAmount += Number(row.affiliate_amount || 0);
+    }
   }
 
   // Deposits by day / month / year (success only, same scope)
@@ -266,7 +381,7 @@ export default defineEventHandler(async (event) => {
     success: true,
     data: {
       totalUsers: Number(usersRow?.total_users || 0),
-      totalAdmins: Number(adminsRow?.total_admins || 0),
+      totalAdmins,
       totalOrders: Number(ordersRow?.total_orders || 0),
       completedOrders: Number(ordersRow?.completed_orders || 0),
       completedAmount: Number(ordersRow?.completed_amount || 0),

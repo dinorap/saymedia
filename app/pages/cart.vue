@@ -507,7 +507,17 @@ async function confirmCheckoutAll() {
     for (const item of items) {
       try {
         const route = useRoute();
-        const sellerRef = route.query.ref && typeof route.query.ref === "string" ? String(route.query.ref).trim() : undefined;
+        let sellerRef;
+        if (route.query.ref && typeof route.query.ref === "string") {
+          const fromUrl = String(route.query.ref).trim();
+          if (fromUrl) {
+            setProductRef(item.id, fromUrl);
+            sellerRef = fromUrl;
+          }
+        } else {
+          const stored = getProductRef(item.id);
+          if (stored) sellerRef = stored;
+        }
         const res = await $fetch("/api/orders/create", {
           method: "POST",
           body: {

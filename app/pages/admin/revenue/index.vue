@@ -149,6 +149,24 @@
             <th>{{ $t("admin.revenuePeriod") }}</th>
             <th>{{ $t("admin.revenueOrdersCount") }}</th>
             <th>{{ $t("admin.revenueCompletedCount") }}</th>
+            <th v-if="summary.isSuperAdmin" class="detail-amount">
+              Doanh thu chủ (CREDIT)
+            </th>
+            <th v-if="summary.isSuperAdmin" class="detail-amount">
+              Doanh thu shop tự bán (CREDIT)
+            </th>
+            <th v-if="summary.isSuperAdmin" class="detail-amount">
+              Phí sàn (CREDIT)
+            </th>
+            <th v-if="summary.isSuperAdmin" class="detail-amount">
+              Doanh thu bán hộ (CREDIT)
+            </th>
+            <th v-if="!summary.isSuperAdmin" class="detail-amount">
+              Doanh thu SP của tôi (CREDIT)
+            </th>
+            <th v-if="!summary.isSuperAdmin" class="detail-amount">
+              Doanh thu bán hộ (CREDIT)
+            </th>
             <th class="detail-amount">
               {{ $t("admin.revenueCompletedRevenue") }}
             </th>
@@ -165,6 +183,24 @@
             <td>{{ row.period }}</td>
             <td>{{ row.totalOrders }}</td>
             <td>{{ row.completedOrders }}</td>
+            <td v-if="summary.isSuperAdmin" class="detail-amount">
+              {{ formatVnd(row.ownerAmount || 0) }}
+            </td>
+            <td v-if="summary.isSuperAdmin" class="detail-amount">
+              {{ formatVnd(row.shopSelfAmount || 0) }}
+            </td>
+            <td v-if="summary.isSuperAdmin" class="detail-amount">
+              {{ formatVnd(row.platformFeeAmount || 0) }}
+            </td>
+            <td v-if="summary.isSuperAdmin" class="detail-amount">
+              {{ formatVnd(row.affiliateAmount || 0) }}
+            </td>
+            <td v-if="!summary.isSuperAdmin" class="detail-amount">
+              {{ formatVnd(row.selfAmount || 0) }}
+            </td>
+            <td v-if="!summary.isSuperAdmin" class="detail-amount">
+              {{ formatVnd(row.affiliateAmount || 0) }}
+            </td>
             <td class="detail-amount">{{ formatVnd(row.completedAmount) }}</td>
             <td class="detail-amount">
               {{ formatVnd(row.totalDepositAmount) }}

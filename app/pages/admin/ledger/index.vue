@@ -194,6 +194,10 @@ function formatVnd(v) {
   return (Number(v) || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 }
 
+function formatCredit(v) {
+  return (Number(v) || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+}
+
 function formatDate(val) {
   if (!val) return "-";
   const d =
@@ -221,7 +225,9 @@ function typeLabel(type) {
 onMounted(() => {
   fetchLedger(1);
   autoRefreshTimer = setInterval(
-    () => fetchLedger(pagination.value.page || 1, { silent: true }),
+    () => {
+      fetchLedger(pagination.value.page || 1, { silent: true });
+    },
     5000,
   );
 });
