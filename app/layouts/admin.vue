@@ -326,13 +326,23 @@ const pageTitle = computed(() => {
   if (name === "admin") return t("admin.dashboard");
   if (name.includes("users")) return t("admin.users");
   if (name.includes("orders")) return t("admin.orders");
+  // Ưu tiên route cụ thể trước, rồi mới tới nhóm chung
+  if (name.includes("deposit-promotions"))
+    return t("depositPromotions.title") || "Mã khuyến mại nạp tiền";
   if (name.includes("deposits")) return t("admin.deposits");
+  if (name.includes("product-keys"))
+    return t("admin.productKeys") || "Key sản phẩm";
   if (name.includes("products")) return t("admin.products");
   if (name.includes("services")) return t("admin.services");
   if (name.includes("revenue")) return t("admin.revenue");
+  if (name.includes("partners"))
+    return t("admin.partners") || "Đối tác & Doanh thu";
   if (name.includes("ledger"))
     return t("admin.creditLedger") || "Sổ sao kê tín chỉ";
   if (name.includes("logs")) return t("admin.logs");
+  if (name.includes("support"))
+    return t("admin.supportChat") || "Chat hỗ trợ";
+  if (name.includes("announcements")) return t("admin.announcements");
   return t("admin.profileName");
 });
 

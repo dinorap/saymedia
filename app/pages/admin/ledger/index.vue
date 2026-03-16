@@ -224,12 +224,9 @@ function typeLabel(type) {
 
 onMounted(() => {
   fetchLedger(1);
-  autoRefreshTimer = setInterval(
-    () => {
-      fetchLedger(pagination.value.page || 1, { silent: true });
-    },
-    5000,
-  );
+  autoRefreshTimer = setInterval(() => {
+    fetchLedger(pagination.value.page || 1, { silent: true });
+  }, 5000);
 });
 onUnmounted(() => {
   if (autoRefreshTimer) {
