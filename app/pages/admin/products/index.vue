@@ -340,9 +340,7 @@
                 </div>
                 <div
                   v-if="
-                    isSuperAdmin &&
-                    editing &&
-                    editing.admin_role === 'admin_1'
+                    isSuperAdmin && editing && editing.admin_role === 'admin_1'
                   "
                   class="form-row"
                 >
@@ -1045,7 +1043,7 @@ function openModal(item = null) {
   form.name = item?.name ?? "";
   form.description = item?.description ?? "";
   form.long_description = item?.long_description ?? "";
-   form.platform_fee_percent =
+  form.platform_fee_percent =
     typeof item?.platform_fee_percent === "number"
       ? item.platform_fee_percent
       : 0;
@@ -1241,6 +1239,9 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+.search-group label {
+  width: 95px;
 }
 .filter-group {
   display: flex;

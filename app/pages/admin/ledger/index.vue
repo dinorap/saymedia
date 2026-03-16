@@ -21,7 +21,7 @@
         <label>{{ $t("admin.userId") || "User ID" }}</label>
         <input v-model="userIdFilter" class="input input--sm" placeholder="1" />
       </div>
-      <button class="btn-refresh" @click="fetchLedger(1)">↻</button>
+
       <div class="filter-group">
         <button
           type="button"
@@ -131,7 +131,8 @@ async function fetchLedger(page = 1, opts = { silent: false }) {
     params.set("page", String(page));
     params.set("limit", String(pageSize.value || 20));
     if (typeFilter.value.trim()) params.set("type", typeFilter.value.trim());
-    if (userIdFilter.value.trim()) params.set("user_id", userIdFilter.value.trim());
+    if (userIdFilter.value.trim())
+      params.set("user_id", userIdFilter.value.trim());
     if (fromDate.value) params.set("from", fromDate.value);
     if (toDate.value) params.set("to", toDate.value);
     const res = await $fetch(`/api/admin/credit-ledger?${params.toString()}`);
@@ -159,7 +160,8 @@ async function exportCsv() {
     const params = new URLSearchParams();
     params.set("format", "csv");
     if (typeFilter.value.trim()) params.set("type", typeFilter.value.trim());
-    if (userIdFilter.value.trim()) params.set("user_id", userIdFilter.value.trim());
+    if (userIdFilter.value.trim())
+      params.set("user_id", userIdFilter.value.trim());
     if (fromDate.value) params.set("from", fromDate.value);
     if (toDate.value) params.set("to", toDate.value);
     const url = `/api/admin/credit-ledger?${params.toString()}`;

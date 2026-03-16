@@ -40,9 +40,7 @@
                 class="badge"
                 :class="item.is_active ? 'badge--success' : 'badge--muted'"
               >
-                {{
-                  item.is_active ? $t("admin.active") : $t("admin.blocked")
-                }}
+                {{ item.is_active ? $t("admin.active") : $t("admin.blocked") }}
               </span>
             </td>
             <td>{{ formatDate(item.created_at) }}</td>
@@ -71,7 +69,8 @@
     <div v-if="pagination.total > 0" class="pagination">
       <span class="page-info">
         {{ $t("admin.page") }} {{ pagination.page }} {{ $t("admin.of") }}
-        {{ pagination.totalPages }} ({{ pagination.total }} {{ $t("admin.records") }})
+        {{ pagination.totalPages }} ({{ pagination.total }}
+        {{ $t("admin.records") }})
       </span>
       <div class="page-right">
         <button
@@ -101,25 +100,20 @@
       >
         <div class="modal">
           <h3 class="modal-title">
-            {{ editing ? $t("admin.edit") : ($t("admin.addService") || "Thêm dịch vụ") }}
+            {{
+              editing
+                ? $t("admin.edit")
+                : $t("admin.addService") || "Thêm dịch vụ"
+            }}
           </h3>
           <form class="modal-form" @submit.prevent="save">
             <div class="form-row">
               <label>{{ $t("admin.serviceName") || "Tên dịch vụ" }}</label>
-              <input
-                v-model="form.name"
-                type="text"
-                class="input"
-                required
-              />
+              <input v-model="form.name" type="text" class="input" required />
             </div>
             <div class="form-row">
               <label>{{ $t("admin.description") || "Mô tả" }}</label>
-              <input
-                v-model="form.description"
-                type="text"
-                class="input"
-              />
+              <input v-model="form.description" type="text" class="input" />
             </div>
             <div v-if="editing" class="form-row">
               <label>{{ $t("admin.status") }}</label>
@@ -130,7 +124,11 @@
             </div>
             <p v-if="error" class="error-msg">{{ error }}</p>
             <div class="modal-actions">
-              <button type="button" class="btn-secondary" @click="modalOpen = false">
+              <button
+                type="button"
+                class="btn-secondary"
+                @click="modalOpen = false"
+              >
                 {{ $t("admin.cancel") }}
               </button>
               <button type="submit" class="btn-primary" :disabled="saving">
@@ -317,6 +315,9 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+.search-group label {
+  width: 95px;
 }
 .list-toolbar label {
   font-size: 0.85rem;

@@ -117,7 +117,8 @@ async function fetchLogs(page = 1, opts = { silent: false }) {
     const params = new URLSearchParams();
     params.set("page", String(page));
     params.set("limit", String(pageSize.value || 20));
-    if (actionFilter.value.trim()) params.set("action", actionFilter.value.trim());
+    if (actionFilter.value.trim())
+      params.set("action", actionFilter.value.trim());
     if (fromDate.value) params.set("from", fromDate.value);
     if (toDate.value) params.set("to", toDate.value);
     const res = await $fetch(`/api/admin/logs?${params.toString()}`);
@@ -146,7 +147,8 @@ async function exportCsv() {
   try {
     const params = new URLSearchParams();
     params.set("format", "csv");
-    if (actionFilter.value.trim()) params.set("action", actionFilter.value.trim());
+    if (actionFilter.value.trim())
+      params.set("action", actionFilter.value.trim());
     if (fromDate.value) params.set("from", fromDate.value);
     if (toDate.value) params.set("to", toDate.value);
     const url = `/api/admin/logs?${params.toString()}`;
@@ -247,6 +249,9 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+.search-group label {
+  width: 95px;
 }
 .input--sm {
   padding: 0.45rem 0.75rem;

@@ -883,7 +883,7 @@ onUnmounted(() => {
   gap: 0.5rem;
 }
 .search-group label {
-  min-width: 9 0px;
+  width: 95px;
 }
 
 .filter-group label {

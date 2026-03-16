@@ -11,11 +11,7 @@
           :placeholder="$t('admin.annSearchPlaceholder')"
         />
       </div>
-      <button
-        type="button"
-        class="btn-add btn-add--right"
-        @click="openModal()"
-      >
+      <button type="button" class="btn-add btn-add--right" @click="openModal()">
         + {{ $t("admin.annWriteButton") }}
       </button>
     </div>
@@ -206,9 +202,7 @@
                 {{ $t("admin.annCancel") }}
               </button>
               <button type="submit" class="btn-primary" :disabled="saving">
-                {{
-                  saving ? $t("admin.loading") : $t("admin.annSave")
-                }}
+                {{ saving ? $t("admin.loading") : $t("admin.annSave") }}
               </button>
             </div>
           </form>
@@ -466,6 +460,9 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+.search-group label {
+  width: 95px;
 }
 
 .list-toolbar label {
