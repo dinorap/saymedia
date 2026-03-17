@@ -981,7 +981,7 @@ onBeforeUnmount(() => {
   justify-content: space-between;
   align-items: center;
   padding: 1rem 1.5rem;
-  border-bottom: 1px solid rgba(1, 123, 251, 0.2);
+  border-bottom: 1px solid rgb(var(--accent-rgb) / 0.2);
   background: rgba(3, 10, 25, 0.55);
 }
 
@@ -1062,7 +1062,7 @@ onBeforeUnmount(() => {
 .payment-tab {
   padding: 0.7rem 1rem;
   background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(1, 123, 251, 0.3);
+  border: 1px solid rgb(var(--accent-rgb) / 0.3);
   border-radius: 12px;
   color: var(--text-secondary);
   font-weight: 500;
@@ -1161,7 +1161,7 @@ onBeforeUnmount(() => {
 
 .qr-container {
   background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(1, 123, 251, 0.18);
+  border: 1px solid rgb(var(--accent-rgb) / 0.18);
   border-radius: 16px;
   padding: 1rem;
   text-align: center;
@@ -1184,7 +1184,7 @@ onBeforeUnmount(() => {
   text-align: center;
   padding: 2rem;
   background: rgba(255, 255, 255, 0.03);
-  border-color: rgba(1, 123, 251, 0.22);
+  border-color: rgb(var(--accent-rgb) / 0.22);
   border: 2px dashed gray;
   border-radius: 12px;
   display: flex;
@@ -1202,7 +1202,7 @@ onBeforeUnmount(() => {
 
 .account-info {
   background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(1, 123, 251, 0.18);
+  border: 1px solid rgb(var(--accent-rgb) / 0.18);
   border-radius: 16px;
   padding: 1rem;
   text-align: center;
@@ -1272,7 +1272,7 @@ onBeforeUnmount(() => {
 .quick-amount-btn {
   padding: 0.75rem;
   background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(1, 123, 251, 0.25);
+  border: 1px solid rgb(var(--accent-rgb) / 0.25);
   border-radius: 8px;
   color: var(--text-secondary);
   font-weight: 500;
@@ -1350,7 +1350,7 @@ onBeforeUnmount(() => {
 
 .quick-amount-btn:hover {
   border-color: var(--blue-border);
-  background: rgba(1, 123, 251, 0.1);
+  background: rgb(var(--accent-rgb) / 0.1);
 }
 
 .quick-amount-btn.active {
@@ -1363,7 +1363,7 @@ onBeforeUnmount(() => {
 /* Account Details */
 .account-details {
   background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(1, 123, 251, 0.18);
+  border: 1px solid rgb(var(--accent-rgb) / 0.18);
   border-radius: 12px;
   padding: 1rem;
 }
@@ -1391,7 +1391,7 @@ onBeforeUnmount(() => {
 /* Transfer Content */
 .transfer-content {
   background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(1, 123, 251, 0.18);
+  border: 1px solid rgb(var(--accent-rgb) / 0.18);
   border-radius: 12px;
   padding: 1rem;
 }
@@ -1412,8 +1412,8 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: rgba(1, 123, 251, 0.1);
-  border: 1px solid rgba(1, 123, 251, 0.35);
+  background: rgb(var(--accent-rgb) / 0.1);
+  border: 1px solid rgb(var(--accent-rgb) / 0.35);
   border-radius: 8px;
   padding: 0.75rem 1rem;
   font-family: "Courier New", monospace;
@@ -1551,7 +1551,7 @@ onBeforeUnmount(() => {
 /* ===== Theme alignment overrides (dark-blue) ===== */
 .modal-content.payment-modal-content {
   background: var(--bg-card);
-  border: 1px solid rgba(1, 123, 251, 0.35);
+  border: 1px solid rgb(var(--accent-rgb) / 0.35);
   box-shadow: var(--neon-shadow);
 }
 
@@ -1566,7 +1566,7 @@ onBeforeUnmount(() => {
 }
 
 .payment-tab:hover {
-  background: rgba(1, 123, 251, 0.1);
+  background: rgb(var(--accent-rgb) / 0.1);
   border-color: var(--blue-border);
   color: #fff;
 }

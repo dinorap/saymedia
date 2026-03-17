@@ -114,12 +114,12 @@ onUnmounted(() => {
   max-height: 420px;
 
   background:
-    radial-gradient(circle at 0 0, rgba(1, 123, 251, 0.2), transparent 55%),
+    radial-gradient(circle at 0 0, rgb(var(--accent-rgb) / 0.2), transparent 55%),
     rgba(5, 15, 35, 0.92);
   border-radius: 16px;
-  border: 1px solid rgba(1, 123, 251, 0.35);
+  border: 1px solid rgb(var(--accent-rgb) / 0.35);
   box-shadow:
-    0 0 25px rgba(1, 123, 251, 0.45),
+    0 0 25px rgb(var(--accent-rgb) / 0.45),
     0 12px 40px rgba(15, 23, 42, 0.9);
   backdrop-filter: blur(16px);
   z-index: 40;
@@ -156,8 +156,8 @@ onUnmounted(() => {
   padding: 0.6rem 0.8rem;
   background: rgba(15, 23, 42, 0.88);
   border-radius: 10px;
-  border: 1px solid rgba(1, 123, 251, 0.24);
-  box-shadow: 0 0 16px rgba(1, 123, 251, 0.15);
+  border: 1px solid rgb(var(--accent-rgb) / 0.24);
+  box-shadow: 0 0 16px rgb(var(--accent-rgb) / 0.15);
 }
 
 .social-proof-text {

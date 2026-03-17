@@ -322,8 +322,8 @@ const isLoggedIn = computed(() => roleCookie.value === "user");
   padding: 18px 18px 20px;
   border-radius: 16px;
   background: rgba(5, 15, 35, 0.85);
-  border: 1px solid rgba(1, 123, 251, 0.28);
-  box-shadow: 0 0 26px rgba(1, 123, 251, 0.18);
+  border: 1px solid rgb(var(--accent-rgb) / 0.28);
+  box-shadow: 0 0 26px rgb(var(--accent-rgb) / 0.18);
 }
 
 .feature-title {
@@ -392,12 +392,12 @@ const isLoggedIn = computed(() => roleCookie.value === "user");
 
 .landing-cta-content {
   border-radius: 18px;
-  border: 1px solid rgba(1, 123, 251, 0.45);
+  border: 1px solid rgb(var(--accent-rgb) / 0.45);
   background:
-    radial-gradient(circle at 0 0, rgba(1, 123, 251, 0.25), transparent 55%),
+    radial-gradient(circle at 0 0, rgb(var(--accent-rgb) / 0.25), transparent 55%),
     rgba(5, 15, 35, 0.96);
   box-shadow:
-    0 0 30px rgba(1, 123, 251, 0.35),
+    0 0 30px rgb(var(--accent-rgb) / 0.35),
     0 20px 60px rgba(15, 23, 42, 0.9);
   padding: 22px 28px;
   display: flex;

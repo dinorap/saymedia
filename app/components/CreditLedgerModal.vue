@@ -215,7 +215,7 @@ function formatDate(val) {
   justify-content: space-between;
   align-items: center;
   padding: 1rem;
-  border-bottom: 1px solid rgba(1, 123, 251, 0.2);
+  border-bottom: 1px solid rgb(var(--accent-rgb) / 0.2);
 }
 .head h3 {
   margin: 0;
@@ -275,7 +275,7 @@ function formatDate(val) {
 .data-table th,
 .data-table td {
   padding: 0.65rem 0.75rem;
-  border-bottom: 1px solid rgba(1, 123, 251, 0.15);
+  border-bottom: 1px solid rgb(var(--accent-rgb) / 0.15);
   text-align: left;
 }
 .data-table th {

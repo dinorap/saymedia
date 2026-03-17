@@ -33,8 +33,8 @@ const message = computed(
 .app-loading-spinner {
   width: 32px;
   height: 32px;
-  border: 3px solid rgba(1, 123, 251, 0.25);
-  border-top-color: var(--blue-bright, #017bfb);
+  border: 3px solid rgb(var(--accent-rgb) / 0.25);
+  border-top-color: var(--blue-bright);
   border-radius: 50%;
   animation: app-loading-spin 0.8s linear infinite;
 }

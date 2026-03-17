@@ -1289,12 +1289,12 @@ watch(
 .media-card {
   border-radius: 18px;
   overflow: hidden;
-  border: 1px solid rgba(1, 123, 251, 0.35);
+  border: 1px solid rgb(var(--accent-rgb) / 0.35);
   background: rgba(2, 6, 23, 0.55);
   backdrop-filter: blur(10px);
   box-shadow:
     0 0 0 1px rgba(15, 23, 42, 0.6),
-    0 0 40px rgba(1, 123, 251, 0.12);
+    0 0 40px rgb(var(--accent-rgb) / 0.12);
 }
 .media-card::before {
   content: "";
@@ -1303,7 +1303,7 @@ watch(
   pointer-events: none;
   background: radial-gradient(
     circle at 40% 0%,
-    rgba(1, 123, 251, 0.08),
+    rgb(var(--accent-rgb) / 0.08),
     transparent 55%
   );
   opacity: 0.9;
@@ -1331,13 +1331,13 @@ watch(
 
 .media-view-tab:hover {
   color: var(--text-primary);
-  background: rgba(1, 123, 251, 0.1);
+  background: rgb(var(--accent-rgb) / 0.1);
 }
 
 .media-view-tab.active {
-  background: rgba(1, 123, 251, 0.2);
+  background: rgb(var(--accent-rgb) / 0.2);
   color: #bfdbfe;
-  border: 1px solid rgba(1, 123, 251, 0.35);
+  border: 1px solid rgb(var(--accent-rgb) / 0.35);
   border-bottom-color: transparent;
   margin-bottom: -1px;
 }
@@ -1432,8 +1432,8 @@ watch(
   transform: translateY(-1px);
 }
 .thumb-btn.active {
-  border-color: rgba(1, 123, 251, 0.85);
-  box-shadow: 0 0 0 2px rgba(1, 123, 251, 0.18);
+  border-color: rgb(var(--accent-rgb) / 0.85);
+  box-shadow: 0 0 0 2px rgb(var(--accent-rgb) / 0.18);
 }
 .image-nav {
   position: absolute;
@@ -1458,7 +1458,7 @@ watch(
 .image-nav:hover {
   transform: translateY(-50%) scale(1.03);
   background: rgba(2, 6, 23, 0.92);
-  border-color: rgba(1, 123, 251, 0.7);
+  border-color: rgb(var(--accent-rgb) / 0.7);
 }
 .image-nav--left {
   left: 12px;
@@ -1469,10 +1469,10 @@ watch(
 .buy-card {
   padding: 14px 14px 12px;
   border-radius: 18px;
-  border: 1px solid rgba(1, 123, 251, 0.35);
+  border: 1px solid rgb(var(--accent-rgb) / 0.35);
   background: rgba(15, 23, 42, 0.9);
   backdrop-filter: blur(10px);
-  box-shadow: 0 0 30px rgba(1, 123, 251, 0.15);
+  box-shadow: 0 0 30px rgb(var(--accent-rgb) / 0.15);
 }
 .buy-card::before {
   content: "";
@@ -1482,7 +1482,7 @@ watch(
   pointer-events: none;
   background: linear-gradient(
     135deg,
-    rgba(1, 123, 251, 0.3),
+    rgb(var(--accent-rgb) / 0.3),
     rgba(251, 191, 36, 0.12),
     rgba(34, 197, 94, 0.1)
   );
@@ -1705,8 +1705,8 @@ watch(
 .tab-pill {
   padding: 2px 8px;
   border-radius: 999px;
-  background: rgba(1, 123, 251, 0.16);
-  border: 1px solid rgba(1, 123, 251, 0.25);
+  background: rgb(var(--accent-rgb) / 0.16);
+  border: 1px solid rgb(var(--accent-rgb) / 0.25);
   color: #bfdbfe;
   font-size: 0.75rem;
   font-weight: 700;
@@ -1772,7 +1772,7 @@ watch(
   background: linear-gradient(
     90deg,
     rgba(251, 191, 36, 0.95),
-    rgba(1, 123, 251, 0.95)
+    rgb(var(--accent-rgb) / 0.95)
   );
 }
 .bar-count {
@@ -1814,10 +1814,10 @@ watch(
   color: #e5e7eb;
   background: radial-gradient(
     circle at 30% 20%,
-    rgba(1, 123, 251, 0.35),
+    rgb(var(--accent-rgb) / 0.35),
     rgba(2, 6, 23, 0.7)
   );
-  border: 1px solid rgba(1, 123, 251, 0.25);
+  border: 1px solid rgb(var(--accent-rgb) / 0.25);
   flex: 0 0 auto;
 }
 .review-ident {
@@ -1956,7 +1956,7 @@ watch(
 }
 .similar-card:hover {
   transform: translateY(-1px);
-  border-color: rgba(1, 123, 251, 0.55);
+  border-color: rgb(var(--accent-rgb) / 0.55);
 }
 .similar-thumb {
   width: 100%;
@@ -2045,7 +2045,7 @@ watch(
   border-radius: 1rem;
   padding: 1.5rem 1.75rem;
   box-shadow: var(--neon-shadow);
-  border: 1px solid rgba(1, 123, 251, 0.45);
+  border: 1px solid rgb(var(--accent-rgb) / 0.45);
 }
 
 .detail-contact-header {

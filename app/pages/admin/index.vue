@@ -419,7 +419,7 @@ onMounted(() => {
 }
 .kpi-card {
   background: rgba(5, 15, 35, 0.7);
-  border: 1px solid rgba(1, 123, 251, 0.2);
+  border: 1px solid rgb(var(--accent-rgb) / 0.2);
   border-radius: 10px;
   padding: 0.75rem 0.9rem;
 }
@@ -451,7 +451,7 @@ onMounted(() => {
 }
 .card {
   background: rgba(5, 15, 35, 0.7);
-  border: 1px solid rgba(1, 123, 251, 0.2);
+  border: 1px solid rgb(var(--accent-rgb) / 0.2);
   border-radius: 10px;
   padding: 1rem;
 }

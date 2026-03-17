@@ -419,14 +419,14 @@ onMounted(async () => {
   align-items: flex-end;
   padding: 0.75rem 1rem;
   background: rgba(5, 15, 35, 0.5);
-  border: 1px solid rgba(1, 123, 251, 0.2);
+  border: 1px solid rgb(var(--accent-rgb) / 0.2);
   border-radius: 10px;
 }
 
 .btn-refresh {
   padding: 0.45rem 0.75rem;
-  background: rgba(1, 123, 251, 0.2);
-  border: 1px solid rgba(1, 123, 251, 0.4);
+  background: rgb(var(--accent-rgb) / 0.2);
+  border: 1px solid rgb(var(--accent-rgb) / 0.4);
   border-radius: 8px;
   cursor: pointer;
   font-size: 0.95rem;
@@ -480,8 +480,8 @@ onMounted(async () => {
 
 .btn-search {
   padding: 0.45rem 0.75rem;
-  background: rgba(1, 123, 251, 0.2);
-  border: 1px solid rgba(1, 123, 251, 0.4);
+  background: rgb(var(--accent-rgb) / 0.2);
+  border: 1px solid rgb(var(--accent-rgb) / 0.4);
   border-radius: 8px;
   cursor: pointer;
   font-size: 1rem;
@@ -512,7 +512,7 @@ onMounted(async () => {
 .data-table td {
   padding: 0.75rem 1rem;
   text-align: left;
-  border-bottom: 1px solid rgba(1, 123, 251, 0.15);
+  border-bottom: 1px solid rgb(var(--accent-rgb) / 0.15);
 }
 
 .data-table th {
@@ -528,7 +528,7 @@ onMounted(async () => {
 }
 
 .data-table tbody tr:hover {
-  background: rgba(1, 123, 251, 0.05);
+  background: rgb(var(--accent-rgb) / 0.05);
 }
 
 .badge {
@@ -540,7 +540,7 @@ onMounted(async () => {
 }
 
 .badge--primary {
-  background: rgba(1, 123, 251, 0.25);
+  background: rgb(var(--accent-rgb) / 0.25);
   color: var(--blue-bright);
 }
 
@@ -599,8 +599,8 @@ onMounted(async () => {
 
 .btn-page {
   padding: 0.4rem 1rem;
-  background: rgba(1, 123, 251, 0.2);
-  border: 1px solid rgba(1, 123, 251, 0.4);
+  background: rgb(var(--accent-rgb) / 0.2);
+  border: 1px solid rgb(var(--accent-rgb) / 0.4);
   border-radius: 8px;
   color: var(--text-primary);
   font-weight: 500;
@@ -608,7 +608,7 @@ onMounted(async () => {
 }
 
 .btn-page:hover:not(:disabled) {
-  background: rgba(1, 123, 251, 0.3);
+  background: rgb(var(--accent-rgb) / 0.3);
 }
 
 .btn-page:disabled {

@@ -242,7 +242,7 @@ onMounted(() => {
   align-items: flex-end;
   padding: 0.75rem 1rem;
   background: rgba(5, 15, 35, 0.5);
-  border: 1px solid rgba(1, 123, 251, 0.2);
+  border: 1px solid rgb(var(--accent-rgb) / 0.2);
   border-radius: 10px;
 }
 .filter-group {
@@ -257,8 +257,8 @@ onMounted(() => {
 .btn-refresh {
   padding: 0.45rem 0.75rem;
   border-radius: 8px;
-  border: 1px solid rgba(1, 123, 251, 0.4);
-  background: rgba(1, 123, 251, 0.2);
+  border: 1px solid rgb(var(--accent-rgb) / 0.4);
+  background: rgb(var(--accent-rgb) / 0.2);
   color: #fff;
 }
 .btn-export-csv {
@@ -296,7 +296,7 @@ onMounted(() => {
 .data-table td {
   padding: 0.75rem 1rem;
   text-align: left;
-  border-bottom: 1px solid rgba(1, 123, 251, 0.15);
+  border-bottom: 1px solid rgb(var(--accent-rgb) / 0.15);
 }
 .data-table th {
   color: var(--text-secondary);
@@ -333,15 +333,15 @@ onMounted(() => {
 }
 .btn-page {
   padding: 0.4rem 1rem;
-  background: rgba(1, 123, 251, 0.2);
-  border: 1px solid rgba(1, 123, 251, 0.4);
+  background: rgb(var(--accent-rgb) / 0.2);
+  border: 1px solid rgb(var(--accent-rgb) / 0.4);
   border-radius: 8px;
   color: var(--text-primary);
   font-weight: 500;
   cursor: pointer;
 }
 .btn-page:hover:not(:disabled) {
-  background: rgba(1, 123, 251, 0.3);
+  background: rgb(var(--accent-rgb) / 0.3);
 }
 .btn-page:disabled {
   opacity: 0.5;

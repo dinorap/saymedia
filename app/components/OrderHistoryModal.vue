@@ -715,11 +715,11 @@ async function submitRefundRequest() {
   position: fixed;
   z-index: 1001;
   background: rgba(8, 20, 45, 0.98);
-  border: 1px solid rgba(1, 123, 251, 0.45);
+  border: 1px solid rgb(var(--accent-rgb) / 0.45);
   border-radius: 12px;
   box-shadow:
     0 8px 32px rgba(0, 0, 0, 0.5),
-    0 0 20px rgba(1, 123, 251, 0.15);
+    0 0 20px rgb(var(--accent-rgb) / 0.15);
   padding: 0;
   max-width: 360px;
   max-height: 70vh;
@@ -729,7 +729,7 @@ async function submitRefundRequest() {
 }
 .note-popover-title {
   padding: 0.65rem 1rem;
-  border-bottom: 1px solid rgba(1, 123, 251, 0.25);
+  border-bottom: 1px solid rgb(var(--accent-rgb) / 0.25);
   font-size: 0.9rem;
   font-weight: 600;
   color: var(--blue-bright);
@@ -764,7 +764,7 @@ async function submitRefundRequest() {
 .note-popover-keys {
   margin-top: 0.35rem;
   padding-left: 0.5rem;
-  border-left: 2px solid rgba(1, 123, 251, 0.4);
+  border-left: 2px solid rgb(var(--accent-rgb) / 0.4);
 }
 .note-popover-key-line {
   padding: 0.2rem 0;
@@ -804,8 +804,8 @@ async function submitRefundRequest() {
   display: inline-block;
   padding: 0.4rem 0.9rem;
   border-radius: 8px;
-  background: rgba(1, 123, 251, 0.2);
-  border: 1px solid rgba(1, 123, 251, 0.5);
+  background: rgb(var(--accent-rgb) / 0.2);
+  border: 1px solid rgb(var(--accent-rgb) / 0.5);
   color: var(--blue-electric);
   font-weight: 600;
   font-size: 0.85rem;
@@ -814,7 +814,7 @@ async function submitRefundRequest() {
 }
 
 .history-link-btn:hover {
-  background: rgba(1, 123, 251, 0.35);
+  background: rgb(var(--accent-rgb) / 0.35);
   color: var(--text-primary);
   border-color: var(--blue-bright);
 }
@@ -834,7 +834,7 @@ async function submitRefundRequest() {
 .refund-textarea {
   width: 100%;
   border-radius: 8px;
-  border: 1px solid rgba(1, 123, 251, 0.3);
+  border: 1px solid rgb(var(--accent-rgb) / 0.3);
   background: rgba(5, 15, 35, 0.8);
   color: var(--text-primary);
   padding: 0.55rem 0.7rem;

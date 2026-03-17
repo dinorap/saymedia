@@ -546,8 +546,8 @@ onUnmounted(() => {
   cursor: pointer;
 }
 .subtab-btn--active {
-  border-color: rgba(59, 130, 246, 0.9);
-  background: rgba(1, 123, 251, 0.2);
+  border-color: var(--blue-bright);
+  background: rgb(var(--accent-rgb) / 0.2);
   color: #e5e7eb;
 }
 .modal-tabs {
@@ -566,7 +566,7 @@ onUnmounted(() => {
   align-items: flex-end;
   padding: 0.75rem 1rem;
   background: rgba(5, 15, 35, 0.5);
-  border: 1px solid rgba(1, 123, 251, 0.2);
+  border: 1px solid rgb(var(--accent-rgb) / 0.2);
   border-radius: 10px;
   flex-wrap: wrap;
 }
@@ -581,14 +581,14 @@ onUnmounted(() => {
 }
 .btn-primary {
   padding: 0.4rem 0.75rem;
-  background: rgba(1, 123, 251, 0.9);
+  background: rgb(var(--accent-rgb) / 0.9);
   color: #fff;
   border: none;
   border-radius: 6px;
   cursor: pointer;
 }
 .btn-primary:hover {
-  background: rgba(1, 123, 251, 1);
+  background: rgb(var(--accent-rgb) / 1);
 }
 .btn-refresh {
   padding: 0.45rem 0.75rem;
@@ -604,17 +604,17 @@ onUnmounted(() => {
 .btn-small {
   padding: 0.25rem 0.5rem;
   font-size: 0.85rem;
-  background: rgba(1, 123, 251, 0.2);
-  color: var(--blue-bright, #017bfb);
-  border: 1px solid rgba(1, 123, 251, 0.4);
+  background: rgb(var(--accent-rgb) / 0.2);
+  color: var(--blue-bright);
+  border: 1px solid rgb(var(--accent-rgb) / 0.4);
   border-radius: 4px;
   cursor: pointer;
 }
 .btn-small:hover {
-  background: rgba(1, 123, 251, 0.3);
+  background: rgb(var(--accent-rgb) / 0.3);
 }
 .card {
-  border: 1px solid rgba(1, 123, 251, 0.2);
+  border: 1px solid rgb(var(--accent-rgb) / 0.2);
   border-radius: 10px;
   padding: 1rem;
   margin-bottom: 1rem;
@@ -632,7 +632,7 @@ onUnmounted(() => {
 .data-table td {
   padding: 0.5rem 0.75rem;
   text-align: left;
-  border-bottom: 1px solid rgba(1, 123, 251, 0.15);
+  border-bottom: 1px solid rgb(var(--accent-rgb) / 0.15);
 }
 .data-table th {
   font-weight: 600;

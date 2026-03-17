@@ -630,7 +630,7 @@ onUnmounted(() => {
   margin-bottom: 16px;
   padding: 16px 20px;
   background: rgba(5, 15, 35, 0.95);
-  border: 1px solid rgba(1, 123, 251, 0.25);
+  border: 1px solid rgb(var(--accent-rgb) / 0.25);
   border-radius: 12px;
 }
 .cart-title {
@@ -649,7 +649,7 @@ onUnmounted(() => {
   text-align: center;
   color: var(--text-secondary);
   background: rgba(5, 15, 35, 0.95);
-  border: 1px solid rgba(1, 123, 251, 0.25);
+  border: 1px solid rgb(var(--accent-rgb) / 0.25);
   border-radius: 12px;
 }
 .cart-grid {
@@ -664,7 +664,7 @@ onUnmounted(() => {
   gap: 12px;
   padding: 16px;
   background: rgba(5, 15, 35, 0.95);
-  border: 1px solid rgba(1, 123, 251, 0.25);
+  border: 1px solid rgb(var(--accent-rgb) / 0.25);
   border-radius: 12px;
 }
 
@@ -694,7 +694,7 @@ onUnmounted(() => {
   align-items: center;
   padding: 14px;
   border-radius: 14px;
-  border: 1px solid rgba(1, 123, 251, 0.25);
+  border: 1px solid rgb(var(--accent-rgb) / 0.25);
   background: rgba(8, 20, 45, 0.9);
   color: var(--text-primary);
 }
@@ -874,7 +874,7 @@ onUnmounted(() => {
 }
 .cart-summary {
   border-radius: 14px;
-  border: 1px solid rgba(1, 123, 251, 0.25);
+  border: 1px solid rgb(var(--accent-rgb) / 0.25);
   background: rgba(5, 15, 35, 0.95);
   color: var(--text-primary);
   padding: 16px;
@@ -932,9 +932,9 @@ onUnmounted(() => {
   max-width: 420px;
   background: rgba(5, 15, 35, 0.98);
   color: var(--text-primary);
-  border: 1px solid rgba(1, 123, 251, 0.4);
+  border: 1px solid rgb(var(--accent-rgb) / 0.4);
   border-radius: 14px;
-  box-shadow: 0 0 40px rgba(1, 123, 251, 0.2);
+  box-shadow: 0 0 40px rgb(var(--accent-rgb) / 0.2);
   padding: 1.25rem;
 }
 

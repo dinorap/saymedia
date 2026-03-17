@@ -86,11 +86,11 @@ import SiteHeader from "~/components/SiteHeader.vue";
   border-radius: 20px;
   padding: 20px 22px 18px;
   background:
-    radial-gradient(circle at 0 0, rgba(1, 123, 251, 0.28), transparent 55%),
+    radial-gradient(circle at 0 0, rgb(var(--accent-rgb) / 0.28), transparent 55%),
     rgba(5, 15, 35, 0.96);
-  border: 1px solid rgba(1, 123, 251, 0.55);
+  border: 1px solid rgb(var(--accent-rgb) / 0.55);
   box-shadow:
-    0 0 36px rgba(1, 123, 251, 0.35),
+    0 0 36px rgb(var(--accent-rgb) / 0.35),
     0 20px 60px rgba(15, 23, 42, 0.95);
   display: flex;
   align-items: center;
@@ -134,9 +134,9 @@ import SiteHeader from "~/components/SiteHeader.vue";
 }
 
 .pricing-card--highlight {
-  border-color: rgba(1, 123, 251, 0.9);
+  border-color: rgb(var(--accent-rgb) / 0.9);
   box-shadow:
-    0 0 40px rgba(1, 123, 251, 0.55),
+    0 0 40px rgb(var(--accent-rgb) / 0.55),
     0 18px 50px rgba(15, 23, 42, 0.95);
   position: relative;
 }

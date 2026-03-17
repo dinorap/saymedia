@@ -68,7 +68,7 @@
 
 .btn-ghost:hover:not(:disabled) {
   background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(1, 123, 251, 0.45);
+  border-color: rgb(var(--accent-rgb) / 0.45);
   color: var(--text-primary);
   transform: translateY(-1px);
 }

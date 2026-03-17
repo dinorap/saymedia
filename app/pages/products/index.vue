@@ -519,9 +519,9 @@ onUnmounted(() => {
   border-radius: 18px;
   padding: 16px 18px 16px;
   background:
-    radial-gradient(circle at 0 0, rgba(1, 123, 251, 0.24), transparent 55%),
+    radial-gradient(circle at 0 0, rgb(var(--accent-rgb) / 0.24), transparent 55%),
     rgba(5, 15, 35, 0.92);
-  border: 1px solid rgba(1, 123, 251, 0.4);
+  border: 1px solid rgb(var(--accent-rgb) / 0.4);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -568,7 +568,7 @@ onUnmounted(() => {
   margin-bottom: 8px;
   color: var(--text-primary);
   background: rgba(5, 15, 35, 0.95);
-  border: 1px solid rgba(1, 123, 251, 0.25);
+  border: 1px solid rgb(var(--accent-rgb) / 0.25);
   border-radius: 10px;
 }
 
@@ -595,7 +595,7 @@ onUnmounted(() => {
   padding: 0.45rem 0.75rem;
   min-width: 170px;
   color: var(--text-primary);
-  border: 1px solid rgba(1, 123, 251, 0.3);
+  border: 1px solid rgb(var(--accent-rgb) / 0.3);
   border-radius: 8px;
   color: var(--text-primary);
   font-size: 0.95rem;
@@ -624,8 +624,8 @@ onUnmounted(() => {
   color: var(--text-primary);
   border-radius: 16px;
   padding: 14px 16px;
-  border: 1px solid rgba(1, 123, 251, 0.35);
-  box-shadow: 0 0 18px rgba(1, 123, 251, 0.16);
+  border: 1px solid rgb(var(--accent-rgb) / 0.35);
+  box-shadow: 0 0 18px rgb(var(--accent-rgb) / 0.16);
   display: grid;
   grid-template-columns: 130px minmax(0, 1fr); /* ảnh+giá | mô tả+nút */
   align-items: flex-start;
@@ -792,7 +792,7 @@ onUnmounted(() => {
   min-width: 150px;
   padding: 0.3rem 0.75rem;
   border-radius: 999px;
-  border: 1px solid rgba(1, 123, 251, 0.55);
+  border: 1px solid rgb(var(--accent-rgb) / 0.55);
   background: rgba(15, 23, 42, 0.9);
   color: var(--text-primary);
   font-size: 0.86rem;
@@ -800,8 +800,8 @@ onUnmounted(() => {
 }
 
 .product-duration-select:focus {
-  border-color: rgba(59, 130, 246, 0.9);
-  box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.6);
+  border-color: var(--blue-bright);
+  box-shadow: 0 0 0 1px rgb(var(--accent-rgb) / 0.6);
 }
 
 .product-actions-row {

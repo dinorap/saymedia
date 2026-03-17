@@ -1347,7 +1347,7 @@ onUnmounted(() => {
 .tabs {
   display: flex;
   gap: 4px;
-  border-bottom: 1px solid rgba(1, 123, 251, 0.2);
+  border-bottom: 1px solid rgb(var(--accent-rgb) / 0.2);
 }
 
 .tab-btn {
@@ -1366,12 +1366,12 @@ onUnmounted(() => {
 
 .tab-btn:hover {
   color: var(--text-primary);
-  background: rgba(1, 123, 251, 0.08);
+  background: rgb(var(--accent-rgb) / 0.08);
 }
 
 .tab-btn.active {
   color: var(--blue-bright);
-  background: rgba(1, 123, 251, 0.12);
+  background: rgb(var(--accent-rgb) / 0.12);
   border-bottom: 2px solid var(--blue-bright);
   margin-bottom: -1px;
 }
@@ -1526,7 +1526,7 @@ onUnmounted(() => {
 .data-table td {
   padding: 0.75rem 1rem;
   text-align: left;
-  border-bottom: 1px solid rgba(1, 123, 251, 0.15);
+  border-bottom: 1px solid rgb(var(--accent-rgb) / 0.15);
 }
 
 .data-table th {
@@ -1556,8 +1556,8 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(1, 123, 251, 0.15);
-  border: 1px solid rgba(1, 123, 251, 0.3);
+  background: rgb(var(--accent-rgb) / 0.15);
+  border: 1px solid rgb(var(--accent-rgb) / 0.3);
   border-radius: 6px;
   cursor: pointer;
   font-size: 14px;
@@ -1565,7 +1565,7 @@ onUnmounted(() => {
 }
 
 .btn-icon:hover {
-  background: rgba(1, 123, 251, 0.25);
+  background: rgb(var(--accent-rgb) / 0.25);
 }
 
 .btn-icon--danger:hover {
@@ -1578,13 +1578,13 @@ onUnmounted(() => {
 }
 
 .data-table tbody tr:hover {
-  background: rgba(1, 123, 251, 0.05);
+  background: rgb(var(--accent-rgb) / 0.05);
 }
 
 .ref-code {
   font-family: monospace;
   font-size: 0.85em;
-  background: rgba(1, 123, 251, 0.15);
+  background: rgb(var(--accent-rgb) / 0.15);
   padding: 0.2rem 0.5rem;
   border-radius: 4px;
 }
@@ -1598,7 +1598,7 @@ onUnmounted(() => {
 }
 
 .badge--primary {
-  background: rgba(1, 123, 251, 0.25);
+  background: rgb(var(--accent-rgb) / 0.25);
   color: var(--blue-bright);
 }
 
@@ -1642,7 +1642,7 @@ onUnmounted(() => {
   padding: 1.5rem;
   max-width: 420px;
   width: 100%;
-  box-shadow: 0 0 40px rgba(1, 123, 251, 0.2);
+  box-shadow: 0 0 40px rgb(var(--accent-rgb) / 0.2);
 }
 
 .modal-wide {
@@ -1657,7 +1657,7 @@ onUnmounted(() => {
 .modal-wide .modal-title {
   margin: 0;
   padding: 1rem 1.25rem;
-  border-bottom: 1px solid rgba(1, 123, 251, 0.2);
+  border-bottom: 1px solid rgb(var(--accent-rgb) / 0.2);
 }
 
 .modal-body {
@@ -1669,7 +1669,7 @@ onUnmounted(() => {
 .modal-wide .modal-actions {
   margin-top: 0;
   padding: 0.85rem 1.25rem 1rem;
-  border-top: 1px solid rgba(1, 123, 251, 0.2);
+  border-top: 1px solid rgb(var(--accent-rgb) / 0.2);
 }
 
 .pagination--modal {
@@ -1706,7 +1706,7 @@ onUnmounted(() => {
 .form-row .input {
   padding: 0.6rem 0.9rem;
   background: rgba(5, 15, 35, 0.9);
-  border: 1px solid rgba(1, 123, 251, 0.3);
+  border: 1px solid rgb(var(--accent-rgb) / 0.3);
   border-radius: 8px;
   color: var(--text-primary);
   font-size: 0.95rem;
@@ -1720,7 +1720,7 @@ onUnmounted(() => {
 .form-row select.input {
   cursor: pointer;
   appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23017BFB' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23ffffff' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 0.75rem center;
   padding-right: 2rem;
@@ -1759,7 +1759,7 @@ onUnmounted(() => {
   padding: 0.5rem 1.25rem;
   background: rgba(255, 255, 255, 0.1);
   color: var(--text-primary);
-  border: 1px solid rgba(1, 123, 251, 0.3);
+  border: 1px solid rgb(var(--accent-rgb) / 0.3);
   border-radius: 8px;
   font-weight: 500;
   cursor: pointer;
@@ -1772,7 +1772,7 @@ onUnmounted(() => {
   align-items: flex-end;
   padding: 0.75rem 1rem;
   background: rgba(5, 15, 35, 0.5);
-  border: 1px solid rgba(1, 123, 251, 0.2);
+  border: 1px solid rgb(var(--accent-rgb) / 0.2);
   border-radius: 10px;
 }
 
@@ -1804,15 +1804,15 @@ onUnmounted(() => {
 
 .btn-search {
   padding: 0.45rem 0.75rem;
-  background: rgba(1, 123, 251, 0.2);
-  border: 1px solid rgba(1, 123, 251, 0.4);
+  background: rgb(var(--accent-rgb) / 0.2);
+  border: 1px solid rgb(var(--accent-rgb) / 0.4);
   border-radius: 8px;
   cursor: pointer;
   font-size: 1rem;
 }
 
 .btn-search:hover {
-  background: rgba(1, 123, 251, 0.3);
+  background: rgb(var(--accent-rgb) / 0.3);
 }
 
 .pagination {
@@ -1837,8 +1837,8 @@ onUnmounted(() => {
 
 .btn-page {
   padding: 0.4rem 1rem;
-  background: rgba(1, 123, 251, 0.2);
-  border: 1px solid rgba(1, 123, 251, 0.4);
+  background: rgb(var(--accent-rgb) / 0.2);
+  border: 1px solid rgb(var(--accent-rgb) / 0.4);
   border-radius: 8px;
   color: var(--text-primary);
   font-weight: 500;
@@ -1846,7 +1846,7 @@ onUnmounted(() => {
 }
 
 .btn-page:hover:not(:disabled) {
-  background: rgba(1, 123, 251, 0.3);
+  background: rgb(var(--accent-rgb) / 0.3);
 }
 
 .btn-page:disabled {

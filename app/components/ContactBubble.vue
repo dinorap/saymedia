@@ -390,9 +390,9 @@ onUnmounted(() => {
   width: 46px;
   height: 46px;
   border-radius: 999px;
-  border: 1px solid rgba(1, 123, 251, 0.65);
+  border: 1px solid rgb(var(--accent-rgb) / 0.65);
   background:
-    radial-gradient(circle at 0 0, rgba(1, 123, 251, 0.35), transparent 55%),
+    radial-gradient(circle at 0 0, rgb(var(--accent-rgb) / 0.35), transparent 55%),
     rgba(5, 15, 35, 0.98);
   color: #e5e7eb;
   cursor: pointer;
@@ -400,7 +400,7 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   box-shadow:
-    0 0 22px rgba(1, 123, 251, 0.6),
+    0 0 22px rgb(var(--accent-rgb) / 0.6),
     0 12px 30px rgba(15, 23, 42, 0.95);
 }
 
@@ -427,10 +427,10 @@ onUnmounted(() => {
 .bubble-panel {
   width: 320px;
   border-radius: 16px;
-  border: 1px solid rgba(1, 123, 251, 0.55);
+  border: 1px solid rgb(var(--accent-rgb) / 0.55);
   background: rgba(5, 15, 35, 0.98);
   box-shadow:
-    0 0 26px rgba(1, 123, 251, 0.4),
+    0 0 26px rgb(var(--accent-rgb) / 0.4),
     0 16px 40px rgba(15, 23, 42, 0.95);
   padding: 10px 12px 10px;
 }

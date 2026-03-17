@@ -354,12 +354,12 @@ async function submitChangePassword() {
   justify-content: space-between;
   align-items: center;
   padding: 16px 150px;
-  border-bottom: 1px solid rgba(1, 123, 251, 0.3);
+  border-bottom: 1px solid rgb(var(--accent-rgb) / 0.3);
   color: var(--text-primary);
   backdrop-filter: blur(12px);
   box-shadow:
-    0 0 20px rgba(1, 123, 251, 0.08),
-    0 1px 0 rgba(1, 123, 251, 0.15);
+    0 0 20px rgb(var(--accent-rgb) / 0.08),
+    0 1px 0 rgb(var(--accent-rgb) / 0.15);
 }
 
 .profile-page .logo {
@@ -397,7 +397,7 @@ async function submitChangePassword() {
   color: var(--text-primary);
   text-shadow:
     0 0 15px var(--blue-glow),
-    0 0 30px rgba(1, 123, 251, 0.4);
+    0 0 30px rgb(var(--accent-rgb) / 0.4);
 }
 
 .profile-page .auth-buttons {
@@ -432,7 +432,7 @@ async function submitChangePassword() {
   color: var(--blue-bright);
   text-shadow:
     0 0 12px var(--blue-glow),
-    0 0 25px rgba(1, 123, 251, 0.5);
+    0 0 25px rgb(var(--accent-rgb) / 0.5);
 }
 
 .profile-page .lang-sep {
@@ -455,8 +455,8 @@ async function submitChangePassword() {
 .profile-page .btn-login {
   color: var(--text-primary);
   color: var(--text-primary);
-  border: 1px solid rgba(1, 123, 251, 0.5);
-  box-shadow: 0 0 15px rgba(1, 123, 251, 0.2);
+  border: 1px solid rgb(var(--accent-rgb) / 0.5);
+  box-shadow: 0 0 15px rgb(var(--accent-rgb) / 0.2);
 }
 
 .profile-page .btn-login:hover {
@@ -465,7 +465,7 @@ async function submitChangePassword() {
   color: var(--blue-bright);
   box-shadow:
     0 0 25px var(--blue-glow),
-    0 0 50px rgba(1, 123, 251, 0.25);
+    0 0 50px rgb(var(--accent-rgb) / 0.25);
 }
 
 .profile-page .user-dropdown {
@@ -475,7 +475,7 @@ async function submitChangePassword() {
 .profile-page .btn-user-name {
   color: var(--text-primary);
   color: var(--text-primary);
-  border: 1px solid rgba(1, 123, 251, 0.5);
+  border: 1px solid rgb(var(--accent-rgb) / 0.5);
   padding: 10px 24px;
   border-radius: 10px;
   font-weight: 600;
@@ -497,7 +497,7 @@ async function submitChangePassword() {
   margin-top: 8px;
   min-width: 140px;
   color: var(--text-primary);
-  border: 1px solid rgba(1, 123, 251, 0.45);
+  border: 1px solid rgb(var(--accent-rgb) / 0.45);
   border-radius: 10px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
   overflow: visible;
@@ -547,15 +547,15 @@ async function submitChangePassword() {
   padding: 0;
   background: rgba(5, 15, 35, 0.96);
   box-shadow: var(--neon-shadow);
-  border: 1px solid rgba(1, 123, 251, 0.2);
+  border: 1px solid rgb(var(--accent-rgb) / 0.2);
   overflow: hidden;
 }
 
 .profile-hero {
   padding: 2rem 1.75rem 1.75rem;
   text-align: center;
-  background: linear-gradient(180deg, rgba(1, 123, 251, 0.12) 0%, transparent 70%);
-  border-bottom: 1px solid rgba(1, 123, 251, 0.15);
+  background: linear-gradient(180deg, rgb(var(--accent-rgb) / 0.12) 0%, transparent 70%);
+  border-bottom: 1px solid rgb(var(--accent-rgb) / 0.15);
 }
 
 .profile-avatar-wrap {
@@ -567,15 +567,15 @@ async function submitChangePassword() {
   height: 72px;
   margin: 0 auto;
   border-radius: 999px;
-  border: 2px solid rgba(1, 123, 251, 0.5);
+  border: 2px solid rgb(var(--accent-rgb) / 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 700;
   font-size: 1.75rem;
   color: var(--blue-electric);
-  background: rgba(1, 123, 251, 0.08);
-  box-shadow: 0 0 24px rgba(1, 123, 251, 0.2);
+  background: rgb(var(--accent-rgb) / 0.08);
+  box-shadow: 0 0 24px rgb(var(--accent-rgb) / 0.2);
 }
 
 .profile-name {
@@ -595,7 +595,7 @@ async function submitChangePassword() {
   padding: 1.25rem 1.5rem;
   border-radius: 1rem;
   background: rgba(0, 20, 50, 0.6);
-  border: 1px solid rgba(1, 123, 251, 0.3);
+  border: 1px solid rgb(var(--accent-rgb) / 0.3);
 }
 
 .profile-balance-label {
@@ -672,8 +672,8 @@ async function submitChangePassword() {
 .profile-stat-card {
   padding: 1rem;
   border-radius: 0.75rem;
-  border: 1px solid rgba(1, 123, 251, 0.2);
-  background: rgba(1, 123, 251, 0.04);
+  border: 1px solid rgb(var(--accent-rgb) / 0.2);
+  background: rgb(var(--accent-rgb) / 0.04);
   text-align: center;
 }
 

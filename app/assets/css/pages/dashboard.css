@@ -29,17 +29,17 @@
 
 .kpi-card {
   background   : var(--bg-card);
-  border       : 1px solid rgba(1, 123, 251, 0.2);
+  border       : 1px solid rgb(var(--accent-rgb) / 0.2);
   border-radius: 12px;
   padding      : 1.25rem;
   position     : relative;
-  box-shadow   : 0 0 20px rgba(1, 123, 251, 0.06);
+  box-shadow   : 0 0 20px rgb(var(--accent-rgb) / 0.06);
   transition   : border-color var(--transition-fast),
     box-shadow var(--transition-glow);
 }
 
 .kpi-card:hover {
-  border-color: rgba(1, 123, 251, 0.35);
+  border-color: rgb(var(--accent-rgb) / 0.35);
   box-shadow  : 0 0 24px var(--blue-glow);
 }
 
@@ -88,10 +88,10 @@
 
 .dashboard .card {
   background   : var(--bg-card);
-  border       : 1px solid rgba(1, 123, 251, 0.2);
+  border       : 1px solid rgb(var(--accent-rgb) / 0.2);
   border-radius: 12px;
   padding      : 1.25rem;
-  box-shadow   : 0 0 20px rgba(1, 123, 251, 0.06);
+  box-shadow   : 0 0 20px rgb(var(--accent-rgb) / 0.06);
 }
 
 .card-head {
@@ -169,8 +169,8 @@
   padding      : 0.75rem;
   border-radius: 8px;
   margin-bottom: 0.5rem;
-  background   : rgba(1, 123, 251, 0.06);
-  border       : 1px solid rgba(1, 123, 251, 0.15);
+  background   : rgb(var(--accent-rgb) / 0.06);
+  border       : 1px solid rgb(var(--accent-rgb) / 0.15);
   transition   : background var(--transition-fast);
 }
 
@@ -179,7 +179,7 @@
 }
 
 .center-item:hover {
-  background: rgba(1, 123, 251, 0.1);
+  background: rgb(var(--accent-rgb) / 0.1);
 }
 
 .center-icon {
@@ -243,7 +243,7 @@
 
 .bar-fill {
   height       : 100%;
-  background   : linear-gradient(90deg, var(--blue-bright), rgba(1, 123, 251, 0.7));
+  background   : linear-gradient(90deg, var(--blue-bright), rgb(var(--accent-rgb) / 0.7));
   border-radius: 6px;
   box-shadow   : 0 0 12px var(--blue-glow);
   transition   : width var(--transition-glow);

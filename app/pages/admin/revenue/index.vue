@@ -362,7 +362,7 @@ const maxCompletedAmount = computed(() => {
 }
 .kpi-card {
   background: rgba(5, 15, 35, 0.7);
-  border: 1px solid rgba(1, 123, 251, 0.25);
+  border: 1px solid rgb(var(--accent-rgb) / 0.25);
   border-radius: 10px;
   padding: 0.85rem 1rem;
 }
@@ -388,7 +388,7 @@ const maxCompletedAmount = computed(() => {
 }
 .card {
   background: rgba(5, 15, 35, 0.7);
-  border: 1px solid rgba(1, 123, 251, 0.2);
+  border: 1px solid rgb(var(--accent-rgb) / 0.2);
   border-radius: 10px;
   padding: 1rem;
 }
@@ -404,7 +404,7 @@ const maxCompletedAmount = computed(() => {
 .data-table th,
 .data-table td {
   padding: 0.6rem 0.55rem;
-  border-bottom: 1px solid rgba(1, 123, 251, 0.15);
+  border-bottom: 1px solid rgb(var(--accent-rgb) / 0.15);
   text-align: left;
 }
 .data-table th {
@@ -458,7 +458,7 @@ const maxCompletedAmount = computed(() => {
 }
 .detail-tab.active {
   border-color: var(--blue-bright);
-  background: rgba(1, 123, 251, 0.16);
+  background: rgb(var(--accent-rgb) / 0.16);
   color: #fff;
 }
 .detail-table {
@@ -488,7 +488,7 @@ const maxCompletedAmount = computed(() => {
   height: 6px;
   border-radius: 999px;
   background: rgba(15, 23, 42, 0.9);
-  border: 1px solid rgba(1, 123, 251, 0.3);
+  border: 1px solid rgb(var(--accent-rgb) / 0.3);
   overflow: hidden;
 }
 .detail-bar-fill {

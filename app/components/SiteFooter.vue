@@ -54,7 +54,7 @@ const { locale } = useI18n();
   border-top: 1px solid rgba(148, 163, 184, 0.25);
   padding: 16px 150px 20px;
   background:
-    radial-gradient(circle at 10% 0, rgba(1, 123, 251, 0.28), transparent 55%),
+    radial-gradient(circle at 10% 0, rgb(var(--accent-rgb) / 0.28), transparent 55%),
     radial-gradient(circle at 90% 0, rgba(56, 189, 248, 0.16), transparent 55%),
     radial-gradient(circle at 50% 140%, rgba(15, 23, 42, 0.95), #020617);
   color: var(--text-secondary);

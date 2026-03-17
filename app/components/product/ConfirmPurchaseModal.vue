@@ -174,9 +174,9 @@ function confirm() {
   width: 100%;
   max-width: 400px;
   background: var(--bg-card);
-  border: 1px solid rgba(1, 123, 251, 0.4);
+  border: 1px solid rgb(var(--accent-rgb) / 0.4);
   border-radius: 14px;
-  box-shadow: 0 0 40px rgba(1, 123, 251, 0.2);
+  box-shadow: 0 0 40px rgb(var(--accent-rgb) / 0.2);
   padding: 1.5rem;
 }
 
@@ -255,7 +255,7 @@ function confirm() {
 .cpm-btn-cancel {
   padding: 0.5rem 1.2rem;
   border-radius: 8px;
-  border: 1px solid rgba(1, 123, 251, 0.5);
+  border: 1px solid rgb(var(--accent-rgb) / 0.5);
   background: transparent;
   color: var(--text-secondary);
   font-weight: 500;

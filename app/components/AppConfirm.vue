@@ -73,8 +73,8 @@ function onConfirm() {
   background: transparent;
 }
 .btn-confirm {
-  border: 1px solid rgba(1, 123, 251, 0.5);
-  background: rgba(1, 123, 251, 0.2);
+  border: 1px solid rgb(var(--accent-rgb) / 0.5);
+  background: rgb(var(--accent-rgb) / 0.2);
   color: #fff;
 }
 </style>

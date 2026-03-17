@@ -270,7 +270,7 @@ watch(
 .memo-box { margin-top: .8rem; padding: .65rem; border: 1px solid rgba(255,255,255,.12); border-radius: 8px; background: rgba(255,255,255,.03); }
 .memo-label { font-size: .85rem; color: var(--text-secondary); margin-bottom: .35rem; }
 .memo-row { display: flex; align-items: center; gap: .5rem; }
-.memo-row code { flex: 1; display: block; padding: .5rem; background: rgba(1,123,251,.12); border-radius: 6px; font-size: .82rem; overflow-x: auto; }
+.memo-row code { flex: 1; display: block; padding: .5rem; background: rgb(var(--accent-rgb) / .12); border-radius: 6px; font-size: .82rem; overflow-x: auto; }
 .memo-row button { padding: .45rem .65rem; border-radius: 6px; border: 1px solid rgba(255,255,255,.18); background: rgba(255,255,255,.06); color: #fff; cursor: pointer; }
 .actions { margin-top: .85rem; display: flex; gap: .5rem; }
 .primary,.secondary { padding: .6rem .9rem; border-radius: 999px; border: 0; cursor: pointer; font-weight: 600; }

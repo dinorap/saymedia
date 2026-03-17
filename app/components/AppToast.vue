@@ -43,7 +43,7 @@ const { toast, hide } = useToast();
   gap: 0.75rem;
   padding: 0.9rem 1rem;
   border-radius: 0.9rem;
-  background: radial-gradient(circle at top left, rgba(1, 123, 251, 0.25), transparent),
+  background: radial-gradient(circle at top left, rgb(var(--accent-rgb) / 0.25), transparent),
     var(--bg-card);
   border: 1px solid rgba(255, 255, 255, 0.12);
   box-shadow: var(--neon-shadow);

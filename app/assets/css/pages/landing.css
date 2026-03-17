@@ -12,11 +12,11 @@
   background-image:
     linear-gradient(180deg, rgba(3, 6, 20, 0.25) 0%, rgba(3, 6, 20, 0.6) 55%, rgba(3, 6, 20, 0.9) 100%),
     url("/background.png"),
-    radial-gradient(ellipse 140% 90% at 75% 35%, rgba(1, 123, 251, 0.12) 0%, transparent 50%),
-    radial-gradient(1.5px 1.5px at 10% 20%, rgba(1, 123, 251, 0.4), transparent),
-    radial-gradient(1.5px 1.5px at 90% 75%, rgba(1, 123, 251, 0.35), transparent),
-    radial-gradient(1px 1px at 50% 50%, rgba(1, 123, 251, 0.2), transparent),
-    radial-gradient(1px 1px at 25% 80%, rgba(1, 123, 251, 0.25), transparent);
+    radial-gradient(ellipse 140% 90% at 75% 35%, rgb(var(--accent-rgb) / 0.12) 0%, transparent 50%),
+    radial-gradient(1.5px 1.5px at 10% 20%, rgb(var(--accent-rgb) / 0.4), transparent),
+    radial-gradient(1.5px 1.5px at 90% 75%, rgb(var(--accent-rgb) / 0.35), transparent),
+    radial-gradient(1px 1px at 50% 50%, rgb(var(--accent-rgb) / 0.2), transparent),
+    radial-gradient(1px 1px at 25% 80%, rgb(var(--accent-rgb) / 0.25), transparent);
   background-size    : 100% 100%, 100% auto, 100% 100%, 260px 200px, 240px 180px, 200px 200px, 220px 220px;
   background-position: center top, center top, 0 0, 0 0, 0 0, 0 0, 0 0;
   background-repeat  : no-repeat, no-repeat, no-repeat, repeat, repeat, repeat, repeat;
@@ -36,11 +36,11 @@
 
 .landing-page .profile-modal {
   background   : var(--bg-nav);
-  border       : 1px solid rgba(1, 123, 251, 0.45);
+  border       : 1px solid rgb(var(--accent-rgb) / 0.45);
   border-radius: 14px;
   padding      : 24px;
   min-width    : 320px;
-  box-shadow   : 0 0 40px rgba(1, 123, 251, 0.2);
+  box-shadow   : 0 0 40px rgb(var(--accent-rgb) / 0.2);
 }
 
 .landing-page .profile-modal-title {
@@ -57,7 +57,7 @@
 .landing-page .profile-modal-close {
   margin-top   : 16px;
   padding      : 8px 20px;
-  background   : rgba(1, 123, 251, 0.2);
+  background   : rgb(var(--accent-rgb) / 0.2);
   border       : 1px solid var(--blue-border);
   color        : var(--text-primary);
   border-radius: 8px;
@@ -87,15 +87,15 @@
 .landing-page .btn-secondary {
   background: transparent;
   color     : var(--text-primary);
-  border    : 1px solid rgba(1, 123, 251, 0.5);
+  border    : 1px solid rgb(var(--accent-rgb) / 0.5);
   padding   : 14px 32px;
-  box-shadow: 0 0 15px rgba(1, 123, 251, 0.15);
+  box-shadow: 0 0 15px rgb(var(--accent-rgb) / 0.15);
 }
 
 .landing-page .btn-secondary:hover {
   border-color: var(--blue-bright);
   color       : var(--blue-bright);
-  box-shadow  : 0 0 25px var(--blue-glow), 0 0 45px rgba(1, 123, 251, 0.3);
+  box-shadow  : 0 0 25px var(--blue-glow), 0 0 45px rgb(var(--accent-rgb) / 0.3);
   transform   : translateY(-1px);
 }
 
@@ -157,10 +157,10 @@
   height       : 320px;
   border-radius: 50%;
   background   :
-    radial-gradient(circle at 30% 30%, rgba(1, 123, 251, 0.2) 0%, transparent 50%),
-    radial-gradient(circle, rgba(1, 123, 251, 0.12) 0%, transparent 62%);
+    radial-gradient(circle at 30% 30%, rgb(var(--accent-rgb) / 0.2) 0%, transparent 50%),
+    radial-gradient(circle, rgb(var(--accent-rgb) / 0.12) 0%, transparent 62%);
   border    : 1px solid var(--blue-border);
-  box-shadow: 0 0 40px rgba(1, 123, 251, 0.2), 0 0 80px rgba(1, 123, 251, 0.1), inset 0 0 60px rgba(1, 123, 251, 0.06);
+  box-shadow: 0 0 40px rgb(var(--accent-rgb) / 0.2), 0 0 80px rgb(var(--accent-rgb) / 0.1), inset 0 0 60px rgb(var(--accent-rgb) / 0.06);
   position  : relative;
 }
 
@@ -175,7 +175,7 @@
   border-radius: 50%;
   filter       : blur(65px);
   opacity      : 0.6;
-  box-shadow   : 0 0 80px var(--blue-glow), 0 0 150px rgba(1, 123, 251, 0.4);
+  box-shadow   : 0 0 80px var(--blue-glow), 0 0 150px rgb(var(--accent-rgb) / 0.4);
 }
 
 .landing-page .stats-container {
@@ -210,8 +210,8 @@
   inset              : 0;
   border-radius      : 14px;
   background         : rgba(5, 15, 35, 0.75);
-  border             : 1px solid rgba(1, 123, 251, 0.45);
-  box-shadow         : 0 0 25px rgba(1, 123, 251, 0.15), 0 4px 28px rgba(0, 0, 0, 0.35);
+  border             : 1px solid rgb(var(--accent-rgb) / 0.45);
+  box-shadow         : 0 0 25px rgb(var(--accent-rgb) / 0.15), 0 4px 28px rgba(0, 0, 0, 0.35);
   backdrop-filter    : blur(12px);
   display            : flex;
   align-items        : center;
@@ -222,7 +222,7 @@
 
 .landing-page .stat-card:hover .stat-card-face {
   border-color: var(--blue-bright);
-  box-shadow  : 0 0 28px rgba(1, 123, 251, 0.25), 0 4px 28px rgba(0, 0, 0, 0.35);
+  box-shadow  : 0 0 28px rgb(var(--accent-rgb) / 0.25), 0 4px 28px rgba(0, 0, 0, 0.35);
 }
 
 .landing-page .stat-card-face--back {
@@ -236,7 +236,7 @@
   padding      : 12px;
   border-radius: 10px;
   border       : 1px solid var(--blue-border);
-  box-shadow   : 0 0 18px rgba(1, 123, 251, 0.25);
+  box-shadow   : 0 0 18px rgb(var(--accent-rgb) / 0.25);
   flex-shrink  : 0;
 }
 
@@ -282,7 +282,7 @@
   font-size     : 26px;
   font-weight   : 700;
   color         : var(--blue-bright);
-  text-shadow   : 0 0 15px var(--blue-glow), 0 0 30px rgba(1, 123, 251, 0.4);
+  text-shadow   : 0 0 15px var(--blue-glow), 0 0 30px rgb(var(--accent-rgb) / 0.4);
   letter-spacing: -0.02em;
 }
 

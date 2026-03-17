@@ -1,5 +1,5 @@
 /**
- * Design system - SayMedia AI (xanh #017BFB)
+ * Design system - SayMedia AI
  */
 :root {
   /* Nền - xanh đậm */
@@ -8,13 +8,19 @@
   --bg-card: rgba(5, 15, 35, 0.85);
   --bg-nav : rgba(3, 10, 25, 0.95);
 
-  /* Xanh #017BFB - accent */
-  --blue-bright  : #017BFB;
+  /* Accent (đổi theo theme) */
+  --accent-rgb  : 1 123 251;
+  --accent      : rgb(var(--accent-rgb));
+  --blue-bright  : var(--accent);
   --blue-electric: #2a8fff;
-  --blue-glow    : rgba(1, 123, 251, 0.5);
-  --blue-border  : rgba(1, 123, 251, 0.65);
-  --blue-soft    : rgba(1, 123, 251, 0.15);
-  --neon-shadow  : 0 0 15px rgba(1, 123, 251, 0.45), 0 0 30px rgba(1, 123, 251, 0.2);
+  --blue-glow    : rgb(var(--accent-rgb) / 0.5);
+  --blue-border  : rgb(var(--accent-rgb) / 0.65);
+  --blue-soft    : rgb(var(--accent-rgb) / 0.15);
+  --neon-shadow  : 0 0 15px rgb(var(--accent-rgb) / 0.45), 0 0 30px rgb(var(--accent-rgb) / 0.2);
+
+  /* Brand blue (không đổi theo theme) */
+  --brand-blue-bright: rgb(1 123 251);
+  --brand-blue-glow  : rgb(1 123 251 / 0.5);
 
   /* Chữ */
   --text-primary  : #ffffff;
@@ -22,12 +28,12 @@
   --text-muted    : rgba(255, 255, 255, 0.55);
 
   /* Nút & form */
-  --btn-primary-bg      : linear-gradient(135deg, #0160e0 0%, #017BFB 100%);
-  --btn-primary-glow    : 0 0 20px rgba(1, 123, 251, 0.5), 0 0 40px rgba(1, 123, 251, 0.2);
+  --btn-primary-bg      : linear-gradient(135deg, #0160e0 0%, var(--accent) 100%);
+  --btn-primary-glow    : 0 0 20px rgb(var(--accent-rgb) / 0.5), 0 0 40px rgb(var(--accent-rgb) / 0.2);
   --btn-secondary-bg    : transparent;
-  --btn-secondary-border: rgba(1, 123, 251, 0.7);
+  --btn-secondary-border: rgb(var(--accent-rgb) / 0.7);
   --input-bg            : rgba(0, 30, 80, 0.5);
-  --input-border        : rgba(1, 123, 251, 0.3);
+  --input-border        : rgb(var(--accent-rgb) / 0.3);
   --input-focus-border  : var(--blue-border);
   --input-focus-glow    : 0 0 15px var(--blue-glow);
 
@@ -42,55 +48,63 @@
  * Mặc định: không set / xóa data-theme để dùng bộ màu gốc.
  */
 :root[data-theme="spring"] {
+  --accent-rgb  : 34 197 94;
+  --accent      : rgb(var(--accent-rgb));
   --blue-bright  : #22c55e; /* green */
   --blue-electric: #4ade80;
-  --blue-glow    : rgba(34, 197, 94, 0.45);
-  --blue-border  : rgba(34, 197, 94, 0.6);
-  --blue-soft    : rgba(34, 197, 94, 0.14);
-  --neon-shadow  : 0 0 15px rgba(34, 197, 94, 0.4), 0 0 30px rgba(34, 197, 94, 0.18);
+  --blue-glow    : rgb(var(--accent-rgb) / 0.45);
+  --blue-border  : rgb(var(--accent-rgb) / 0.6);
+  --blue-soft    : rgb(var(--accent-rgb) / 0.14);
+  --neon-shadow  : 0 0 15px rgb(var(--accent-rgb) / 0.4), 0 0 30px rgb(var(--accent-rgb) / 0.18);
   --btn-primary-bg  : linear-gradient(135deg, #16a34a 0%, #22c55e 100%);
-  --btn-primary-glow: 0 0 20px rgba(34, 197, 94, 0.45), 0 0 40px rgba(34, 197, 94, 0.18);
+  --btn-primary-glow: 0 0 20px rgb(var(--accent-rgb) / 0.45), 0 0 40px rgb(var(--accent-rgb) / 0.18);
   --input-bg        : rgba(10, 60, 25, 0.45);
-  --input-border    : rgba(34, 197, 94, 0.28);
+  --input-border    : rgb(var(--accent-rgb) / 0.28);
 }
 
 :root[data-theme="summer"] {
+  --accent-rgb  : 6 182 212;
+  --accent      : rgb(var(--accent-rgb));
   --blue-bright  : #06b6d4; /* cyan */
   --blue-electric: #22d3ee;
-  --blue-glow    : rgba(6, 182, 212, 0.45);
-  --blue-border  : rgba(6, 182, 212, 0.6);
-  --blue-soft    : rgba(6, 182, 212, 0.14);
-  --neon-shadow  : 0 0 15px rgba(6, 182, 212, 0.4), 0 0 30px rgba(6, 182, 212, 0.18);
+  --blue-glow    : rgb(var(--accent-rgb) / 0.45);
+  --blue-border  : rgb(var(--accent-rgb) / 0.6);
+  --blue-soft    : rgb(var(--accent-rgb) / 0.14);
+  --neon-shadow  : 0 0 15px rgb(var(--accent-rgb) / 0.4), 0 0 30px rgb(var(--accent-rgb) / 0.18);
   --btn-primary-bg  : linear-gradient(135deg, #0891b2 0%, #06b6d4 100%);
-  --btn-primary-glow: 0 0 20px rgba(6, 182, 212, 0.45), 0 0 40px rgba(6, 182, 212, 0.18);
+  --btn-primary-glow: 0 0 20px rgb(var(--accent-rgb) / 0.45), 0 0 40px rgb(var(--accent-rgb) / 0.18);
   --input-bg        : rgba(0, 45, 55, 0.45);
-  --input-border    : rgba(6, 182, 212, 0.28);
+  --input-border    : rgb(var(--accent-rgb) / 0.28);
 }
 
 :root[data-theme="autumn"] {
+  --accent-rgb  : 249 115 22;
+  --accent      : rgb(var(--accent-rgb));
   --blue-bright  : #f97316; /* orange */
   --blue-electric: #fb923c;
-  --blue-glow    : rgba(249, 115, 22, 0.45);
-  --blue-border  : rgba(249, 115, 22, 0.6);
-  --blue-soft    : rgba(249, 115, 22, 0.14);
-  --neon-shadow  : 0 0 15px rgba(249, 115, 22, 0.4), 0 0 30px rgba(249, 115, 22, 0.18);
+  --blue-glow    : rgb(var(--accent-rgb) / 0.45);
+  --blue-border  : rgb(var(--accent-rgb) / 0.6);
+  --blue-soft    : rgb(var(--accent-rgb) / 0.14);
+  --neon-shadow  : 0 0 15px rgb(var(--accent-rgb) / 0.4), 0 0 30px rgb(var(--accent-rgb) / 0.18);
   --btn-primary-bg  : linear-gradient(135deg, #ea580c 0%, #f97316 100%);
-  --btn-primary-glow: 0 0 20px rgba(249, 115, 22, 0.45), 0 0 40px rgba(249, 115, 22, 0.18);
+  --btn-primary-glow: 0 0 20px rgb(var(--accent-rgb) / 0.45), 0 0 40px rgb(var(--accent-rgb) / 0.18);
   --input-bg        : rgba(70, 25, 5, 0.45);
-  --input-border    : rgba(249, 115, 22, 0.28);
+  --input-border    : rgb(var(--accent-rgb) / 0.28);
 }
 
 :root[data-theme="winter"] {
+  --accent-rgb  : 167 139 250;
+  --accent      : rgb(var(--accent-rgb));
   --blue-bright  : #a78bfa; /* violet */
   --blue-electric: #c4b5fd;
-  --blue-glow    : rgba(167, 139, 250, 0.45);
-  --blue-border  : rgba(167, 139, 250, 0.6);
-  --blue-soft    : rgba(167, 139, 250, 0.14);
-  --neon-shadow  : 0 0 15px rgba(167, 139, 250, 0.4), 0 0 30px rgba(167, 139, 250, 0.18);
+  --blue-glow    : rgb(var(--accent-rgb) / 0.45);
+  --blue-border  : rgb(var(--accent-rgb) / 0.6);
+  --blue-soft    : rgb(var(--accent-rgb) / 0.14);
+  --neon-shadow  : 0 0 15px rgb(var(--accent-rgb) / 0.4), 0 0 30px rgb(var(--accent-rgb) / 0.18);
   --btn-primary-bg  : linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%);
-  --btn-primary-glow: 0 0 20px rgba(167, 139, 250, 0.45), 0 0 40px rgba(167, 139, 250, 0.18);
+  --btn-primary-glow: 0 0 20px rgb(var(--accent-rgb) / 0.45), 0 0 40px rgb(var(--accent-rgb) / 0.18);
   --input-bg        : rgba(30, 15, 60, 0.45);
-  --input-border    : rgba(167, 139, 250, 0.28);
+  --input-border    : rgb(var(--accent-rgb) / 0.28);
 }
 
 body {

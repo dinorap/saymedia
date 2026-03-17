@@ -661,7 +661,7 @@ onMounted(async () => {
   align-items: flex-end;
   padding: 0.75rem 1rem;
   background: rgba(5, 15, 35, 0.5);
-  border: 1px solid rgba(1, 123, 251, 0.2);
+  border: 1px solid rgb(var(--accent-rgb) / 0.2);
   border-radius: 10px;
 }
 
@@ -699,8 +699,8 @@ onMounted(async () => {
 
 .btn-search {
   padding: 0.45rem 0.75rem;
-  background: rgba(1, 123, 251, 0.2);
-  border: 1px solid rgba(1, 123, 251, 0.4);
+  background: rgb(var(--accent-rgb) / 0.2);
+  border: 1px solid rgb(var(--accent-rgb) / 0.4);
   border-radius: 8px;
   cursor: pointer;
   font-size: 1rem;
@@ -735,7 +735,7 @@ onMounted(async () => {
 .data-table td {
   padding: 0.75rem 1rem;
   text-align: left;
-  border-bottom: 1px solid rgba(1, 123, 251, 0.15);
+  border-bottom: 1px solid rgb(var(--accent-rgb) / 0.15);
 }
 
 .data-table th {
@@ -778,7 +778,7 @@ onMounted(async () => {
 }
 
 .data-table tbody tr:hover {
-  background: rgba(1, 123, 251, 0.05);
+  background: rgb(var(--accent-rgb) / 0.05);
 }
 
 .badge {
@@ -790,7 +790,7 @@ onMounted(async () => {
 }
 
 .badge--primary {
-  background: rgba(1, 123, 251, 0.25);
+  background: rgb(var(--accent-rgb) / 0.25);
   color: var(--blue-bright);
 }
 
@@ -839,8 +839,8 @@ onMounted(async () => {
 
 .btn-page {
   padding: 0.4rem 1rem;
-  background: rgba(1, 123, 251, 0.2);
-  border: 1px solid rgba(1, 123, 251, 0.4);
+  background: rgb(var(--accent-rgb) / 0.2);
+  border: 1px solid rgb(var(--accent-rgb) / 0.4);
   border-radius: 8px;
   color: var(--text-primary);
   font-weight: 500;
@@ -848,7 +848,7 @@ onMounted(async () => {
 }
 
 .btn-page:hover:not(:disabled) {
-  background: rgba(1, 123, 251, 0.3);
+  background: rgb(var(--accent-rgb) / 0.3);
 }
 
 .btn-page:disabled {
@@ -864,15 +864,15 @@ onMounted(async () => {
 .btn-edit-note {
   padding: 0.35rem 0.75rem;
   font-size: 0.8rem;
-  background: rgba(1, 123, 251, 0.2);
-  border: 1px solid rgba(1, 123, 251, 0.5);
+  background: rgb(var(--accent-rgb) / 0.2);
+  border: 1px solid rgb(var(--accent-rgb) / 0.5);
   border-radius: 6px;
   color: var(--blue-bright);
   cursor: pointer;
 }
 
 .btn-edit-note:hover:not(:disabled) {
-  background: rgba(1, 123, 251, 0.3);
+  background: rgb(var(--accent-rgb) / 0.3);
 }
 .btn-refund {
   margin-left: 0.4rem;
@@ -893,9 +893,9 @@ onMounted(async () => {
   position: fixed;
   z-index: 1001;
   background: rgba(8, 20, 45, 0.98);
-  border: 1px solid rgba(1, 123, 251, 0.45);
+  border: 1px solid rgb(var(--accent-rgb) / 0.45);
   border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 20px rgba(1, 123, 251, 0.15);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 20px rgb(var(--accent-rgb) / 0.15);
   padding: 0;
   max-width: 360px;
   max-height: 70vh;
@@ -905,7 +905,7 @@ onMounted(async () => {
 }
 .note-popover-title {
   padding: 0.65rem 1rem;
-  border-bottom: 1px solid rgba(1, 123, 251, 0.25);
+  border-bottom: 1px solid rgb(var(--accent-rgb) / 0.25);
   font-size: 0.9rem;
   font-weight: 600;
   color: var(--blue-bright);
@@ -940,7 +940,7 @@ onMounted(async () => {
 .note-popover-keys {
   margin-top: 0.35rem;
   padding-left: 0.5rem;
-  border-left: 2px solid rgba(1, 123, 251, 0.4);
+  border-left: 2px solid rgb(var(--accent-rgb) / 0.4);
 }
 .note-popover-key-line {
   padding: 0.2rem 0;
@@ -981,7 +981,7 @@ onMounted(async () => {
   width: 100%;
   max-width: 420px;
   background: var(--bg-card);
-  border: 1px solid rgba(1, 123, 251, 0.3);
+  border: 1px solid rgb(var(--accent-rgb) / 0.3);
   border-radius: 12px;
   padding: 1.25rem;
 }
@@ -1002,7 +1002,7 @@ onMounted(async () => {
   padding: 0.75rem;
   margin-bottom: 1rem;
   background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(1, 123, 251, 0.3);
+  border: 1px solid rgb(var(--accent-rgb) / 0.3);
   border-radius: 8px;
   color: var(--text-primary);
   font-size: 0.9rem;
@@ -1014,7 +1014,7 @@ onMounted(async () => {
   padding: 0.6rem 0.75rem;
   margin-bottom: 1rem;
   background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(1, 123, 251, 0.3);
+  border: 1px solid rgb(var(--accent-rgb) / 0.3);
   border-radius: 8px;
   color: var(--text-primary);
   font-size: 0.9rem;

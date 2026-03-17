@@ -1322,7 +1322,7 @@ onUnmounted(() => {
   align-items: flex-end;
   padding: 0.75rem 1rem;
   background: rgba(5, 15, 35, 0.5);
-  border: 1px solid rgba(1, 123, 251, 0.2);
+  border: 1px solid rgb(var(--accent-rgb) / 0.2);
   border-radius: 10px;
 }
 .list-toolbar .btn-add--right {
@@ -1350,7 +1350,7 @@ onUnmounted(() => {
   padding: 0.45rem 0.75rem;
   min-width: 180px;
   background: rgba(5, 15, 35, 0.9);
-  border: 1px solid rgba(1, 123, 251, 0.3);
+  border: 1px solid rgb(var(--accent-rgb) / 0.3);
   border-radius: 8px;
   color: var(--text-primary);
   font-size: 0.95rem;
@@ -1359,8 +1359,8 @@ onUnmounted(() => {
   margin-left: 0.35rem;
   padding: 0.2rem 0.4rem;
   font-size: 0.8rem;
-  background: rgba(1, 123, 251, 0.2);
-  border: 1px solid rgba(1, 123, 251, 0.4);
+  background: rgb(var(--accent-rgb) / 0.2);
+  border: 1px solid rgb(var(--accent-rgb) / 0.4);
   border-radius: 4px;
   color: var(--blue-bright);
   cursor: pointer;
@@ -1372,8 +1372,8 @@ onUnmounted(() => {
 }
 .btn-search {
   padding: 0.45rem 0.75rem;
-  background: rgba(1, 123, 251, 0.2);
-  border: 1px solid rgba(1, 123, 251, 0.4);
+  background: rgb(var(--accent-rgb) / 0.2);
+  border: 1px solid rgb(var(--accent-rgb) / 0.4);
   border-radius: 8px;
   cursor: pointer;
   font-size: 1rem;
@@ -1409,8 +1409,8 @@ onUnmounted(() => {
 }
 .btn-page {
   padding: 0.4rem 1rem;
-  background: rgba(1, 123, 251, 0.2);
-  border: 1px solid rgba(1, 123, 251, 0.4);
+  background: rgb(var(--accent-rgb) / 0.2);
+  border: 1px solid rgb(var(--accent-rgb) / 0.4);
   border-radius: 8px;
   color: var(--text-primary);
   font-weight: 500;
@@ -1481,7 +1481,7 @@ onUnmounted(() => {
 .data-table td {
   padding: 0.75rem 1rem;
   text-align: left;
-  border-bottom: 1px solid rgba(1, 123, 251, 0.15);
+  border-bottom: 1px solid rgb(var(--accent-rgb) / 0.15);
 }
 .col-thumb {
   width: 80px;
@@ -1515,14 +1515,14 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(1, 123, 251, 0.15);
-  border: 1px solid rgba(1, 123, 251, 0.3);
+  background: rgb(var(--accent-rgb) / 0.15);
+  border: 1px solid rgb(var(--accent-rgb) / 0.3);
   border-radius: 6px;
   cursor: pointer;
   font-size: 14px;
 }
 .btn-icon:hover {
-  background: rgba(1, 123, 251, 0.25);
+  background: rgb(var(--accent-rgb) / 0.25);
 }
 .btn-icon--danger:hover {
   background: rgba(255, 100, 100, 0.2);
@@ -1567,7 +1567,7 @@ onUnmounted(() => {
   padding: 1.5rem 1.75rem;
   max-width: 880px;
   width: 100%;
-  box-shadow: 0 0 40px rgba(1, 123, 251, 0.2);
+  box-shadow: 0 0 40px rgb(var(--accent-rgb) / 0.2);
   max-height: 80vh;
   display: flex;
   flex-direction: column;
@@ -1618,7 +1618,7 @@ onUnmounted(() => {
 .form-row .input {
   padding: 0.6rem 0.9rem;
   background: rgba(5, 15, 35, 0.9);
-  border: 1px solid rgba(1, 123, 251, 0.3);
+  border: 1px solid rgb(var(--accent-rgb) / 0.3);
   border-radius: 8px;
   color: var(--text-primary);
   font-size: 0.95rem;
@@ -1650,7 +1650,7 @@ onUnmounted(() => {
 .btn-upload {
   padding: 0.55rem 0.9rem;
   border-radius: 8px;
-  border: 1px solid rgba(1, 123, 251, 0.5);
+  border: 1px solid rgb(var(--accent-rgb) / 0.5);
   background: rgba(15, 23, 42, 0.9);
   color: var(--text-secondary);
   font-size: 0.85rem;
@@ -1731,7 +1731,7 @@ onUnmounted(() => {
   padding: 0.5rem 1.25rem;
   background: rgba(255, 255, 255, 0.1);
   color: var(--text-primary);
-  border: 1px solid rgba(1, 123, 251, 0.3);
+  border: 1px solid rgb(var(--accent-rgb) / 0.3);
   border-radius: 8px;
   font-weight: 500;
   cursor: pointer;
