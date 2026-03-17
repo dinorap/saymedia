@@ -1,32 +1,10 @@
-import jwt from "jsonwebtoken";
 import pool from "../../utils/db";
 import { ensureCreditLedgerSchema } from "../../utils/creditLedger";
-
-const JWT_SECRET =
-  process.env.JWT_SECRET || "chuoi_bi_mat_jwt_ngau_nhien_cua_sep_123456";
+import { requireUser } from "../../utils/authHelpers";
+import { checkRateLimit, rateLimitKey } from "../../utils/rateLimit";
 
 export default defineEventHandler(async (event) => {
-  const token = getCookie(event, "auth_token");
-  if (!token) {
-    throw createError({ statusCode: 401, statusMessage: "Chưa đăng nhập" });
-  }
-
-  let decoded: { id: number; role: string };
-  try {
-    decoded = jwt.verify(token, JWT_SECRET) as { id: number; role: string };
-  } catch {
-    throw createError({
-      statusCode: 401,
-      statusMessage: "Phiên đăng nhập hết hạn",
-    });
-  }
-
-  if (decoded.role !== "user") {
-    throw createError({
-      statusCode: 403,
-      statusMessage: "Chỉ người dùng mới xem được sổ sao kê tín chỉ",
-    });
-  }
+  const decoded = requireUser(event);
 
   await ensureCreditLedgerSchema();
 
@@ -37,6 +15,15 @@ export default defineEventHandler(async (event) => {
   const from = query.from ? String(query.from).trim() : "";
   const to = query.to ? String(query.to).trim() : "";
   const format = query.format ? String(query.format).trim().toLowerCase() : "";
+
+  if (format === "csv") {
+    checkRateLimit({
+      key: rateLimitKey(["export_csv", "user_credit_ledger", decoded.id]),
+      max: 3,
+      windowMs: 60_000,
+      statusMessage: "Bạn export quá nhanh, vui lòng thử lại sau.",
+    });
+  }
 
   let limit = 50;
   if (query.limit) {

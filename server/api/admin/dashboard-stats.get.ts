@@ -1,11 +1,13 @@
 import pool from "../../utils/db";
 import { ensureAdminWalletSchema } from "../../utils/adminWallet";
+import { ensureCommerceSchema } from "../../utils/commerce";
 
 export default defineEventHandler(async (event) => {
   const currentUser = event.context.user;
   if (!currentUser) {
     throw createError({ statusCode: 401, statusMessage: "Chưa đăng nhập" });
   }
+  await ensureCommerceSchema();
 
   const isSuperAdmin = currentUser.role === "admin_0";
 
@@ -48,7 +50,7 @@ export default defineEventHandler(async (event) => {
     `
       SELECT
         COUNT(*) AS completed_orders_today,
-        COALESCE(SUM(o.amount), 0) AS completed_amount_today
+        COALESCE(SUM(COALESCE(o.amount_credit, ROUND(o.amount))), 0) AS completed_amount_today
       FROM orders o
       ${orderScopeWhere}
         AND DATE(o.created_at) = CURDATE()
@@ -60,7 +62,7 @@ export default defineEventHandler(async (event) => {
     `
       SELECT
         COUNT(*) AS completed_orders_month,
-        COALESCE(SUM(o.amount), 0) AS completed_amount_month
+        COALESCE(SUM(COALESCE(o.amount_credit, ROUND(o.amount))), 0) AS completed_amount_month
       FROM orders o
       ${orderScopeWhere}
         AND YEAR(o.created_at) = YEAR(CURDATE())
@@ -130,7 +132,7 @@ export default defineEventHandler(async (event) => {
                   AND COALESCE(oo.seller_admin_id, oo.admin_id) = COALESCE(oo.product_owner_admin_id, oo.admin_id)
                   AND COALESCE(p.platform_fee_percent, 0) > 0
                   ${isSuperAdmin ? "" : "AND COALESCE(oo.product_owner_admin_id, oo.admin_id) = ?"}
-                THEN ROUND(oo.amount * p.platform_fee_percent / 100)
+                THEN ROUND(COALESCE(oo.amount_credit, ROUND(oo.amount)) * p.platform_fee_percent / 100)
                 ELSE 0
               END
             )

@@ -1,31 +1,15 @@
-import jwt from "jsonwebtoken";
 import pool from "../../utils/db";
-
-const JWT_SECRET =
-  process.env.JWT_SECRET || "chuoi_bi_mat_jwt_ngau_nhien_cua_sep_123456";
+import { requireUser } from "../../utils/authHelpers";
+import { checkRateLimit, rateLimitKey } from "../../utils/rateLimit";
 
 export default defineEventHandler(async (event) => {
-  const token = getCookie(event, "auth_token");
-  if (!token) {
-    throw createError({ statusCode: 401, statusMessage: "Chưa đăng nhập" });
-  }
-
-  let decoded: { id: number; role: string };
-  try {
-    decoded = jwt.verify(token, JWT_SECRET) as { id: number; role: string };
-  } catch {
-    throw createError({
-      statusCode: 401,
-      statusMessage: "Phiên đăng nhập hết hạn",
-    });
-  }
-
-  if (decoded.role !== "user") {
-    throw createError({
-      statusCode: 403,
-      statusMessage: "Chỉ người dùng mới sử dụng giỏ hàng",
-    });
-  }
+  const decoded = requireUser(event);
+  checkRateLimit({
+    key: rateLimitKey(["cart_add", decoded.id]),
+    max: 30,
+    windowMs: 60_000,
+    statusMessage: "Thao tác quá nhanh, vui lòng thử lại sau.",
+  });
 
   const body = await readBody(event);
   const productId = Number(body?.product_id || 0);

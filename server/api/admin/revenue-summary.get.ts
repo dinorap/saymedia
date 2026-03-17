@@ -1,4 +1,5 @@
 import pool from "../../utils/db";
+import { ensureCommerceSchema } from "../../utils/commerce";
 
 interface RevenueBucket {
   period: string;
@@ -18,6 +19,7 @@ export default defineEventHandler(async (event) => {
   if (!currentUser) {
     throw createError({ statusCode: 401, statusMessage: "Chưa đăng nhập" });
   }
+  await ensureCommerceSchema();
 
   const isSuperAdmin = currentUser.role === "admin_0";
   // Scope orders:
@@ -79,7 +81,8 @@ export default defineEventHandler(async (event) => {
     `
       SELECT
         o.id,
-        o.amount,
+        COALESCE(o.amount_credit, ROUND(o.amount)) AS amount,
+        o.amount_credit,
         o.status,
         o.created_at,
         u.username AS user_username,
@@ -147,12 +150,12 @@ export default defineEventHandler(async (event) => {
           DATE(o.created_at) AS period,
           COUNT(*) AS total_orders,
           SUM(CASE WHEN o.status = 'completed' THEN 1 ELSE 0 END) AS completed_orders,
-          SUM(CASE WHEN o.status = 'completed' THEN o.amount ELSE 0 END) AS completed_amount,
+          SUM(CASE WHEN o.status = 'completed' THEN COALESCE(o.amount_credit, ROUND(o.amount)) ELSE 0 END) AS completed_amount,
           -- Doanh thu "chủ": chỉ tính đơn trực tiếp (không qua ref/bán hộ)
-          SUM(CASE WHEN o.status = 'completed' AND owner.role = 'admin_0' AND o.admin_id = o.product_owner_admin_id THEN o.amount ELSE 0 END) AS owner_amount,
-          SUM(CASE WHEN o.status = 'completed' AND owner.role = 'admin_1' AND o.admin_id = o.product_owner_admin_id THEN o.amount ELSE 0 END) AS shop_self_amount,
-          SUM(CASE WHEN o.status = 'completed' AND owner.role = 'admin_1' AND o.admin_id = o.product_owner_admin_id THEN ROUND(o.amount * COALESCE(p.platform_fee_percent,0) / 100) ELSE 0 END) AS platform_fee_amount,
-          SUM(CASE WHEN o.status = 'completed' AND o.seller_admin_id IS NOT NULL AND o.admin_id <> o.product_owner_admin_id THEN o.amount ELSE 0 END) AS affiliate_amount
+          SUM(CASE WHEN o.status = 'completed' AND owner.role = 'admin_0' AND o.admin_id = o.product_owner_admin_id THEN COALESCE(o.amount_credit, ROUND(o.amount)) ELSE 0 END) AS owner_amount,
+          SUM(CASE WHEN o.status = 'completed' AND owner.role = 'admin_1' AND o.admin_id = o.product_owner_admin_id THEN COALESCE(o.amount_credit, ROUND(o.amount)) ELSE 0 END) AS shop_self_amount,
+          SUM(CASE WHEN o.status = 'completed' AND owner.role = 'admin_1' AND o.admin_id = o.product_owner_admin_id THEN ROUND(COALESCE(o.amount_credit, ROUND(o.amount)) * COALESCE(p.platform_fee_percent,0) / 100) ELSE 0 END) AS platform_fee_amount,
+          SUM(CASE WHEN o.status = 'completed' AND o.seller_admin_id IS NOT NULL AND o.admin_id <> o.product_owner_admin_id THEN COALESCE(o.amount_credit, ROUND(o.amount)) ELSE 0 END) AS affiliate_amount
         FROM orders o
         JOIN admins owner ON o.product_owner_admin_id = owner.id
         LEFT JOIN products p ON o.product_id = p.id
@@ -165,9 +168,9 @@ export default defineEventHandler(async (event) => {
           DATE(o.created_at) AS period,
           COUNT(*) AS total_orders,
           SUM(CASE WHEN o.status = 'completed' THEN 1 ELSE 0 END) AS completed_orders,
-          SUM(CASE WHEN o.status = 'completed' THEN o.amount ELSE 0 END) AS completed_amount,
-          SUM(CASE WHEN o.status = 'completed' AND o.product_owner_admin_id = ? AND o.admin_id = o.product_owner_admin_id THEN o.amount ELSE 0 END) AS self_amount,
-          SUM(CASE WHEN o.status = 'completed' AND o.admin_id = ? AND o.product_owner_admin_id <> ? THEN o.amount ELSE 0 END) AS affiliate_amount
+          SUM(CASE WHEN o.status = 'completed' THEN COALESCE(o.amount_credit, ROUND(o.amount)) ELSE 0 END) AS completed_amount,
+          SUM(CASE WHEN o.status = 'completed' AND o.product_owner_admin_id = ? AND o.admin_id = o.product_owner_admin_id THEN COALESCE(o.amount_credit, ROUND(o.amount)) ELSE 0 END) AS self_amount,
+          SUM(CASE WHEN o.status = 'completed' AND o.admin_id = ? AND o.product_owner_admin_id <> ? THEN COALESCE(o.amount_credit, ROUND(o.amount)) ELSE 0 END) AS affiliate_amount
         FROM orders o
         ${scopeWhere}
           AND o.created_at >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)
@@ -201,12 +204,12 @@ export default defineEventHandler(async (event) => {
           DATE_FORMAT(o.created_at, '%Y-%m') AS period,
           COUNT(*) AS total_orders,
           SUM(CASE WHEN o.status = 'completed' THEN 1 ELSE 0 END) AS completed_orders,
-          SUM(CASE WHEN o.status = 'completed' THEN o.amount ELSE 0 END) AS completed_amount,
+          SUM(CASE WHEN o.status = 'completed' THEN COALESCE(o.amount_credit, ROUND(o.amount)) ELSE 0 END) AS completed_amount,
           -- Doanh thu "chủ": chỉ tính đơn trực tiếp (không qua ref/bán hộ)
-          SUM(CASE WHEN o.status = 'completed' AND owner.role = 'admin_0' AND o.admin_id = o.product_owner_admin_id THEN o.amount ELSE 0 END) AS owner_amount,
-          SUM(CASE WHEN o.status = 'completed' AND owner.role = 'admin_1' AND o.admin_id = o.product_owner_admin_id THEN o.amount ELSE 0 END) AS shop_self_amount,
-          SUM(CASE WHEN o.status = 'completed' AND owner.role = 'admin_1' AND o.admin_id = o.product_owner_admin_id THEN ROUND(o.amount * COALESCE(p.platform_fee_percent,0) / 100) ELSE 0 END) AS platform_fee_amount,
-          SUM(CASE WHEN o.status = 'completed' AND o.seller_admin_id IS NOT NULL AND o.admin_id <> o.product_owner_admin_id THEN o.amount ELSE 0 END) AS affiliate_amount
+          SUM(CASE WHEN o.status = 'completed' AND owner.role = 'admin_0' AND o.admin_id = o.product_owner_admin_id THEN COALESCE(o.amount_credit, ROUND(o.amount)) ELSE 0 END) AS owner_amount,
+          SUM(CASE WHEN o.status = 'completed' AND owner.role = 'admin_1' AND o.admin_id = o.product_owner_admin_id THEN COALESCE(o.amount_credit, ROUND(o.amount)) ELSE 0 END) AS shop_self_amount,
+          SUM(CASE WHEN o.status = 'completed' AND owner.role = 'admin_1' AND o.admin_id = o.product_owner_admin_id THEN ROUND(COALESCE(o.amount_credit, ROUND(o.amount)) * COALESCE(p.platform_fee_percent,0) / 100) ELSE 0 END) AS platform_fee_amount,
+          SUM(CASE WHEN o.status = 'completed' AND o.seller_admin_id IS NOT NULL AND o.admin_id <> o.product_owner_admin_id THEN COALESCE(o.amount_credit, ROUND(o.amount)) ELSE 0 END) AS affiliate_amount
         FROM orders o
         JOIN admins owner ON o.product_owner_admin_id = owner.id
         LEFT JOIN products p ON o.product_id = p.id
@@ -219,9 +222,9 @@ export default defineEventHandler(async (event) => {
           DATE_FORMAT(o.created_at, '%Y-%m') AS period,
           COUNT(*) AS total_orders,
           SUM(CASE WHEN o.status = 'completed' THEN 1 ELSE 0 END) AS completed_orders,
-          SUM(CASE WHEN o.status = 'completed' THEN o.amount ELSE 0 END) AS completed_amount,
-          SUM(CASE WHEN o.status = 'completed' AND o.product_owner_admin_id = ? AND o.admin_id = o.product_owner_admin_id THEN o.amount ELSE 0 END) AS self_amount,
-          SUM(CASE WHEN o.status = 'completed' AND o.admin_id = ? AND o.product_owner_admin_id <> ? THEN o.amount ELSE 0 END) AS affiliate_amount
+          SUM(CASE WHEN o.status = 'completed' THEN COALESCE(o.amount_credit, ROUND(o.amount)) ELSE 0 END) AS completed_amount,
+          SUM(CASE WHEN o.status = 'completed' AND o.product_owner_admin_id = ? AND o.admin_id = o.product_owner_admin_id THEN COALESCE(o.amount_credit, ROUND(o.amount)) ELSE 0 END) AS self_amount,
+          SUM(CASE WHEN o.status = 'completed' AND o.admin_id = ? AND o.product_owner_admin_id <> ? THEN COALESCE(o.amount_credit, ROUND(o.amount)) ELSE 0 END) AS affiliate_amount
         FROM orders o
         ${scopeWhere}
           AND o.created_at >= DATE_SUB(CURDATE(), INTERVAL 5 MONTH)
@@ -255,12 +258,12 @@ export default defineEventHandler(async (event) => {
           YEAR(o.created_at) AS period,
           COUNT(*) AS total_orders,
           SUM(CASE WHEN o.status = 'completed' THEN 1 ELSE 0 END) AS completed_orders,
-          SUM(CASE WHEN o.status = 'completed' THEN o.amount ELSE 0 END) AS completed_amount,
+          SUM(CASE WHEN o.status = 'completed' THEN COALESCE(o.amount_credit, ROUND(o.amount)) ELSE 0 END) AS completed_amount,
           -- Doanh thu "chủ": chỉ tính đơn trực tiếp (không qua ref/bán hộ)
-          SUM(CASE WHEN o.status = 'completed' AND owner.role = 'admin_0' AND o.admin_id = o.product_owner_admin_id THEN o.amount ELSE 0 END) AS owner_amount,
-          SUM(CASE WHEN o.status = 'completed' AND owner.role = 'admin_1' AND o.admin_id = o.product_owner_admin_id THEN o.amount ELSE 0 END) AS shop_self_amount,
-          SUM(CASE WHEN o.status = 'completed' AND owner.role = 'admin_1' AND o.admin_id = o.product_owner_admin_id THEN ROUND(o.amount * COALESCE(p.platform_fee_percent,0) / 100) ELSE 0 END) AS platform_fee_amount,
-          SUM(CASE WHEN o.status = 'completed' AND o.seller_admin_id IS NOT NULL AND o.admin_id <> o.product_owner_admin_id THEN o.amount ELSE 0 END) AS affiliate_amount
+          SUM(CASE WHEN o.status = 'completed' AND owner.role = 'admin_0' AND o.admin_id = o.product_owner_admin_id THEN COALESCE(o.amount_credit, ROUND(o.amount)) ELSE 0 END) AS owner_amount,
+          SUM(CASE WHEN o.status = 'completed' AND owner.role = 'admin_1' AND o.admin_id = o.product_owner_admin_id THEN COALESCE(o.amount_credit, ROUND(o.amount)) ELSE 0 END) AS shop_self_amount,
+          SUM(CASE WHEN o.status = 'completed' AND owner.role = 'admin_1' AND o.admin_id = o.product_owner_admin_id THEN ROUND(COALESCE(o.amount_credit, ROUND(o.amount)) * COALESCE(p.platform_fee_percent,0) / 100) ELSE 0 END) AS platform_fee_amount,
+          SUM(CASE WHEN o.status = 'completed' AND o.seller_admin_id IS NOT NULL AND o.admin_id <> o.product_owner_admin_id THEN COALESCE(o.amount_credit, ROUND(o.amount)) ELSE 0 END) AS affiliate_amount
         FROM orders o
         JOIN admins owner ON o.product_owner_admin_id = owner.id
         LEFT JOIN products p ON o.product_id = p.id
@@ -273,9 +276,9 @@ export default defineEventHandler(async (event) => {
           YEAR(o.created_at) AS period,
           COUNT(*) AS total_orders,
           SUM(CASE WHEN o.status = 'completed' THEN 1 ELSE 0 END) AS completed_orders,
-          SUM(CASE WHEN o.status = 'completed' THEN o.amount ELSE 0 END) AS completed_amount,
-          SUM(CASE WHEN o.status = 'completed' AND o.product_owner_admin_id = ? AND o.admin_id = o.product_owner_admin_id THEN o.amount ELSE 0 END) AS self_amount,
-          SUM(CASE WHEN o.status = 'completed' AND o.admin_id = ? AND o.product_owner_admin_id <> ? THEN o.amount ELSE 0 END) AS affiliate_amount
+          SUM(CASE WHEN o.status = 'completed' THEN COALESCE(o.amount_credit, ROUND(o.amount)) ELSE 0 END) AS completed_amount,
+          SUM(CASE WHEN o.status = 'completed' AND o.product_owner_admin_id = ? AND o.admin_id = o.product_owner_admin_id THEN COALESCE(o.amount_credit, ROUND(o.amount)) ELSE 0 END) AS self_amount,
+          SUM(CASE WHEN o.status = 'completed' AND o.admin_id = ? AND o.product_owner_admin_id <> ? THEN COALESCE(o.amount_credit, ROUND(o.amount)) ELSE 0 END) AS affiliate_amount
         FROM orders o
         ${scopeWhere}
           AND YEAR(o.created_at) >= YEAR(CURDATE()) - 2

@@ -1,9 +1,12 @@
 import pool from "./db";
+import { assertRuntimeMigrationsAllowed } from "./runtimeMigrations";
 
 let supportSchemaReady = false;
 
 export async function ensureSupportChatSchema() {
   if (supportSchemaReady) return;
+
+  assertRuntimeMigrationsAllowed("supportChat");
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS support_threads (

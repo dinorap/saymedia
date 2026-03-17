@@ -1,5 +1,6 @@
 import type { PoolConnection } from 'mysql2/promise'
 import pool from './db'
+import { assertRuntimeMigrationsAllowed } from './runtimeMigrations'
 
 let ledgerSchemaReady = false
 let userPaidBonusReady = false
@@ -16,6 +17,8 @@ export type CreditLedgerType =
 /** Đảm bảo bảng credit_ledger có cột paid_delta, bonus_delta (tách paid/bonus cho commission) */
 export async function ensureCreditLedgerSchema() {
   if (ledgerSchemaReady) return
+
+  assertRuntimeMigrationsAllowed('creditLedger')
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS credit_ledger (

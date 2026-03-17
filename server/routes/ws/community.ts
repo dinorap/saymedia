@@ -2,9 +2,10 @@ import { defineWebSocketHandler, type H3Event, getCookie } from "h3";
 import jwt from "jsonwebtoken";
 import pool from "../../utils/db";
 import { ensureChatSchema, type ChatMessageRow } from "../../utils/chat";
+import { getJwtSecret } from "../../utils/jwt";
+import { checkRateLimit, rateLimitKey } from "../../utils/rateLimit";
 
-const JWT_SECRET =
-  process.env.JWT_SECRET || "chuoi_bi_mat_jwt_ngau_nhien_cua_sep_123456";
+const JWT_SECRET = getJwtSecret();
 
 type CommunityPeer = any;
 
@@ -62,6 +63,14 @@ async function createMessageFromPeer(peer: CommunityPeer, contentRaw: string) {
     throw new Error("UNAUTHENTICATED");
   }
 
+  // Rate limit chat over WS (per user)
+  checkRateLimit({
+    key: rateLimitKey(["ws_chat", decoded.id]),
+    max: 12,
+    windowMs: 30_000,
+    statusMessage: "RATE_LIMITED",
+  });
+
   let content = String(contentRaw || "").trim();
   if (!content) {
     throw new Error("EMPTY_CONTENT");
@@ -110,6 +119,26 @@ function broadcast(payload: any) {
 export default defineWebSocketHandler({
   async open(peer) {
     peers.add(peer);
+    // Require authentication to connect & read history
+    try {
+      const event = getEventFromPeer(peer);
+      const token = event ? getCookie(event, "auth_token") : null;
+      if (!token) {
+        try {
+          peer.close();
+        } catch {}
+        peers.delete(peer);
+        return;
+      }
+      // Verify token early to avoid leaking chat history.
+      jwt.verify(token, JWT_SECRET);
+    } catch {
+      try {
+        peer.close();
+      } catch {}
+      peers.delete(peer);
+      return;
+    }
     try {
       const history = await loadRecentMessages(100);
       peer.send(

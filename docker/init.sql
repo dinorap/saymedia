@@ -129,7 +129,9 @@ CREATE TABLE orders (
     user_id INT NOT NULL,
     product_id INT NULL,
     admin_id INT NOT NULL,
-    amount DECIMAL(10,2) NOT NULL,
+    -- amount/amount_credit là số "credit" nguyên
+    amount BIGINT NOT NULL,
+    amount_credit BIGINT NOT NULL,
     paid_part BIGINT NULL,
     bonus_part BIGINT NULL,
     status ENUM('pending', 'completed', 'cancelled') DEFAULT 'pending',

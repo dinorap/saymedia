@@ -58,13 +58,13 @@
         </select>
       </div>
       <div class="filter-group">
-        <label>Sắp xếp</label>
+        <label>{{ $t("admin.sort") }}</label>
         <select v-model="sortMode" class="input input--sm">
-          <option value="created_desc">Mới nhất</option>
-          <option value="created_asc">Cũ nhất</option>
-          <option value="name_asc">Tên A → Z</option>
-          <option value="name_desc">Tên Z → A</option>
-          <option value="status_active_first">Ưu tiên đang hoạt động</option>
+          <option value="created_desc">{{ $t("admin.sortNewest") }}</option>
+          <option value="created_asc">{{ $t("admin.sortOldest") }}</option>
+          <option value="name_asc">{{ $t("admin.sortNameAsc") }}</option>
+          <option value="name_desc">{{ $t("admin.sortNameDesc") }}</option>
+          <option value="status_active_first">{{ $t("admin.sortActiveFirst") }}</option>
         </select>
       </div>
       <button type="button" class="btn-add btn-add--right" @click="openModal()">
@@ -83,8 +83,8 @@
             <th>{{ $t("admin.productName") || "Tên sản phẩm" }}</th>
             <th>{{ $t("admin.thumbnail") || "Ảnh" }}</th>
             <th>{{ $t("admin.adminId") }}</th>
-            <th>Tổng key đã bán</th>
-            <th>Tổng điểm đã bán</th>
+            <th>{{ $t("admin.totalSoldKeys") }}</th>
+            <th>{{ $t("admin.totalSoldCredit") }}</th>
             <th>{{ $t("admin.productType") || "Loại" }}</th>
             <th>{{ $t("admin.downloadUrl") || "Link tải" }}</th>
             <th>{{ $t("admin.status") }}</th>
@@ -145,7 +145,7 @@
               <button
                 type="button"
                 class="btn-icon"
-                title="Thống kê theo loại key"
+                :title="$t('admin.statsByKeyType')"
                 @click="openStatsModal(item)"
               >
                 📊
@@ -349,7 +349,7 @@
                   </select>
                 </div>
                 <div v-if="isSuperAdmin" class="form-row">
-                  <label>Phí nền tảng % (phí sàn)</label>
+                  <label>{{ $t("admin.platformFeePercentLabel") }}</label>
                   <input
                     v-model.number="form.platform_fee_percent"
                     type="number"
@@ -513,7 +513,7 @@
                     min="0"
                     max="100"
                     class="input input--sm"
-                    placeholder="Hoa hồng %"
+                    :placeholder="$t('admin.commissionPercentPlaceholder')"
                   />
                 </div>
                 <div class="seller-add-btn-wrap">
@@ -548,9 +548,9 @@
                 <thead>
                   <tr>
                     <th>#</th>
-                    <th>Shop</th>
+                    <th>{{ $t("admin.shopLabel") }}</th>
                     <th>{{ $t("admin.productRefCode") }}</th>
-                    <th>Hoa hồng %</th>
+                    <th>{{ $t("admin.commissionPercentLabel") }}</th>
                     <th>{{ $t("admin.status") }}</th>
                     <th>{{ $t("admin.actions") }}</th>
                   </tr>
@@ -578,14 +578,14 @@
                           :disabled="savingCommissionId === row.id"
                           @click="saveCommission(row)"
                         >
-                          {{ savingCommissionId === row.id ? "..." : "Lưu" }}
+                          {{ savingCommissionId === row.id ? "..." : $t("admin.saveShort") }}
                         </button>
                         <button
                           type="button"
                           class="btn-secondary btn-primary--sm"
                           @click="commissionEditId = null"
                         >
-                          Hủy
+                          {{ $t("admin.cancelShort") }}
                         </button>
                       </template>
                       <template v-else>
@@ -596,7 +596,7 @@
                           class="btn-small-inline"
                           @click="startEditCommission(row)"
                         >
-                          Sửa
+                          {{ $t("admin.editShort") }}
                         </button>
                       </template>
                     </td>
@@ -628,7 +628,7 @@
                         class="btn-secondary btn-primary--sm seller-delete-btn"
                         @click="deleteSeller(row)"
                       >
-                        Xóa
+                        {{ $t("admin.deleteShort") }}
                       </button>
                     </td>
                   </tr>
@@ -658,22 +658,22 @@
       >
         <div class="modal">
           <h3 class="modal-title">
-            Thống kê bán theo loại key –
+            {{ $t("admin.keyStatsByDuration") }} –
             {{ statsModal.product?.name || "" }}
           </h3>
           <div class="modal-form">
             <AppLoading v-if="statsModal.loading" />
             <div v-else-if="!statsModal.items.length" class="table-empty">
-              Chưa có đơn nào cho sản phẩm này
+              {{ $t("admin.keyStatsEmpty") }}
             </div>
             <table v-else class="data-table">
               <thead>
                 <tr>
-                  <th>Loại key</th>
-                  <th>Số key</th>
-                  <th>Giá/1 key (credit)</th>
-                  <th>Doanh thu (credit)</th>
-                  <th>CREDIT chia cho chủ/shop</th>
+                  <th>{{ $t("admin.keyType") }}</th>
+                  <th>{{ $t("admin.keyCount") }}</th>
+                  <th>{{ $t("admin.unitPricePerKey") }}</th>
+                  <th>{{ $t("admin.revenueCredit") }}</th>
+                  <th>{{ $t("admin.creditShareOwnerShop") }}</th>
                 </tr>
               </thead>
               <tbody>
@@ -692,7 +692,7 @@
                 class="btn-secondary"
                 @click="statsModal.open = false"
               >
-                Đóng
+                {{ $t("admin.closeShort") }}
               </button>
             </div>
           </div>
@@ -966,7 +966,7 @@ async function saveCommission(row: any) {
     });
     row.commission_percent = v;
     commissionEditId.value = null;
-    showToast("Đã cập nhật % hoa hồng", "success");
+    showToast(t("admin.toastCommissionUpdated"), "success");
   } catch (e) {
     showToast(e?.data?.statusMessage || "Không cập nhật được", "error");
   } finally {
@@ -1011,7 +1011,7 @@ async function deleteSeller(row: any) {
     await $fetch(`/api/admin/product-sellers/${row.id}`, {
       method: "DELETE",
     });
-    showToast("Đã xóa đối tác khỏi sản phẩm", "success");
+    showToast(t("admin.toastSellerRemoved"), "success");
     // Cập nhật lại danh sách tại chỗ
     sellerModal.items = sellerModal.items.filter((x: any) => x.id !== row.id);
   } catch (e: any) {
@@ -1040,9 +1040,9 @@ async function copyListingRef(row: any) {
   if (!url) return;
   try {
     await navigator.clipboard.writeText(url);
-    showToast("Đã copy link ref sản phẩm", "success");
+    showToast(t("admin.toastRefCopied"), "success");
   } catch {
-    showToast("Không thể copy, vui lòng thử lại", "error");
+    showToast(t("admin.toastCopyFailed"), "error");
   }
 }
 

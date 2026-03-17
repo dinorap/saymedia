@@ -34,10 +34,10 @@
           <tr>
             <th>#</th>
             <th>{{ $t("admin.productName") }}</th>
-            <th>Tổng số key</th>
-            <th>Các thời hạn</th>
+            <th>{{ $t("admin.productKeysUi.totalKeys") }}</th>
+            <th>{{ $t("admin.productKeysUi.durations") }}</th>
             <th>{{ $t("admin.createdAt") }}</th>
-            <th>{{ $t("admin.updatedAt") || "Cập nhật gần nhất" }}</th>
+            <th>{{ $t("admin.updatedAt") }}</th>
             <th class="th-actions">{{ $t("admin.actions") }}</th>
           </tr>
         </thead>
@@ -53,7 +53,7 @@
               <button
                 type="button"
                 class="btn-icon"
-                title="Quản lý key"
+                :title="$t('admin.productKeysUi.manageKeys')"
                 @click="openProductKeysModal(row)"
               >
                 🔑
@@ -109,41 +109,43 @@
         @click.self="modalOpen = false"
       >
         <div class="modal">
-          <h3 class="modal-title">Thêm key sản phẩm</h3>
+          <h3 class="modal-title">{{ $t("admin.productKeysUi.addTitle") }}</h3>
           <form class="modal-form" @submit.prevent="save">
             <div class="form-row">
-              <label>Tên sản phẩm</label>
+              <label>{{ $t("admin.productKeysUi.productNameLabel") }}</label>
               <select
                 v-model.number="form.product_id"
                 class="input"
                 :disabled="modalProductLocked && !!currentProduct"
                 required
               >
-                <option disabled :value="0">Chọn sản phẩm</option>
+                <option disabled :value="0">
+                  {{ $t("admin.productKeysUi.chooseProduct") }}
+                </option>
                 <option v-for="p in productOptions" :key="p.id" :value="p.id">
                   {{ p.name }}
                 </option>
               </select>
             </div>
             <div class="form-row">
-              <label>Giá mỗi key (điểm)</label>
+              <label>{{ $t("admin.productKeysUi.pricePerKey") }}</label>
               <input
                 v-model.number="form.price"
                 type="number"
                 min="1"
                 class="input"
-                placeholder="Nhập giá cho mỗi key..."
+                :placeholder="$t('admin.productKeysUi.pricePerKeyPlaceholder')"
                 required
               />
             </div>
             <div class="form-row">
-              <label>Danh sách key (mỗi dòng 1 key)</label>
+              <label>{{ $t("admin.productKeysUi.keysListLabel") }}</label>
               <div class="input-upload-row">
                 <textarea
                   v-model="form.keys_text"
                   class="input input--textarea"
                   rows="6"
-                  placeholder="Mỗi dòng 1 key..."
+                  :placeholder="$t('admin.productKeysUi.keysListPlaceholder')"
                 />
                 <input
                   ref="keysFileInput"
@@ -157,17 +159,21 @@
                   class="btn-upload"
                   @click="openKeysFilePicker"
                 >
-                  Tải file .txt
+                  {{ $t("admin.productKeysUi.uploadTxt") }}
                 </button>
               </div>
               <p v-if="keysCount > 0" class="keys-count">
-                Đang nhập <strong>{{ keysCount }}</strong> key
+                {{ $t("admin.productKeysUi.importing") }}
+                <strong>{{ keysCount }}</strong>
+                {{ $t("admin.productKeysUi.keysUnit") }}
               </p>
             </div>
             <div class="form-row">
-              <label>Thời hạn</label>
+              <label>{{ $t("admin.keyDuration") }}</label>
               <select v-model="form.valid_duration" class="input" required>
-                <option disabled value="">Chọn thời hạn</option>
+                <option disabled value="">
+                  {{ $t("admin.productKeysUi.chooseDuration") }}
+                </option>
                 <option v-for="opt in durationOptions" :key="opt" :value="opt">
                   {{ opt }}
                 </option>
@@ -200,12 +206,13 @@
       >
         <div class="modal modal--wide">
           <h3 class="modal-title">
-            Quản lý key - {{ currentProduct?.product_name || "" }}
+            {{ $t("admin.productKeysUi.manageTitle") }} -
+            {{ currentProduct?.product_name || "" }}
           </h3>
           <div class="product-keys-toolbar">
             <div class="product-keys-left">
               <div class="filter-group">
-                <label>Thời hạn</label>
+                <label>{{ $t("admin.keyDuration") }}</label>
                 <select
                   v-model="productKeysDuration"
                   class="input input--sm"
@@ -226,14 +233,16 @@
                 class="btn-add btn-add--small"
                 @click="openModalForCurrentProduct"
               >
-                + Thêm key cho sản phẩm này
+                + {{ $t("admin.productKeysUi.addForThisProduct") }}
               </button>
             </div>
             <div class="product-keys-right">
               <div class="price-row">
-                <label>Thời hạn sửa giá</label>
+                <label>{{ $t("admin.productKeysUi.editPriceDuration") }}</label>
                 <select v-model="priceEditDuration" class="input input--sm">
-                  <option disabled value="">Chọn thời hạn</option>
+                  <option disabled value="">
+                    {{ $t("admin.productKeysUi.chooseDuration") }}
+                  </option>
                   <option
                     v-for="opt in durationOptions"
                     :key="opt"
@@ -244,13 +253,13 @@
                 </select>
               </div>
               <div class="price-row">
-                <label>Giá mới (điểm)</label>
+                <label>{{ $t("admin.productKeysUi.newPrice") }}</label>
                 <input
                   v-model.number="priceEditValue"
                   type="number"
                   min="1"
                   class="input input--sm"
-                  placeholder="Nhập giá mới..."
+                  :placeholder="$t('admin.productKeysUi.newPricePlaceholder')"
                 />
               </div>
               <div class="price-row price-row--button">
@@ -260,7 +269,11 @@
                   :disabled="priceEditLoading"
                   @click="applyBulkPrice"
                 >
-                  {{ priceEditLoading ? "..." : "Sửa giá theo thời hạn" }}
+                  {{
+                    priceEditLoading
+                      ? "..."
+                      : $t("admin.productKeysUi.editPriceByDuration")
+                  }}
                 </button>
               </div>
             </div>
@@ -276,9 +289,9 @@
               <thead>
                 <tr>
                   <th>#</th>
-                  <th>Key</th>
-                  <th>Thời hạn</th>
-                  <th>Giá key (VND)</th>
+                  <th>{{ $t("admin.productKeysUi.keyColumn") }}</th>
+                  <th>{{ $t("admin.keyDuration") }}</th>
+                  <th>{{ $t("admin.productKeysUi.priceColumn") }}</th>
                   <th>{{ $t("admin.createdAt") }}</th>
                   <th class="th-actions">{{ $t("admin.actions") }}</th>
                 </tr>
@@ -362,7 +375,7 @@
               class="btn-secondary"
               @click="closeProductKeysModal"
             >
-              {{ $t("admin.close") || "Đóng" }}
+              {{ $t("admin.close") }}
             </button>
           </div>
         </div>
@@ -525,11 +538,11 @@ function openModal() {
 async function save() {
   error.value = "";
   if (!form.product_id) {
-    error.value = "Vui lòng chọn sản phẩm";
+    error.value = t("admin.productKeysUi.errors.chooseProduct");
     return;
   }
   if (!form.price || form.price <= 0) {
-    error.value = "Giá key phải lớn hơn 0";
+    error.value = t("admin.productKeysUi.errors.pricePositive");
     return;
   }
   const keys = String(form.keys_text || "")
@@ -537,16 +550,16 @@ async function save() {
     .map((k) => k.trim())
     .filter((k) => !!k);
   if (!keys.length) {
-    error.value = "Danh sách key không được để trống";
+    error.value = t("admin.productKeysUi.errors.keysRequired");
     return;
   }
   const uniqueKeys = Array.from(new Set(keys));
   if (uniqueKeys.length !== keys.length) {
-    error.value = "Danh sách key có chứa key trùng nhau, vui lòng xoá bớt.";
+    error.value = t("admin.productKeysUi.errors.duplicateKeys");
     return;
   }
   if (!form.valid_duration) {
-    error.value = "Vui lòng chọn thời hạn";
+    error.value = t("admin.productKeysUi.errors.chooseDuration");
     return;
   }
 
@@ -562,7 +575,7 @@ async function save() {
       productName = currentProduct.value.product_name || "";
     }
     if (!productName) {
-      error.value = "Không tìm thấy tên sản phẩm, vui lòng chọn lại sản phẩm.";
+      error.value = t("admin.productKeysUi.errors.productNameNotFound");
       saving.value = false;
       return;
     }
@@ -586,17 +599,17 @@ async function save() {
     }
     const inserted = res?.inserted ?? 0;
     const skipped = res?.skipped ?? 0;
-    let msg = "Đã thêm key";
+    let msg = t("admin.productKeysUi.toasts.addedDefault");
     if (inserted && skipped) {
-      msg = `Đã thêm ${inserted} key, bỏ qua ${skipped} key đã tồn tại`;
+      msg = t("admin.productKeysUi.toasts.addedWithSkipped", { inserted, skipped });
     } else if (inserted && !skipped) {
-      msg = `Đã thêm ${inserted} key`;
+      msg = t("admin.productKeysUi.toasts.addedInsertedOnly", { inserted });
     } else if (!inserted && skipped) {
-      msg = "Không thêm được key mới, tất cả key đã tồn tại";
+      msg = t("admin.productKeysUi.toasts.addedNoneAllExist");
     }
     showToast(msg, inserted ? "success" : "warning");
   } catch (e) {
-    error.value = e?.data?.statusMessage || e?.message || "Lỗi";
+    error.value = e?.data?.statusMessage || e?.message || t("admin.error");
     showToast(error.value, "error");
   } finally {
     saving.value = false;
@@ -634,7 +647,7 @@ async function onUploadKeysFile(event) {
 async function deleteKey(row, isInProductModal = false) {
   const ok = await askConfirm({
     title: t("admin.delete"),
-    message: `Xóa key này?\n${row.key}`,
+    message: t("admin.productKeysUi.confirmDeleteKey", { key: row.key }),
     confirmText: t("admin.delete"),
     cancelText: t("admin.cancel"),
   });
@@ -651,7 +664,7 @@ async function deleteKey(row, isInProductModal = false) {
     }
     showToast(t("admin.deleteSuccess"), "success");
   } catch (e) {
-    showToast(e?.data?.statusMessage || "Lỗi", "error");
+    showToast(e?.data?.statusMessage || t("admin.error"), "error");
   }
 }
 
@@ -675,15 +688,15 @@ function closeProductKeysModal() {
 
 async function applyBulkPrice() {
   if (!currentProduct.value) {
-    showToast("Không xác định được sản phẩm", "error");
+    showToast(t("admin.productKeysUi.errors.productNotIdentified"), "error");
     return;
   }
   if (!priceEditDuration.value) {
-    showToast("Vui lòng chọn thời hạn cần sửa giá", "error");
+    showToast(t("admin.productKeysUi.errors.chooseDurationForEdit"), "error");
     return;
   }
   if (!priceEditValue.value || priceEditValue.value <= 0) {
-    showToast("Giá mới phải lớn hơn 0", "error");
+    showToast(t("admin.productKeysUi.errors.newPricePositive"), "error");
     return;
   }
 
@@ -711,11 +724,12 @@ async function applyBulkPrice() {
   // #endregion agent log
 
   const ok = await askConfirm({
-    title: "Xác nhận sửa giá",
-    message: `Sửa giá toàn bộ key thời hạn "${priceEditDuration.value}" của sản phẩm này thành ${priceEditValue.value!.toLocaleString(
-      "vi-VN",
-    )} điểm?`,
-    confirmText: "Sửa giá",
+    title: t("admin.productKeysUi.confirmUpdatePriceTitle"),
+    message: t("admin.productKeysUi.confirmUpdatePriceMessage", {
+      duration: priceEditDuration.value,
+      price: Number(priceEditValue.value || 0),
+    }),
+    confirmText: t("admin.productKeysUi.confirmUpdatePriceConfirm"),
     cancelText: t("admin.cancel"),
   });
   if (!ok) return;
@@ -758,12 +772,12 @@ async function applyBulkPrice() {
     await fetchList({ silent: true });
     showToast(
       updated
-        ? `Đã cập nhật giá cho ${updated} key`
-        : "Không có key nào được cập nhật",
+        ? t("admin.productKeysUi.toasts.priceUpdated", { updated })
+        : t("admin.productKeysUi.toasts.priceUpdatedNone"),
       updated ? "success" : "warning",
     );
   } catch (e) {
-    showToast(e?.data?.statusMessage || "Lỗi cập nhật giá", "error");
+    showToast(e?.data?.statusMessage || t("admin.productKeysUi.errors.updatePriceFailed"), "error");
   } finally {
     priceEditLoading.value = false;
   }

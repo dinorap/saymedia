@@ -360,7 +360,6 @@ const editStatus = ref("pending");
 const refundReason = ref("");
 const savingNoteId = ref(null);
 const refundModalOrder = ref(null);
-let autoRefreshTimer = null;
 
 const notePopoverOrder = ref(null);
 const notePopoverStyle = ref({});
@@ -641,16 +640,10 @@ async function refundOrder() {
 onMounted(async () => {
   await fetchAdmins();
   await fetchOrders(1);
-  autoRefreshTimer = setInterval(() => {
-    fetchOrders(pagination.value.page || 1, { silent: true });
-  }, 5000);
-});
-
-onUnmounted(() => {
-  if (autoRefreshTimer) {
-    clearInterval(autoRefreshTimer);
-    autoRefreshTimer = null;
-  }
+  useAutoRefresh(
+    () => fetchOrders(pagination.value.page || 1, { silent: true }),
+    { intervalMs: 15000, pauseWhenHidden: true },
+  );
 });
 </script>
 

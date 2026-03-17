@@ -7,7 +7,7 @@
         :class="{ 'subtab-btn--active': activeTab === 'shops' }"
         @click="activeTab = 'shops'"
       >
-        Shop
+        {{ $t("admin.partnersUi.tabShop") }}
       </button>
       <button
         type="button"
@@ -15,31 +15,31 @@
         :class="{ 'subtab-btn--active': activeTab === 'owner' }"
         @click="activeTab = 'owner'"
       >
-        Chủ
+        {{ $t("admin.partnersUi.tabOwner") }}
       </button>
     </div>
 
     <div class="card summary-card">
       <template v-if="!isSuperAdmin || activeTab === 'shops'">
-        <h2 class="card-title">Tổng quan theo shop</h2>
-        <div v-if="loading" class="table-loading">Đang tải...</div>
+        <h2 class="card-title">{{ $t("admin.partnersUi.overviewByShop") }}</h2>
+        <div v-if="loading" class="table-loading">{{ $t("admin.loading") }}</div>
         <div v-else-if="!shopPartners.length" class="table-empty">
-          Chưa có dữ liệu
+          {{ $t("admin.noData") }}
         </div>
         <table v-else class="data-table">
           <thead>
             <tr>
-              <th>Shop</th>
-              <th>Đơn sản phẩm shop</th>
-              <th>Doanh thu SP shop (credit)</th>
-              <th>Phí sàn (credit)</th>
-              <th>Net SP shop (credit)</th>
-              <th>Đơn bán hộ</th>
-              <th>Doanh thu bán hộ (credit)</th>
-              <th>Doanh thu bán hộ thực nhận (credit)</th>
-              <th>Số dư cần chuyển (credit)</th>
-              <th>Số dư (VND)</th>
-              <th v-if="isSuperAdmin">Thao tác</th>
+              <th>{{ $t("admin.shopLabel") }}</th>
+              <th>{{ $t("admin.partnersUi.shopProductOrders") }}</th>
+              <th>{{ $t("admin.partnersUi.shopProductRevenue") }}</th>
+              <th>{{ $t("admin.partnersUi.platformFee") }}</th>
+              <th>{{ $t("admin.partnersUi.shopNetRevenue") }}</th>
+              <th>{{ $t("admin.partnersUi.affiliateOrders") }}</th>
+              <th>{{ $t("admin.partnersUi.affiliateRevenue") }}</th>
+              <th>{{ $t("admin.partnersUi.affiliateReceived") }}</th>
+              <th>{{ $t("admin.partnersUi.balanceToPay") }}</th>
+              <th>{{ $t("admin.partnersUi.balanceVnd") }}</th>
+              <th v-if="isSuperAdmin">{{ $t("admin.actions") }}</th>
             </tr>
           </thead>
           <tbody>
@@ -62,31 +62,34 @@
                   class="btn-small"
                   @click="showByProduct(p.admin_id)"
                 >
-                  Xem theo SP
+                  {{ $t("admin.partnersUi.viewByProduct") }}
                 </button>
               </td>
             </tr>
           </tbody>
         </table>
         <p v-if="shopPartners.length" class="vnd-note">
-          1 credit = {{ vndPerCredit.toLocaleString("vi-VN") }} VND (quy đổi cuối
-          tháng để chuyển tiền cho shop).
+          {{
+            $t("admin.partnersUi.vndPerCreditNote", {
+              vndPerCredit: vndPerCredit.toLocaleString("vi-VN"),
+            })
+          }}
         </p>
       </template>
 
       <template v-else>
-        <h2 class="card-title">Chủ – theo sản phẩm</h2>
-        <div v-if="ownerLoading" class="table-loading">Đang tải...</div>
+        <h2 class="card-title">{{ $t("admin.partnersUi.ownerByProductTitle") }}</h2>
+        <div v-if="ownerLoading" class="table-loading">{{ $t("admin.loading") }}</div>
         <div v-else-if="!ownerProducts.length" class="table-empty">
-          Chưa có dữ liệu
+          {{ $t("admin.noData") }}
         </div>
         <table v-else class="data-table">
           <thead>
             <tr>
-              <th>Sản phẩm</th>
-              <th>Tổng key đã bán</th>
-              <th>Tổng doanh thu (credit)</th>
-              <th>Chi tiết</th>
+              <th>{{ $t("admin.productName") }}</th>
+              <th>{{ $t("admin.totalSoldKeys") }}</th>
+              <th>{{ $t("admin.partnersUi.totalRevenueCredit") }}</th>
+              <th>{{ $t("admin.partnersUi.detail") }}</th>
             </tr>
           </thead>
           <tbody>
@@ -96,7 +99,7 @@
               <td>{{ formatNum(p.total_sold_credit || 0) }}</td>
               <td>
                 <button type="button" class="btn-small" @click="openOwnerKeyDetails(p)">
-                  Chi tiết key
+                  {{ $t("admin.partnersUi.keyDetail") }}
                 </button>
               </td>
             </tr>
@@ -113,13 +116,13 @@
       >
         <div class="modal">
           <h3 class="modal-title">
-            Doanh thu theo sản phẩm
+            {{ $t("admin.partnersUi.revenueByProductTitle") }}
             <span v-if="currentPartnerName">– {{ currentPartnerName }}</span>
           </h3>
           <div class="modal-body">
-            <div v-if="byProductLoading" class="table-loading">Đang tải...</div>
+            <div v-if="byProductLoading" class="table-loading">{{ $t("admin.loading") }}</div>
             <div v-else-if="!byProduct.length" class="table-empty">
-              Chưa có đơn nào
+              {{ $t("admin.partnersUi.noOrders") }}
             </div>
             <template v-else>
               <div class="modal-tabs">
@@ -129,7 +132,7 @@
                   :class="{ 'subtab-btn--active': byProductSubtab === 'self' }"
                   @click="byProductSubtab = 'self'"
                 >
-                  Shop tự bán
+                  {{ $t("admin.partnersUi.subtabSelf") }}
                 </button>
                 <button
                   type="button"
@@ -137,19 +140,19 @@
                   :class="{ 'subtab-btn--active': byProductSubtab === 'affiliate' }"
                   @click="byProductSubtab = 'affiliate'"
                 >
-                  Bán hộ
+                  {{ $t("admin.partnersUi.subtabAffiliate") }}
                 </button>
               </div>
 
               <table v-if="byProductSubtab === 'self'" class="data-table">
                 <thead>
                   <tr>
-                    <th>Sản phẩm</th>
-                    <th>Số đơn</th>
-                    <th>Doanh thu SP shop (credit)</th>
-                    <th>Phí sàn (credit)</th>
-                    <th>CREDIT chia cho shop</th>
-                    <th>Chi tiết</th>
+                    <th>{{ $t("admin.productName") }}</th>
+                    <th>{{ $t("admin.partnersUi.ordersCount") }}</th>
+                    <th>{{ $t("admin.partnersUi.shopProductRevenue") }}</th>
+                    <th>{{ $t("admin.partnersUi.platformFee") }}</th>
+                    <th>{{ $t("admin.partnersUi.creditShareToShop") }}</th>
+                    <th>{{ $t("admin.partnersUi.detail") }}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -165,12 +168,14 @@
                         class="btn-small"
                         @click="openKeyDetails(r)"
                       >
-                        Chi tiết key
+                        {{ $t("admin.partnersUi.keyDetail") }}
                       </button>
                     </td>
                   </tr>
                   <tr v-if="!selfByProduct.length">
-                    <td colspan="6" class="table-empty">Chưa có đơn tự bán</td>
+                    <td colspan="6" class="table-empty">
+                      {{ $t("admin.partnersUi.noSelfOrders") }}
+                    </td>
                   </tr>
                 </tbody>
               </table>
@@ -178,11 +183,11 @@
               <table v-else class="data-table">
                 <thead>
                   <tr>
-                    <th>Sản phẩm</th>
-                    <th>Số đơn bán hộ</th>
-                    <th>Doanh thu bán hộ (credit)</th>
-                    <th>CREDIT thực nhận (credit)</th>
-                    <th>Chi tiết</th>
+                    <th>{{ $t("admin.productName") }}</th>
+                    <th>{{ $t("admin.partnersUi.affiliateOrders") }}</th>
+                    <th>{{ $t("admin.partnersUi.affiliateRevenue") }}</th>
+                    <th>{{ $t("admin.partnersUi.affiliateReceived") }}</th>
+                    <th>{{ $t("admin.partnersUi.detail") }}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -200,12 +205,14 @@
                         class="btn-small"
                         @click="openKeyDetails(r)"
                       >
-                        Chi tiết key
+                        {{ $t("admin.partnersUi.keyDetail") }}
                       </button>
                     </td>
                   </tr>
                   <tr v-if="!affiliateByProduct.length">
-                    <td colspan="5" class="table-empty">Chưa có đơn bán hộ</td>
+                    <td colspan="5" class="table-empty">
+                      {{ $t("admin.partnersUi.noAffiliateOrders") }}
+                    </td>
                   </tr>
                 </tbody>
               </table>
@@ -217,7 +224,7 @@
               class="btn-primary"
               @click="closeByProductModal"
             >
-              Đóng
+              {{ $t("admin.closeShort") }}
             </button>
           </div>
         </div>
@@ -232,25 +239,25 @@
       >
         <div class="modal">
           <h3 class="modal-title">
-            Chi tiết key theo loại
+            {{ $t("admin.partnersUi.keyDetailsByTypeTitle") }}
             <span v-if="currentProductName">– {{ currentProductName }}</span>
           </h3>
           <div class="modal-body">
             <div v-if="keyDetailsLoading" class="table-loading">
-              Đang tải...
+              {{ $t("admin.loading") }}
             </div>
             <div v-else-if="!keyDetails.length" class="table-empty">
-              Chưa có đơn key nào
+              {{ $t("admin.partnersUi.noKeyOrders") }}
             </div>
             <table v-else class="data-table">
               <thead>
                 <tr>
-                  <th>Loại key</th>
-                  <th>Giá/1 key (credit)</th>
-                  <th>Số key</th>
-                  <th>Doanh thu (credit)</th>
-                  <th>Phí sàn (credit)</th>
-                  <th>Số dư cần chuyển (credit)</th>
+                  <th>{{ $t("admin.keyType") }}</th>
+                  <th>{{ $t("admin.unitPricePerKey") }}</th>
+                  <th>{{ $t("admin.keyCount") }}</th>
+                  <th>{{ $t("admin.revenueCredit") }}</th>
+                  <th>{{ $t("admin.partnersUi.platformFee") }}</th>
+                  <th>{{ $t("admin.partnersUi.balanceToPay") }}</th>
                 </tr>
               </thead>
               <tbody>
@@ -271,7 +278,7 @@
               class="btn-primary"
               @click="closeKeyDetailsModal"
             >
-              Đóng
+              {{ $t("admin.closeShort") }}
             </button>
           </div>
         </div>
@@ -455,7 +462,7 @@ async function openKeyDetails(row: any) {
 async function openOwnerKeyDetails(product: any) {
   if (!product?.id) return;
   selectedPartnerId.value = currentUser.value?.id ?? null;
-  currentPartnerName.value = "Chủ";
+  currentPartnerName.value = t("admin.partnersUi.ownerLabel");
   currentProductName.value = product.name || "";
   keyDetailsLoading.value = true;
   keyDetails.value = [];

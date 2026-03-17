@@ -4,8 +4,9 @@ import { ensurePaymentSchema, PAYMENT_EXPIRE_MINUTES, convertVndToCredit } from 
 import { addAuditLog } from '../../../utils/audit'
 import { applyDepositCredit, ensureCreditLedgerSchema } from '../../../utils/creditLedger'
 import { addDepositSocialProofItem } from '../../../utils/socialProof'
+import { getJwtSecret } from '../../../utils/jwt'
 
-const JWT_SECRET = process.env.JWT_SECRET || 'chuoi_bi_mat_jwt_ngau_nhien_cua_sep_123456'
+const JWT_SECRET = getJwtSecret()
 
 export default defineEventHandler(async (event) => {
   // Hard-disable test crediting in production

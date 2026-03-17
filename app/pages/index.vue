@@ -134,9 +134,9 @@
           <div
             class="landing-section-head landing-section-head--left landing-section-head--chat"
           >
-            <h2 class="landing-section-title">Cộng đồng đang chat</h2>
+            <h2 class="landing-section-title">{{ $t("communityChat.title") }}</h2>
             <p class="landing-section-subtitle landing-section-subtitle--chat">
-              Mọi tài khoản đều có thể nhắn – dùng lịch sự, không spam.
+              {{ $t("communityChat.subtitle") }}
             </p>
           </div>
         </div>

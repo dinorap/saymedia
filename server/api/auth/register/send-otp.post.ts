@@ -1,10 +1,11 @@
 import jwt from 'jsonwebtoken'
 import pool from '../../../utils/db'
 import { setOtp } from '../../../utils/otpStore'
-import { sendOtpEmail } from '../../../utils/email'
+import { enqueueOtpEmail } from '../../../utils/emailQueue'
 import { checkOtpRateLimit } from '../../../utils/otpRateLimit'
+import { getJwtSecret } from '../../../utils/jwt'
 
-const JWT_SECRET = process.env.JWT_SECRET || 'chuoi_bi_mat_jwt_ngau_nhien_cua_sep_123456'
+const JWT_SECRET = getJwtSecret()
 const COOKIE_NAME = 'register_ref_claim'
 
 export default defineEventHandler(async (event) => {
@@ -47,9 +48,6 @@ export default defineEventHandler(async (event) => {
 
   const code = String(Math.floor(100000 + Math.random() * 900000))
   setOtp(e, code, { username: u, password, admin_id: adminId })
-  const sent = await sendOtpEmail(e, code, 'đăng ký')
-  if (!sent) {
-    throw createError({ statusCode: 500, statusMessage: 'Không gửi được email OTP. Vui lòng thử lại!' })
-  }
+  enqueueOtpEmail(e, code, 'đăng ký')
   return { success: true, message: 'Đã gửi mã OTP đến email của bạn!' }
 })

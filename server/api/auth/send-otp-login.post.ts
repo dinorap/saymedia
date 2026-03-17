@@ -1,6 +1,6 @@
 import pool from '../../utils/db'
 import { setOtp } from '../../utils/otpStore'
-import { sendOtpEmail } from '../../utils/email'
+import { enqueueOtpEmail } from '../../utils/emailQueue'
 import { checkOtpRateLimit } from '../../utils/otpRateLimit'
 
 export default defineEventHandler(async (event) => {
@@ -20,9 +20,6 @@ export default defineEventHandler(async (event) => {
 
   const code = String(Math.floor(100000 + Math.random() * 900000))
   setOtp(email, code)
-  const sent = await sendOtpEmail(email, code, 'đăng nhập')
-  if (!sent) {
-    throw createError({ statusCode: 500, statusMessage: 'Không gửi được email OTP. Vui lòng thử lại!' })
-  }
+  enqueueOtpEmail(email, code, 'đăng nhập')
   return { success: true, message: 'Đã gửi mã OTP đến email của bạn!' }
 })

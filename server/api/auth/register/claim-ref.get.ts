@@ -4,8 +4,9 @@
  */
 import jwt from 'jsonwebtoken'
 import pool from '../../../utils/db'
+import { getJwtSecret } from '../../../utils/jwt'
 
-const JWT_SECRET = process.env.JWT_SECRET || 'chuoi_bi_mat_jwt_ngau_nhien_cua_sep_123456'
+const JWT_SECRET = getJwtSecret()
 const COOKIE_NAME = 'register_ref_claim'
 const COOKIE_MAX_AGE = 60 * 60 * 24 // 24h
 

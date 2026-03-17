@@ -1,9 +1,9 @@
 import jwt from "jsonwebtoken";
 import pool from "../../utils/db";
 import { ensureSupportChatSchema } from "../../utils/supportChat";
+import { getJwtSecret } from "../../utils/jwt";
 
-const JWT_SECRET =
-  process.env.JWT_SECRET || "chuoi_bi_mat_jwt_ngau_nhien_cua_sep_123456";
+const JWT_SECRET = getJwtSecret();
 
 export default defineEventHandler(async (event) => {
   const token = getCookie(event, "auth_token");

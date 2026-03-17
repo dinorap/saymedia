@@ -1,11 +1,13 @@
 import pool from "../../utils/db";
 import { getVndPerCredit } from "../../utils/payment";
+import { ensureCommerceSchema } from "../../utils/commerce";
 
 export default defineEventHandler(async (event) => {
   const currentUser = event.context.user;
   if (!currentUser) {
     throw createError({ statusCode: 401, statusMessage: "Chưa đăng nhập" });
   }
+  await ensureCommerceSchema();
   if (currentUser.role !== "admin_0") {
     throw createError({
       statusCode: 403,
@@ -82,7 +84,7 @@ export default defineEventHandler(async (event) => {
                 WHEN owner.role = 'admin_1'
                   AND COALESCE(oo.seller_admin_id, oo.admin_id) = COALESCE(oo.product_owner_admin_id, oo.admin_id)
                   AND COALESCE(p.platform_fee_percent, 0) > 0
-                THEN ROUND(oo.amount * p.platform_fee_percent / 100)
+                THEN ROUND(COALESCE(oo.amount_credit, ROUND(oo.amount)) * p.platform_fee_percent / 100)
                 ELSE 0
               END
             )

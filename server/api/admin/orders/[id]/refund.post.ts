@@ -6,6 +6,7 @@ import {
 } from "../../../../utils/creditLedger";
 import { ensureOrderRefundSchema } from "../../../../utils/orderRefund";
 import { ensureAdminWalletSchema } from "../../../../utils/adminWallet";
+import { ensureCommerceSchema } from "../../../../utils/commerce";
 
 export default defineEventHandler(async (event) => {
   const currentUser = event.context.user;
@@ -27,6 +28,7 @@ export default defineEventHandler(async (event) => {
   await ensureCreditLedgerSchema();
   await ensureOrderRefundSchema();
   await ensureAdminWalletSchema();
+  await ensureCommerceSchema();
 
   const conn = await pool.getConnection();
   let resultCredit = 0;
@@ -36,7 +38,7 @@ export default defineEventHandler(async (event) => {
 
     const [[order]]: any = await conn.query(
       `
-        SELECT id, user_id, admin_id, amount, paid_part, bonus_part, status, refunded_at
+        SELECT id, user_id, admin_id, amount, amount_credit, paid_part, bonus_part, status, refunded_at
         FROM orders
         WHERE id = ?
         LIMIT 1
@@ -58,8 +60,20 @@ export default defineEventHandler(async (event) => {
     if (order.refunded_at) {
       throw createError({ statusCode: 400, statusMessage: "Đơn hàng này đã được hoàn tiền" });
     }
+    if (String(order.status || "") !== "completed") {
+      throw createError({
+        statusCode: 400,
+        statusMessage: "Chỉ có thể hoàn tiền cho đơn hàng đã hoàn thành",
+      });
+    }
 
-    const amount = Math.trunc(Number(order.amount || 0));
+    const amount = Math.trunc(
+      Number(
+        order.amount_credit != null
+          ? order.amount_credit
+          : Math.round(Number(order.amount || 0)),
+      ),
+    );
     if (!Number.isFinite(amount) || amount <= 0) {
       throw createError({ statusCode: 400, statusMessage: "Số tiền đơn hàng không hợp lệ" });
     }

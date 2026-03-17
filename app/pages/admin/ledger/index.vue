@@ -122,7 +122,6 @@ const exportingCsv = ref(false);
 const pagination = ref({ page: 1, limit: 10, total: 0, totalPages: 1 });
 const pageSize = ref(10);
 let timer = null;
-let autoRefreshTimer = null;
 
 async function fetchLedger(page = 1, opts = { silent: false }) {
   if (!opts?.silent) loading.value = true;
@@ -224,15 +223,10 @@ function typeLabel(type) {
 
 onMounted(() => {
   fetchLedger(1);
-  autoRefreshTimer = setInterval(() => {
-    fetchLedger(pagination.value.page || 1, { silent: true });
-  }, 5000);
-});
-onUnmounted(() => {
-  if (autoRefreshTimer) {
-    clearInterval(autoRefreshTimer);
-    autoRefreshTimer = null;
-  }
+  useAutoRefresh(
+    () => fetchLedger(pagination.value.page || 1, { silent: true }),
+    { intervalMs: 15000, pauseWhenHidden: true },
+  );
 });
 </script>
 

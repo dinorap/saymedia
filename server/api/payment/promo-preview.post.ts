@@ -1,32 +1,16 @@
-import jwt from 'jsonwebtoken'
 import pool from '../../utils/db'
 import { convertVndToCredit, ensurePaymentSchema } from '../../utils/payment'
-
-const JWT_SECRET =
-  process.env.JWT_SECRET || 'chuoi_bi_mat_jwt_ngau_nhien_cua_sep_123456'
+import { requireUser } from '../../utils/authHelpers'
+import { checkRateLimit, rateLimitKey } from '../../utils/rateLimit'
 
 export default defineEventHandler(async (event) => {
-  const token = getCookie(event, 'auth_token')
-  if (!token) {
-    throw createError({ statusCode: 401, statusMessage: 'Chưa đăng nhập' })
-  }
-
-  let decoded: { id: number; role: string }
-  try {
-    decoded = jwt.verify(token, JWT_SECRET) as { id: number; role: string }
-  } catch {
-    throw createError({
-      statusCode: 401,
-      statusMessage: 'Phiên đăng nhập hết hạn',
-    })
-  }
-
-  if (decoded.role !== 'user') {
-    throw createError({
-      statusCode: 403,
-      statusMessage: 'Chỉ người dùng mới nạp tiền được',
-    })
-  }
+  const decoded = requireUser(event)
+  checkRateLimit({
+    key: rateLimitKey(['promo_preview', decoded.id]),
+    max: 12,
+    windowMs: 30_000,
+    statusMessage: 'Bạn thao tác quá nhanh, vui lòng thử lại sau.',
+  })
 
   const body = await readBody<{
     amount?: number
@@ -46,6 +30,7 @@ export default defineEventHandler(async (event) => {
   if (!rawCode) {
     return {
       success: true,
+      vnd_per_credit: baseConv.vndPerCredit,
       base_credit: baseCredit,
       bonus_credit: 0,
       total_credit: baseCredit,
@@ -138,6 +123,7 @@ export default defineEventHandler(async (event) => {
 
   return {
     success: true,
+    vnd_per_credit: baseConv.vndPerCredit,
     base_credit: baseCredit,
     bonus_credit: bonusCredit,
     total_credit: totalCredit,

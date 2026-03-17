@@ -9,6 +9,10 @@
     - Rate-limit cho đăng nhập và tạo đơn hàng.
     - Các header bảo mật: `X-Content-Type-Options`, `X-Frame-Options`, `X-XSS-Protection`, `Referrer-Policy`.
 
+## Deploy production
+
+Xem hướng dẫn triển khai và chính sách migrate DB trong `DEPLOYMENT.md`.
+
 ## Chức năng người dùng (role `user`)
 
 - **Đăng ký / Đăng nhập**

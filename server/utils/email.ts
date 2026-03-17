@@ -25,6 +25,10 @@ function getConfig(): { sender: string; password: string } | null {
   return null
 }
 
+export function isEmailConfigured(): boolean {
+  return !!getConfig()
+}
+
 function getTransporter() {
   if (transporter) return transporter
   const config = getConfig()

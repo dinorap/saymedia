@@ -43,3 +43,8 @@ export function consumeOtp(email: string): { code: string; payload?: Record<stri
   store.delete(key)
   return { code: entry.code, payload: entry.payload }
 }
+
+export function deleteOtp(email: string) {
+  const key = email.toLowerCase().trim()
+  store.delete(key)
+}

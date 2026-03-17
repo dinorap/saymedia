@@ -1,21 +1,18 @@
-import jwt from 'jsonwebtoken'
 import { ensureChatSchema } from '../../utils/chat'
 import pool from '../../utils/db'
-
-const JWT_SECRET = process.env.JWT_SECRET || 'chuoi_bi_mat_jwt_ngau_nhien_cua_sep_123456'
+import { requireAuth } from '../../utils/authHelpers'
+import { checkRateLimit, rateLimitKey } from '../../utils/rateLimit'
 
 export default defineEventHandler(async (event) => {
-  const token = getCookie(event, 'auth_token')
-  if (!token) {
-    throw createError({ statusCode: 401, statusMessage: 'Bạn cần đăng nhập để chat.' })
-  }
-
-  let decoded: { id: number; username: string; role: string }
-  try {
-    decoded = jwt.verify(token, JWT_SECRET) as { id: number; username: string; role: string }
-  } catch {
-    throw createError({ statusCode: 401, statusMessage: 'Phiên đăng nhập hết hạn.' })
-  }
+  const decoded = requireAuth(event)
+  checkRateLimit({
+    key: rateLimitKey(['chat', decoded.id]),
+    max: 10,
+    windowMs: 30_000,
+    statusMessage: 'Bạn chat quá nhanh, vui lòng thử lại sau.',
+    auditAction: 'rate_limited_chat',
+    auditMetadata: { user_id: decoded.id },
+  })
 
   const body = await readBody(event)
   let content = String(body?.content || '').trim()

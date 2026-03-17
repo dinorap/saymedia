@@ -1,32 +1,9 @@
-import jwt from "jsonwebtoken";
 import pool from "../../utils/db";
 import { ensureProductKeySchema } from "../../utils/productKeys";
-
-const JWT_SECRET =
-  process.env.JWT_SECRET || "chuoi_bi_mat_jwt_ngau_nhien_cua_sep_123456";
+import { requireUser } from "../../utils/authHelpers";
 
 export default defineEventHandler(async (event) => {
-  const token = getCookie(event, "auth_token");
-  if (!token) {
-    throw createError({ statusCode: 401, statusMessage: "Chưa đăng nhập" });
-  }
-
-  let decoded: { id: number; role: string };
-  try {
-    decoded = jwt.verify(token, JWT_SECRET) as { id: number; role: string };
-  } catch {
-    throw createError({
-      statusCode: 401,
-      statusMessage: "Phiên đăng nhập hết hạn",
-    });
-  }
-
-  if (decoded.role !== "user") {
-    throw createError({
-      statusCode: 403,
-      statusMessage: "Chỉ người dùng mới sử dụng giỏ hàng",
-    });
-  }
+  const decoded = requireUser(event);
 
   const [rows]: any = await pool.query(
     `
@@ -35,7 +12,6 @@ export default defineEventHandler(async (event) => {
         c.qty,
         c.duration,
         p.name,
-        p.price,
         p.thumbnail_url,
         p.type
       FROM user_cart_items c
@@ -82,7 +58,7 @@ export default defineEventHandler(async (event) => {
   const items = rows.map((r: any) => ({
     id: r.id,
     name: r.name,
-    price: Number(r.price || 0),
+    price: 0, // set below from duration_prices
     thumbnail_url: r.thumbnail_url || null,
     type: r.type || null,
     qty: Number(r.qty || 1),
@@ -90,6 +66,16 @@ export default defineEventHandler(async (event) => {
     duration_prices: durationPricesByProduct[r.id] || {},
     duration_stock: durationStockByProduct[r.id] || {},
   }));
+
+  // Hướng A: giá luôn lấy theo duration từ product_keys.
+  for (const it of items) {
+    const d = it.duration ? String(it.duration) : "";
+    const p =
+      d && it.duration_prices && typeof it.duration_prices[d] === "number"
+        ? Number(it.duration_prices[d] || 0)
+        : 0;
+    it.price = Number.isFinite(p) ? p : 0;
+  }
 
   return {
     success: true,

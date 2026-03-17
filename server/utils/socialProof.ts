@@ -1,9 +1,12 @@
 import pool from './db'
+import { assertRuntimeMigrationsAllowed } from './runtimeMigrations'
 
 let schemaReady = false
 
 export async function ensureSocialProofSchema() {
   if (schemaReady) return
+
+  assertRuntimeMigrationsAllowed('socialProof')
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS recent_orders_feed (

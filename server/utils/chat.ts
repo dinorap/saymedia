@@ -1,9 +1,12 @@
 import pool from './db'
+import { assertRuntimeMigrationsAllowed } from './runtimeMigrations'
 
 let chatSchemaReady = false
 
 export async function ensureChatSchema() {
   if (chatSchemaReady) return
+
+  assertRuntimeMigrationsAllowed('chat')
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS community_messages (

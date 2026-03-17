@@ -274,24 +274,17 @@ async function loadQuickStats() {
   }
 }
 
-let autoRefreshTimer = null;
-
 onMounted(async () => {
   await loadProfile({});
   await loadQuickStats();
-  autoRefreshTimer = setInterval(async () => {
-    if (user.value) {
+  useAutoRefresh(
+    async () => {
+      if (!user.value) return;
       await loadProfile({ silent: true });
       await loadQuickStats();
-    }
-  }, 5000);
-});
-
-onUnmounted(() => {
-  if (autoRefreshTimer) {
-    clearInterval(autoRefreshTimer);
-    autoRefreshTimer = null;
-  }
+    },
+    { intervalMs: 20000, pauseWhenHidden: true },
+  );
 });
 
 function formatVnd(v) {

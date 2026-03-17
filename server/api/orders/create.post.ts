@@ -10,9 +10,9 @@ import { ensureCommerceSchema } from "../../utils/commerce";
 import { addSocialProofItem } from "../../utils/socialProof";
 import { orderCreateSchema, parseBodyOrThrow } from "../../utils/schemas";
 import { VALID_KEY_DURATIONS, ensureProductKeySchema } from "../../utils/productKeys";
+import { getJwtSecret } from "../../utils/jwt";
 
-const JWT_SECRET =
-  process.env.JWT_SECRET || "chuoi_bi_mat_jwt_ngau_nhien_cua_sep_123456";
+const JWT_SECRET = getJwtSecret();
 
 export default defineEventHandler(async (event) => {
   const token = getCookie(event, "auth_token");
@@ -61,7 +61,7 @@ export default defineEventHandler(async (event) => {
 
     const [[product]]: any = await conn.query(
       `
-        SELECT id, name, price, type, is_active, download_url, admin_id
+        SELECT id, name, type, is_active, download_url, admin_id
         FROM products
         WHERE id = ? AND is_active = 1
         LIMIT 1
@@ -115,56 +115,62 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // Xác định đơn giá và auto phát key nếu là sản phẩm dạng key
-    let unitPrice = Number(product.price || 0);
+    // Hướng A: giá luôn lấy từ product_keys theo duration (không dùng products.price).
+    if (!duration) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: "Vui lòng chọn loại key (duration) để mua sản phẩm này",
+      });
+    }
+
+    // Xác định đơn giá và auto phát key
+    let unitPrice = 0;
     let deliveredKeys: string[] = [];
 
-    if (duration) {
-      // Lấy đủ số lượng key đúng loại, khóa hàng để tránh race condition
-      const [keyRows]: any = await conn.query(
+    // Lấy đủ số lượng key đúng loại, khóa hàng để tránh race condition
+    const [keyRows]: any = await conn.query(
+      `
+        SELECT id, \`key\`, price
+        FROM product_keys
+        WHERE product_id = ? AND valid_duration = ?
+        ORDER BY created_at ASC
+        LIMIT ?
+        FOR UPDATE
+      `,
+      [productId, duration, quantity],
+    );
+
+    if (!keyRows || keyRows.length < quantity) {
+      const remaining = keyRows ? keyRows.length : 0;
+      throw createError({
+        statusCode: 400,
+        statusMessage:
+          remaining > 0
+            ? `Không đủ key cho loại ${duration}, chỉ còn ${remaining} key`
+            : `Hiện tại đã hết key cho loại ${duration}`,
+      });
+    }
+
+    const firstPrice = Number(keyRows[0].price);
+    if (!Number.isFinite(firstPrice) || firstPrice <= 0) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: "Giá key không hợp lệ",
+      });
+    }
+    unitPrice = firstPrice;
+    deliveredKeys = keyRows.map((r: any) => String(r.key));
+
+    // Xóa các key đã phát khỏi DB
+    const keyIds = keyRows.map((r: any) => r.id);
+    if (keyIds.length) {
+      await conn.query(
         `
-          SELECT id, \`key\`, price
-          FROM product_keys
-          WHERE product_id = ? AND valid_duration = ?
-          ORDER BY created_at ASC
-          LIMIT ?
-          FOR UPDATE
+          DELETE FROM product_keys
+          WHERE id IN (${keyIds.map(() => "?").join(",")})
         `,
-        [productId, duration, quantity],
+        keyIds,
       );
-
-      if (!keyRows || keyRows.length < quantity) {
-        const remaining = keyRows ? keyRows.length : 0;
-        throw createError({
-          statusCode: 400,
-          statusMessage:
-            remaining > 0
-              ? `Không đủ key cho loại ${duration}, chỉ còn ${remaining} key`
-              : `Hiện tại đã hết key cho loại ${duration}`,
-        });
-      }
-
-      const firstPrice = Number(keyRows[0].price);
-      if (!Number.isFinite(firstPrice) || firstPrice <= 0) {
-        throw createError({
-          statusCode: 400,
-          statusMessage: "Giá key không hợp lệ",
-        });
-      }
-      unitPrice = firstPrice;
-      deliveredKeys = keyRows.map((r: any) => String(r.key));
-
-      // Xóa các key đã phát khỏi DB
-      const keyIds = keyRows.map((r: any) => r.id);
-      if (keyIds.length) {
-        await conn.query(
-          `
-            DELETE FROM product_keys
-            WHERE id IN (${keyIds.map(() => "?").join(",")})
-          `,
-          keyIds,
-        );
-      }
     }
 
     if (!Number.isFinite(unitPrice) || unitPrice <= 0) {
@@ -174,7 +180,23 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    const amount = unitPrice * quantity;
+    // Quy ước: giá/amount của order là "credit" nguyên.
+    // Với sản phẩm key: unitPrice lấy từ product_keys.price (BIGINT) → luôn là số nguyên.
+    // Với sản phẩm thường (nếu có): bắt buộc giá cũng phải là số nguyên.
+    const unitPriceInt = Math.trunc(unitPrice);
+    if (!Number.isFinite(unitPriceInt) || unitPriceInt <= 0 || unitPriceInt !== unitPrice) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: "Giá sản phẩm phải là số nguyên (credit)",
+      });
+    }
+    const amountCredit = unitPriceInt * quantity;
+    if (!Number.isFinite(amountCredit) || amountCredit <= 0) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: "Thành tiền không hợp lệ",
+      });
+    }
 
     const initialStatus = "completed"; // tự duyệt luôn
     let note: string | null = null;
@@ -188,7 +210,6 @@ export default defineEventHandler(async (event) => {
       note = lines.join("\n");
     }
 
-    const amountInt = Math.round(amount);
     // Quy ước mới:
     // - orders.admin_id: admin "được ghi nhận doanh số/đối tác" (nếu có ref => seller; không có ref => owner)
     // - orders.product_owner_admin_id: chủ sở hữu sản phẩm (luôn là product.admin_id)
@@ -196,8 +217,8 @@ export default defineEventHandler(async (event) => {
 
     const [result]: any = await conn.query(
       `
-        INSERT INTO orders (user_id, product_id, admin_id, seller_admin_id, product_owner_admin_id, amount, paid_part, bonus_part, seller_ref, status, note)
-        VALUES (?, ?, ?, ?, ?, ?, NULL, NULL, ?, ?, ?)
+        INSERT INTO orders (user_id, product_id, admin_id, seller_admin_id, product_owner_admin_id, amount, amount_credit, paid_part, bonus_part, seller_ref, status, note)
+        VALUES (?, ?, ?, ?, ?, ?, ?, NULL, NULL, ?, ?, ?)
       `,
       [
         user.id,
@@ -205,7 +226,8 @@ export default defineEventHandler(async (event) => {
         reportAdminId,
         sellerAdminId,
         productOwnerAdminId,
-        amount,
+        amountCredit,
+        amountCredit,
         sellerRefUsed,
         initialStatus,
         note,
@@ -215,7 +237,7 @@ export default defineEventHandler(async (event) => {
 
     const creditResult = await applyPurchaseCreditDeduction(conn, {
       userId: user.id,
-      totalAmount: amountInt,
+      totalAmount: amountCredit,
       referenceType: "order",
       referenceId: orderId,
       note: `Mua ${quantity}x sản phẩm #${product.id}: ${product.name}`,
@@ -228,11 +250,10 @@ export default defineEventHandler(async (event) => {
       [creditResult.paidPart, creditResult.bonusPart, orderId],
     );
 
-    const totalCreditUsed =
-      Number(creditResult.paidPart || 0) + Number(creditResult.bonusPart || 0);
+    const paidPartCredit = Number(creditResult.paidPart || 0);
 
-    // Tạm thời: coi bonus như điểm thường → chia doanh thu theo tổng điểm đã trừ
-    if (totalCreditUsed > 0 && productOwnerAdminId) {
+    // Chỉ chia doanh thu/hoa hồng trên phần paid_part (tiền thật). Bonus không chia.
+    if (paidPartCredit > 0 && productOwnerAdminId) {
       await ensureAdminWalletSchema();
       let commissionPercent: number | null = 20;
       if (sellerAdminId && sellerAdminId !== productOwnerAdminId) {
@@ -246,7 +267,7 @@ export default defineEventHandler(async (event) => {
         orderId,
         sellerAdminId: sellerAdminId ?? productOwnerAdminId,
         productOwnerAdminId,
-        paidPartCredit: totalCreditUsed,
+        paidPartCredit,
         commissionPercent,
         productName: product.name,
       });

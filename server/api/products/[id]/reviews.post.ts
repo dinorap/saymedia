@@ -1,9 +1,7 @@
-import jwt from "jsonwebtoken";
 import pool from "../../../utils/db";
 import { ensureProductReviewsSchema } from "../../../utils/productReviews";
-
-const JWT_SECRET =
-  process.env.JWT_SECRET || "chuoi_bi_mat_jwt_ngau_nhien_cua_sep_123456";
+import { requireUser } from "../../../utils/authHelpers";
+import { checkRateLimit, rateLimitKey } from "../../../utils/rateLimit";
 
 export default defineEventHandler(async (event) => {
   const id = Number(getRouterParam(event, "id"));
@@ -11,27 +9,15 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: "Sản phẩm không hợp lệ" });
   }
 
-  const token = getCookie(event, "auth_token");
-  if (!token) {
-    throw createError({ statusCode: 401, statusMessage: "Chưa đăng nhập" });
-  }
-
-  let decoded: { id: number; role: string };
-  try {
-    decoded = jwt.verify(token, JWT_SECRET) as { id: number; role: string };
-  } catch {
-    throw createError({
-      statusCode: 401,
-      statusMessage: "Phiên đăng nhập hết hạn",
-    });
-  }
-
-  if (decoded.role !== "user") {
-    throw createError({
-      statusCode: 403,
-      statusMessage: "Chỉ người dùng mới được đánh giá sản phẩm",
-    });
-  }
+  const decoded = requireUser(event);
+  checkRateLimit({
+    key: rateLimitKey(["review", decoded.id, id]),
+    max: 6,
+    windowMs: 60_000,
+    statusMessage: "Bạn thao tác quá nhanh, vui lòng thử lại sau.",
+    auditAction: "rate_limited_review",
+    auditMetadata: { product_id: id, user_id: decoded.id },
+  });
 
   await ensureProductReviewsSchema();
 

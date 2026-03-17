@@ -1,11 +1,7 @@
 import jwt from 'jsonwebtoken'
+import { getJwtSecret } from '../utils/jwt'
 
-const DEFAULT_SECRET = 'chuoi_bi_mat_jwt_ngau_nhien_cua_sep_123456'
-const JWT_SECRET = process.env.JWT_SECRET || DEFAULT_SECRET
-
-if (process.env.NODE_ENV === 'production' && JWT_SECRET === DEFAULT_SECRET) {
-  throw new Error('[security] JWT_SECRET đang dùng giá trị mặc định trong production. Hãy đặt JWT_SECRET trong .env để bảo mật.')
-}
+const JWT_SECRET = getJwtSecret()
 
 export default defineEventHandler((event) => {
   const path = getRequestURL(event).pathname
@@ -18,8 +14,14 @@ export default defineEventHandler((event) => {
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as { id: number; username: string; role: string; admin_id?: number }
+    // Critical: /api/admin must only be accessible by admin roles.
+    if (decoded.role !== 'admin_0' && decoded.role !== 'admin_1' && decoded.role !== 'admin_2') {
+      throw createError({ statusCode: 403, statusMessage: 'Không có quyền' })
+    }
     event.context.user = decoded
-  } catch {
+  } catch (err: any) {
+    // Preserve intentional createError() responses (e.g. 403).
+    if (err?.statusCode) throw err
     throw createError({ statusCode: 401, statusMessage: 'Phiên đăng nhập hết hạn' })
   }
 })

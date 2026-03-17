@@ -1,5 +1,6 @@
 import pool from "../../../utils/db";
 import { ensureAdminWalletSchema } from "../../../utils/adminWallet";
+import { ensureCommerceSchema } from "../../../utils/commerce";
 
 type KeyStats = {
   duration: string;
@@ -15,6 +16,7 @@ export default defineEventHandler(async (event) => {
   if (!currentUser) {
     throw createError({ statusCode: 401, statusMessage: "Chưa đăng nhập" });
   }
+  await ensureCommerceSchema();
 
   await ensureAdminWalletSchema();
 
@@ -58,7 +60,8 @@ export default defineEventHandler(async (event) => {
     `
     SELECT
       o.id,
-      o.amount,
+      COALESCE(o.amount_credit, ROUND(o.amount)) AS amount,
+      o.amount_credit,
       o.paid_part,
       o.bonus_part,
       o.note,

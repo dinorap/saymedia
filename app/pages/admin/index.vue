@@ -3,48 +3,55 @@
     <!-- CREDIT overview -->
     <div class="credit-overview card">
       <div class="overview-item">
-        <span class="label">Tổng CREDIT đang lưu hành</span>
+        <span class="label">{{ $t("admin.dashboardUi.totalCreditInCirculation") }}</span>
         <span class="value">{{ formatCredit(stats.total_balance) }}</span>
         <span class="sub">
-          Paid: {{ formatCredit(stats.total_paid_credit) }} · Bonus:
+          {{ $t("admin.dashboardUi.paidLabel") }}:
+          {{ formatCredit(stats.total_paid_credit) }} ·
+          {{ $t("admin.dashboardUi.bonusLabel") }}:
           {{ formatCredit(stats.total_bonus_credit) }}
         </span>
       </div>
       <div class="overview-item">
-        <span class="label">CREDIT từ nạp (tích lũy)</span>
+        <span class="label">{{ $t("admin.dashboardUi.creditFromDeposits") }}</span>
         <span class="value">{{ formatCredit(stats.total_deposit_credit) }}</span>
         <span class="sub">
-          Người đã từng nạp: {{ stats.deposit_user_count }} (Tổng credit:
+          {{ $t("admin.dashboardUi.depositUsers") }}:
+          {{ stats.deposit_user_count }}
+          ({{ $t("admin.dashboardUi.totalCredit") }}:
           {{ formatCredit(stats.deposit_credit_sum) }})
         </span>
       </div>
       <div class="overview-item">
-        <span class="label">CREDIT khuyến mại (tích lũy)</span>
+        <span class="label">{{ $t("admin.dashboardUi.promoCredit") }}</span>
         <span class="value">{{ formatCredit(stats.total_promotion_credit) }}</span>
         <span class="sub">
-          Tài khoản tạo cưỡng chế: {{ stats.forced_user_count }}
+          {{ $t("admin.dashboardUi.forcedAccounts") }}:
+          {{ stats.forced_user_count }}
         </span>
       </div>
       <div class="overview-item">
-        <span class="label">Nạp hôm nay</span>
+        <span class="label">{{ $t("admin.dashboardUi.depositsToday") }}</span>
         <span class="value">
           {{ formatCredit(stats.today_deposit_credit) }} credit
         </span>
         <span class="sub">
-          {{ stats.today_deposit_tx_count }} giao dịch
+          {{ stats.today_deposit_tx_count }}
+          {{ $t("admin.dashboardUi.transactions") }}
         </span>
       </div>
       <div class="overview-item">
-        <span class="label">Nạp trong tháng này</span>
+        <span class="label">{{ $t("admin.dashboardUi.depositsThisMonth") }}</span>
         <span class="value">
           {{ formatCredit(stats.month_deposit_credit) }} credit
         </span>
         <span class="sub">
-          {{ stats.month_deposit_tx_count }} giao dịch
+          {{ stats.month_deposit_tx_count }}
+          {{ $t("admin.dashboardUi.transactions") }}
         </span>
       </div>
       <div class="overview-item">
-        <span class="label">Quy mô hệ thống</span>
+        <span class="label">{{ $t("admin.dashboardUi.systemSize") }}</span>
         <span class="value">
           {{ stats.total_users }} user · {{ stats.total_shops }} shop
         </span>
@@ -54,44 +61,44 @@
     <!-- Activity KPIs -->
     <div class="kpi-row">
       <div class="kpi-card">
-        <div class="kpi-label">User mới hôm nay</div>
+        <div class="kpi-label">{{ $t("admin.dashboardUi.newUsersToday") }}</div>
         <div class="kpi-value">{{ dash.new_users_today }}</div>
         <div class="kpi-sub">
-          7 ngày qua: {{ dash.new_users_last7d }}
+          {{ $t("admin.dashboardUi.last7Days") }}: {{ dash.new_users_last7d }}
         </div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-label">Đơn hoàn thành</div>
+        <div class="kpi-label">{{ $t("admin.dashboardUi.completedOrders") }}</div>
         <div class="kpi-value">{{ dash.completed_orders_today }}</div>
         <div class="kpi-sub">
-          Tháng này: {{ dash.completed_orders_month }}
+          {{ $t("admin.thisMonth") }}: {{ dash.completed_orders_month }}
         </div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-label">Doanh thu đơn (CREDIT)</div>
+        <div class="kpi-label">{{ $t("admin.dashboardUi.orderRevenueCredit") }}</div>
         <div class="kpi-value">
           {{ formatCredit(dash.completed_amount_today) }}
         </div>
         <div class="kpi-sub">
-          Tháng này: {{ formatCredit(dash.completed_amount_month) }}
+          {{ $t("admin.thisMonth") }}: {{ formatCredit(dash.completed_amount_month) }}
         </div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-label">Tiền nạp (VNĐ)</div>
+        <div class="kpi-label">{{ $t("admin.dashboardUi.depositVnd") }}</div>
         <div class="kpi-value">
           {{ formatVnd(dash.deposits_today_amount) }}
         </div>
         <div class="kpi-sub">
-          Tháng này: {{ formatVnd(dash.deposits_month_amount) }}
+          {{ $t("admin.thisMonth") }}: {{ formatVnd(dash.deposits_month_amount) }}
         </div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-label">CREDIT treo cho shop</div>
+        <div class="kpi-label">{{ $t("admin.dashboardUi.pendingShopCredit") }}</div>
         <div class="kpi-value">
           {{ formatCredit(dash.pending_shop_credit) }}
         </div>
         <div class="kpi-sub">
-          Tổng công nợ cần trả
+          {{ $t("admin.dashboardUi.totalPayable") }}
         </div>
       </div>
     </div>
@@ -99,20 +106,20 @@
     <!-- Recent activity tables -->
     <div class="grid-row">
       <div class="card">
-        <h2 class="card-title">Nạp gần đây</h2>
+        <h2 class="card-title">{{ $t("admin.dashboardUi.recentDeposits") }}</h2>
         <div v-if="recent.depositsLoading" class="table-empty">
-          Đang tải...
+          {{ $t("admin.loading") }}
         </div>
         <div v-else-if="!recent.deposits.length" class="table-empty">
-          Chưa có giao dịch nạp nào
+          {{ $t("admin.dashboardUi.noRecentDeposits") }}
         </div>
         <table v-else class="data-table">
           <thead>
             <tr>
               <th>User</th>
-              <th>Số tiền (VNĐ)</th>
-              <th>Trạng thái</th>
-              <th>Thời gian</th>
+              <th>{{ $t("admin.dashboardUi.amountVnd") }}</th>
+              <th>{{ $t("admin.status") }}</th>
+              <th>{{ $t("payment.history.time") }}</th>
             </tr>
           </thead>
           <tbody>
@@ -126,21 +133,21 @@
         </table>
       </div>
       <div class="card">
-        <h2 class="card-title">Đơn gần đây</h2>
+        <h2 class="card-title">{{ $t("admin.dashboardUi.recentOrders") }}</h2>
         <div v-if="recent.ordersLoading" class="table-empty">
-          Đang tải...
+          {{ $t("admin.loading") }}
         </div>
         <div v-else-if="!recent.orders.length" class="table-empty">
-          Chưa có đơn nào
+          {{ $t("admin.dashboardUi.noRecentOrders") }}
         </div>
         <table v-else class="data-table">
           <thead>
             <tr>
               <th>User</th>
-              <th>Sản phẩm</th>
-              <th>Số tiền (CREDIT)</th>
-              <th>Trạng thái</th>
-              <th>Thời gian</th>
+              <th>{{ $t("admin.productName") }}</th>
+              <th>{{ $t("admin.dashboardUi.amountCredit") }}</th>
+              <th>{{ $t("admin.status") }}</th>
+              <th>{{ $t("payment.history.time") }}</th>
             </tr>
           </thead>
           <tbody>
@@ -158,55 +165,57 @@
 
     <!-- Reconciliation / alerts (tạm ẩn) -->
     <div v-if="false && reconLoaded" class="recon-card card">
-      <h2 class="card-title">Cảnh báo & đối soát</h2>
+      <h2 class="card-title">{{ $t("admin.dashboardUi.reconTitle") }}</h2>
       <div v-if="recon.alerts && recon.alerts.length" class="recon-alerts">
-        <p class="recon-alert-title">Có cảnh báo lệch số:</p>
+        <p class="recon-alert-title">{{ $t("admin.dashboardUi.reconHasAlerts") }}</p>
         <ul>
           <li v-for="(m, idx) in recon.alerts" :key="idx">{{ m }}</li>
         </ul>
       </div>
       <div v-else class="recon-ok">
-        Không phát hiện lệch số lớn giữa nạp, ledger và số dư user.
+        {{ $t("admin.dashboardUi.reconOk") }}
       </div>
       <div class="recon-grid">
         <div class="recon-item">
-          <span class="label">Tiền nạp (VNĐ) thành công</span>
+          <span class="label">{{ $t("admin.dashboardUi.reconDepositVndSuccess") }}</span>
           <span class="value">{{ formatVnd(recon.total_deposit_vnd) }}</span>
           <span class="sub">
-            Quy đổi ra CREDIT (theo {{ recon.vnd_per_credit }} VND):
+            {{ $t("admin.dashboardUi.reconConvertToCredit", { vndPerCredit: recon.vnd_per_credit }) }}:
             {{ formatCredit(recon.expected_credit_from_vnd) }}
           </span>
         </div>
         <div class="recon-item">
-          <span class="label">CREDIT nạp ghi trong ledger</span>
+          <span class="label">{{ $t("admin.dashboardUi.reconDepositCreditInLedger") }}</span>
           <span class="value">
             {{ formatCredit(recon.total_deposit_credit) }}
           </span>
           <span class="sub">
-            Lệch so với quy đổi: {{ formatCredit(recon.diff_deposit_credit) }}
+            {{ $t("admin.dashboardUi.reconDiffVsConvert") }}:
+            {{ formatCredit(recon.diff_deposit_credit) }}
           </span>
         </div>
         <div class="recon-item">
-          <span class="label">Tổng CREDIT trên users</span>
+          <span class="label">{{ $t("admin.dashboardUi.reconTotalCreditOnUsers") }}</span>
           <span class="value">
             {{ formatCredit(recon.total_users_credit) }}
           </span>
         </div>
         <div class="recon-item">
-          <span class="label">Tổng delta credit_ledger</span>
+          <span class="label">{{ $t("admin.dashboardUi.reconTotalDeltaLedger") }}</span>
           <span class="value">
             {{ formatCredit(recon.net_ledger_delta) }}
           </span>
           <span class="sub">
-            Lệch: {{ formatCredit(recon.diff_users_vs_ledger) }}
+            {{ $t("admin.dashboardUi.reconDiff") }}:
+            {{ formatCredit(recon.diff_users_vs_ledger) }}
           </span>
         </div>
         <div class="recon-item">
-          <span class="label">CREDIT treo cho shop (admin_wallet)</span>
+          <span class="label">{{ $t("admin.dashboardUi.reconPendingShopCredit") }}</span>
           <span class="value">
             {{ formatCredit(recon.pending_shop_credit) }}
           </span>
-          <span class="sub">Công nợ cần trả cho các shop</span>
+          <span class="sub">{{ $t("admin.dashboardUi.reconShopPayable") }}</span>
         </div>
       </div>
     </div>
@@ -362,15 +371,16 @@ onMounted(() => {
   // Đối soát chỉ dành cho admin_0, backend tự chặn role khác
   fetchReconciliation();
 
-  // Auto refresh 5s, silent (không bật loading để tránh nháy)
-  const timer = setInterval(() => {
-    fetchStats();
-    fetchDashboard();
-    fetchRecent();
-    fetchReconciliation();
-  }, 5000);
-
-  onUnmounted(() => clearInterval(timer));
+  // Auto refresh (pause when tab hidden)
+  useAutoRefresh(
+    () => {
+      fetchStats();
+      fetchDashboard();
+      fetchRecent();
+      fetchReconciliation();
+    },
+    { intervalMs: 15000, pauseWhenHidden: true },
+  );
 });
 </script>
 

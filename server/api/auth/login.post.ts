@@ -6,13 +6,14 @@ import { checkLoginRateLimit, recordLoginFailure, clearLoginFailure } from '../.
 import { addAuditLog } from '../../utils/audit'
 import { loginSchema, parseBodyOrThrow } from '../../utils/schemas'
 import { ensureUserStatsSchema } from '../../utils/userStats'
+import { getJwtSecret } from '../../utils/jwt'
 
 export default defineEventHandler(async (event) => {
   const raw = await readBody(event)
   const body = parseBodyOrThrow(raw, loginSchema)
   const { username, password, email, otp } = body
 
-  const jwtSecret = process.env.JWT_SECRET || 'chuoi_bi_mat_jwt_ngau_nhien_cua_sep_123456'
+  const jwtSecret = getJwtSecret()
 
   try {
     checkLoginRateLimit(event)

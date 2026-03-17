@@ -1,11 +1,13 @@
 import pool from "../../../utils/db";
 import { ensureAdminWalletSchema } from "../../../utils/adminWallet";
+import { ensureCommerceSchema } from "../../../utils/commerce";
 
 export default defineEventHandler(async (event) => {
   const currentUser = event.context.user;
   if (!currentUser) {
     throw createError({ statusCode: 401, statusMessage: "Chưa đăng nhập" });
   }
+  await ensureCommerceSchema();
 
   await ensureAdminWalletSchema();
 
@@ -42,7 +44,8 @@ export default defineEventHandler(async (event) => {
     SELECT
       o.id,
       o.product_id,
-      o.amount,
+      COALESCE(o.amount_credit, ROUND(o.amount)) AS amount,
+      o.amount_credit,
       COALESCE(o.product_owner_admin_id, o.admin_id) AS owner_admin_id,
       COALESCE(o.seller_admin_id, o.admin_id) AS report_admin_id,
       p.name AS product_name,

@@ -4,9 +4,9 @@ import {
   ensureProductReviewsSchema,
   maskDisplayName,
 } from "../../../utils/productReviews";
+import { getJwtSecret } from "../../../utils/jwt";
 
-const JWT_SECRET =
-  process.env.JWT_SECRET || "chuoi_bi_mat_jwt_ngau_nhien_cua_sep_123456";
+const JWT_SECRET = getJwtSecret();
 
 export default defineEventHandler(async (event) => {
   const id = Number(getRouterParam(event, "id"));

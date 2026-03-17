@@ -1,9 +1,9 @@
 import pool from "../../../utils/db";
 import { ensureSupportChatSchema } from "../../../utils/supportChat";
 import jwt from "jsonwebtoken";
+import { getJwtSecret } from "../../../utils/jwt";
 
-const JWT_SECRET =
-  process.env.JWT_SECRET || "chuoi_bi_mat_jwt_ngau_nhien_cua_sep_123456";
+const JWT_SECRET = getJwtSecret();
 
 export default defineEventHandler(async (event) => {
   const idParam = getRouterParam(event, "id");

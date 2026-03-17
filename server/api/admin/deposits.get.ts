@@ -1,5 +1,6 @@
 import pool from '../../utils/db'
 import { convertVndToCredit } from '../../utils/payment'
+import { checkRateLimit, rateLimitKey } from '../../utils/rateLimit'
 
 export default defineEventHandler(async (event) => {
   const currentUser = event.context.user
@@ -15,6 +16,21 @@ export default defineEventHandler(async (event) => {
   const fromDate = query.from ? String(query.from).trim() : ''
   const toDate = query.to ? String(query.to).trim() : ''
   const formatCsv = query.format === 'csv'
+
+  if (formatCsv && currentUser.role !== 'admin_0') {
+    throw createError({ statusCode: 403, statusMessage: 'Chỉ admin_0 mới được export CSV' })
+  }
+  if (formatCsv) {
+    checkRateLimit({
+      key: rateLimitKey(['export_csv', 'admin_deposits', currentUser.id]),
+      max: 3,
+      windowMs: 60_000,
+      statusMessage: 'Bạn export quá nhanh, vui lòng thử lại sau.',
+      auditAction: 'rate_limited_export_csv',
+      auditMetadata: { scope: 'admin_deposits' },
+    })
+  }
+
   let page = parseInt(String(query.page || 1), 10)
   if (!Number.isFinite(page) || page < 1) page = 1
   let limit = parseInt(String(query.limit || 10), 10)

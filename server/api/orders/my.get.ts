@@ -1,34 +1,13 @@
-import jwt from 'jsonwebtoken'
 import pool from '../../utils/db'
 import { ensureOrderRefundSchema } from '../../utils/orderRefund'
-
-const JWT_SECRET =
-  process.env.JWT_SECRET || 'chuoi_bi_mat_jwt_ngau_nhien_cua_sep_123456'
+import { ensureCommerceSchema } from '../../utils/commerce'
+import { requireUser } from '../../utils/authHelpers'
 
 export default defineEventHandler(async (event) => {
-  const token = getCookie(event, 'auth_token')
-  if (!token) {
-    throw createError({ statusCode: 401, statusMessage: 'Chưa đăng nhập' })
-  }
-
-  let decoded: { id: number; role: string }
-  try {
-    decoded = jwt.verify(token, JWT_SECRET) as { id: number; role: string }
-  } catch {
-    throw createError({
-      statusCode: 401,
-      statusMessage: 'Phiên đăng nhập hết hạn',
-    })
-  }
-
-  if (decoded.role !== 'user') {
-    throw createError({
-      statusCode: 403,
-      statusMessage: 'Chỉ người dùng mới xem lịch sử đơn hàng',
-    })
-  }
+  const decoded = requireUser(event)
 
   await ensureOrderRefundSchema()
+  await ensureCommerceSchema()
 
   let limit = 50
   const query = getQuery(event)
@@ -45,7 +24,8 @@ export default defineEventHandler(async (event) => {
         o.id,
         o.admin_id,
         o.product_id,
-        o.amount,
+        COALESCE(o.amount_credit, ROUND(o.amount)) AS amount,
+        o.amount_credit,
         o.status,
         o.note,
         o.refund_reason,

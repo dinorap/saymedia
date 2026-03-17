@@ -1,26 +1,11 @@
 import pool from "../../utils/db";
 import { ensureSupportChatSchema } from "../../utils/supportChat";
-import jwt from "jsonwebtoken";
 import { broadcastSupportMessage } from "../../routes/ws/support";
-
-const JWT_SECRET =
-  process.env.JWT_SECRET || "chuoi_bi_mat_jwt_ngau_nhien_cua_sep_123456";
+import { requireAuth } from "../../utils/authHelpers";
+import { checkRateLimit, rateLimitKey } from "../../utils/rateLimit";
 
 export default defineEventHandler(async (event) => {
-  const token = getCookie(event, "auth_token");
-  if (!token) {
-    throw createError({ statusCode: 401, statusMessage: "Chưa đăng nhập" });
-  }
-
-  let decoded: { id: number; role: string };
-  try {
-    decoded = jwt.verify(token, JWT_SECRET) as { id: number; role: string };
-  } catch {
-    throw createError({
-      statusCode: 401,
-      statusMessage: "Phiên đăng nhập hết hạn",
-    });
-  }
+  const decoded = requireAuth(event);
 
   const body = await readBody(event);
   const threadId = Number(body?.thread_id);
@@ -46,6 +31,16 @@ export default defineEventHandler(async (event) => {
   if (!thread) {
     throw createError({ statusCode: 404, statusMessage: "Không tìm thấy phiên chat" });
   }
+
+  // Rate limit per sender per thread to prevent spam/DoS
+  checkRateLimit({
+    key: rateLimitKey(["support_msg", decoded.id, threadId]),
+    max: 12,
+    windowMs: 60_000,
+    statusMessage: "Bạn gửi tin quá nhanh, vui lòng thử lại sau.",
+    auditAction: "rate_limited_support_message",
+    auditMetadata: { thread_id: threadId, actor_id: decoded.id },
+  });
 
   let senderType: "user" | "admin";
   if (decoded.role === "user") {

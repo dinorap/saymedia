@@ -453,12 +453,13 @@ const paypalCurrency =
   runtimeConfig.public.PAYPAL_CURRENCY ||
   "USD";
 
-const vndPerCredit =
-  Number(runtimeConfig.public.depositVndPerCredit || 1000) || 1000;
+const vndPerCredit = ref(
+  Number(runtimeConfig.public.depositVndPerCredit || 1000) || 1000,
+);
 
 const baseExpectedCredit = computed(() =>
   depositAmount.value && depositAmount.value > 0
-    ? Math.floor(depositAmount.value / vndPerCredit)
+    ? Math.floor(depositAmount.value / Number(vndPerCredit.value || 1000))
     : 0,
 );
 
@@ -732,6 +733,17 @@ const copyTransferContent = async () => {
 
 let promoPreviewTimer = null;
 
+async function syncVndPerCreditFromServer() {
+  try {
+    const res = await $fetch("/api/payment/rate");
+    if (res?.success && Number(res.vnd_per_credit) > 0) {
+      vndPerCredit.value = Number(res.vnd_per_credit);
+    }
+  } catch {
+    // ignore; fallback to runtimeConfig
+  }
+}
+
 const updatePromoPreview = (silent = false) => {
   if (!promoCode.value || !promoCode.value.trim()) {
     bonusExpectedCredit.value = 0;
@@ -759,6 +771,9 @@ const updatePromoPreview = (silent = false) => {
   })
     .then((res) => {
       if (res && res.success) {
+        if (Number(res.vnd_per_credit) > 0) {
+          vndPerCredit.value = Number(res.vnd_per_credit);
+        }
         bonusExpectedCredit.value = Number(res.bonus_credit || 0);
         if (!silent) {
           if (bonusExpectedCredit.value > 0) {
@@ -826,6 +841,9 @@ const createQR = async () => {
 
     if (res.success) {
       qrData.value = res;
+      if (Number(res.vnd_per_credit) > 0) {
+        vndPerCredit.value = Number(res.vnd_per_credit);
+      }
       qrExpired.value = false;
       const expiresIn =
         Number(res.expires_in_seconds || 0) >= 60
@@ -844,6 +862,16 @@ const createQR = async () => {
     loading.value = false;
   }
 };
+
+// When opening modal, sync the latest conversion rate from server
+watch(
+  () => props.modelValue,
+  async (open) => {
+    if (!open) return;
+    await syncVndPerCreditFromServer();
+  },
+  { immediate: true },
+);
 
 const handleClose = () => {
   emit("update:modelValue", false);

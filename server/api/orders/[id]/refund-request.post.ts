@@ -1,27 +1,11 @@
-import jwt from "jsonwebtoken";
 import pool from "../../../utils/db";
 import { ensureOrderRefundSchema } from "../../../utils/orderRefund";
 import { addAuditLog } from "../../../utils/audit";
-
-const JWT_SECRET =
-  process.env.JWT_SECRET || "chuoi_bi_mat_jwt_ngau_nhien_cua_sep_123456";
+import { requireUser } from "../../../utils/authHelpers";
+import { checkRateLimit, rateLimitKey } from "../../../utils/rateLimit";
 
 export default defineEventHandler(async (event) => {
-  const token = getCookie(event, "auth_token");
-  if (!token) {
-    throw createError({ statusCode: 401, statusMessage: "Chưa đăng nhập" });
-  }
-
-  let decoded: { id: number; role: string };
-  try {
-    decoded = jwt.verify(token, JWT_SECRET) as { id: number; role: string };
-  } catch {
-    throw createError({ statusCode: 401, statusMessage: "Phiên đăng nhập hết hạn" });
-  }
-
-  if (decoded.role !== "user") {
-    throw createError({ statusCode: 403, statusMessage: "Không có quyền" });
-  }
+  const decoded = requireUser(event);
 
   const id = Number(getRouterParam(event, "id"));
   if (!Number.isFinite(id) || id <= 0) {
@@ -33,6 +17,15 @@ export default defineEventHandler(async (event) => {
   if (!reason) {
     throw createError({ statusCode: 400, statusMessage: "Vui lòng nhập lý do hoàn tiền" });
   }
+
+  checkRateLimit({
+    key: rateLimitKey(["refund_request", decoded.id, id]),
+    max: 3,
+    windowMs: 10 * 60_000,
+    statusMessage: "Bạn gửi yêu cầu hoàn tiền quá nhanh, vui lòng thử lại sau.",
+    auditAction: "rate_limited_refund_request",
+    auditMetadata: { order_id: id, user_id: decoded.id },
+  });
 
   await ensureOrderRefundSchema();
 
@@ -53,6 +46,12 @@ export default defineEventHandler(async (event) => {
   }
   if (order.refunded_at) {
     throw createError({ statusCode: 400, statusMessage: "Đơn hàng đã được hoàn tiền" });
+  }
+  if (String(order.status || "") !== "completed") {
+    throw createError({
+      statusCode: 400,
+      statusMessage: "Chỉ có thể yêu cầu hoàn tiền cho đơn hàng đã hoàn thành",
+    });
   }
   if (String(order.refund_request_status || "") === "pending") {
     throw createError({ statusCode: 400, statusMessage: "Đơn hàng đã gửi yêu cầu hoàn tiền" });

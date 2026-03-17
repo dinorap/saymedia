@@ -1,4 +1,5 @@
 import pool from "./db";
+import { assertRuntimeMigrationsAllowed } from "./runtimeMigrations";
 
 let commerceSchemaReady = false;
 
@@ -12,6 +13,8 @@ async function addColumnIfMissing(sql: string) {
 
 export async function ensureCommerceSchema() {
   if (commerceSchemaReady) return;
+
+  assertRuntimeMigrationsAllowed("commerce");
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS products (
@@ -101,6 +104,9 @@ export async function ensureCommerceSchema() {
     "ALTER TABLE orders ADD COLUMN bonus_part BIGINT NULL AFTER paid_part",
   );
   await addColumnIfMissing(
+    "ALTER TABLE orders ADD COLUMN amount_credit BIGINT NULL AFTER amount",
+  );
+  await addColumnIfMissing(
     "ALTER TABLE orders ADD COLUMN seller_ref VARCHAR(64) NULL AFTER bonus_part",
   );
   await addColumnIfMissing(
@@ -161,6 +167,15 @@ export async function ensureCommerceSchema() {
   await addColumnIfMissing("CREATE INDEX idx_orders_created_at ON orders(created_at)");
   await addColumnIfMissing("CREATE INDEX idx_orders_status ON orders(status)");
   await addColumnIfMissing("CREATE INDEX idx_products_is_active_created ON products(is_active, created_at)");
+
+  // Backfill: đồng bộ amount_credit cho các order cũ (khớp với cách đã trừ credit trước đây: Math.round()).
+  try {
+    await pool.query(
+      "UPDATE orders SET amount_credit = ROUND(amount) WHERE amount_credit IS NULL",
+    );
+  } catch {
+    // ignore
+  }
 
   commerceSchemaReady = true;
 }

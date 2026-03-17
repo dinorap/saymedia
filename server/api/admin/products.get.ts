@@ -1,10 +1,12 @@
 import pool from "../../utils/db";
+import { ensureCommerceSchema } from "../../utils/commerce";
 
 export default defineEventHandler(async (event) => {
   const currentUser = event.context.user;
   if (!currentUser) {
     throw createError({ statusCode: 401, statusMessage: "Chưa đăng nhập" });
   }
+  await ensureCommerceSchema();
 
   const query = getQuery(event);
   const search = query.search ? String(query.search).trim() : "";
@@ -68,7 +70,7 @@ export default defineEventHandler(async (event) => {
 
   const orderExpression =
     sortField === "price"
-      ? "p.price"
+      ? "COALESCE(pk.min_price, 0)"
       : sortField === "name"
         ? "p.name"
         : sortField === "is_active"
@@ -100,12 +102,18 @@ export default defineEventHandler(async (event) => {
         p.download_url,
         p.thumbnail_url,
         p.images_json,
+        COALESCE(pk.min_price, 0) AS price,
         p.created_at,
         p.updated_at,
         a.username AS admin_username,
         a.role AS admin_role
       FROM products p
       LEFT JOIN admins a ON p.admin_id = a.id
+      LEFT JOIN (
+        SELECT product_id, MIN(price) AS min_price
+        FROM product_keys
+        GROUP BY product_id
+      ) pk ON pk.product_id = p.id
       ${whereSql}
       ORDER BY ${orderExpression} ${sortDir}, p.id DESC
       LIMIT ? OFFSET ?
@@ -132,7 +140,7 @@ export default defineEventHandler(async (event) => {
       currentUser.role === "admin_0" && adminIdFilter != null && adminIdFilter > 0;
     const [orderRows]: any = await pool.query(
       `
-        SELECT o.product_id, o.amount, o.note
+        SELECT o.product_id, COALESCE(o.amount_credit, ROUND(o.amount)) AS amount, o.note
         FROM orders o
         WHERE o.status = 'completed'
           AND o.product_id IN (${placeholders})

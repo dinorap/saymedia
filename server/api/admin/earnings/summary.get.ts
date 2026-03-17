@@ -1,12 +1,14 @@
 import pool from "../../../utils/db";
 import { ensureAdminWalletSchema } from "../../../utils/adminWallet";
 import { getVndPerCredit } from "../../../utils/payment";
+import { ensureCommerceSchema } from "../../../utils/commerce";
 
 export default defineEventHandler(async (event) => {
   const currentUser = event.context.user;
   if (!currentUser) {
     throw createError({ statusCode: 401, statusMessage: "Chưa đăng nhập" });
   }
+  await ensureCommerceSchema();
 
   await ensureAdminWalletSchema();
 
@@ -84,7 +86,7 @@ export default defineEventHandler(async (event) => {
     SELECT
       COALESCE(o.seller_admin_id, o.admin_id) AS admin_id,
       COUNT(*) AS order_count,
-      SUM(o.amount) AS total_gross_amount
+      SUM(COALESCE(o.amount_credit, ROUND(o.amount))) AS total_gross_amount
     FROM orders o
     WHERE o.status = 'completed' AND COALESCE(o.seller_admin_id, o.admin_id) IN (${placeholders})${orderDateConditions.join("")}
     GROUP BY COALESCE(o.seller_admin_id, o.admin_id)
@@ -127,7 +129,7 @@ export default defineEventHandler(async (event) => {
           COALESCE(o.product_owner_admin_id, o.admin_id) AS owner_admin_id,
           COALESCE(o.seller_admin_id, o.admin_id) AS report_admin_id,
           COUNT(*) AS order_count,
-          COALESCE(SUM(o.amount), 0) AS total_gross_amount
+          COALESCE(SUM(COALESCE(o.amount_credit, ROUND(o.amount))), 0) AS total_gross_amount
         FROM orders o
         WHERE o.status = 'completed'
           AND (COALESCE(o.product_owner_admin_id, o.admin_id) IN (${placeholders2}) OR COALESCE(o.seller_admin_id, o.admin_id) IN (${placeholders2}))
@@ -192,7 +194,7 @@ export default defineEventHandler(async (event) => {
               WHEN owner.role = 'admin_1'
                    AND COALESCE(o.seller_admin_id, o.admin_id) = COALESCE(o.product_owner_admin_id, o.admin_id)
                    AND COALESCE(p.platform_fee_percent, 0) > 0
-              THEN ROUND(o.amount * p.platform_fee_percent / 100)
+              THEN ROUND(COALESCE(o.amount_credit, ROUND(o.amount)) * p.platform_fee_percent / 100)
               ELSE 0
             END
           ) AS total_platform_fee

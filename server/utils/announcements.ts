@@ -1,9 +1,12 @@
 import pool from "./db";
+import { assertRuntimeMigrationsAllowed } from "./runtimeMigrations";
 
 let schemaReady = false;
 
 export async function ensureAnnouncementsSchema() {
   if (schemaReady) return;
+
+  assertRuntimeMigrationsAllowed("announcements");
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS announcements (

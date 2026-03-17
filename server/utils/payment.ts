@@ -1,5 +1,6 @@
 import crypto from 'crypto'
 import pool from './db'
+import { assertRuntimeMigrationsAllowed } from './runtimeMigrations'
 
 let schemaReady = false
 
@@ -9,6 +10,8 @@ let cachedVndPerCredit: number | null = null
 
 export async function ensurePaymentSchema() {
   if (schemaReady) return
+
+  assertRuntimeMigrationsAllowed('payment')
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS payment_transactions (

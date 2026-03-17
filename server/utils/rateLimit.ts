@@ -1,4 +1,5 @@
 import { addAuditLog } from './audit'
+import { getRequestIpKey } from './authHelpers'
 
 /**
  * Rate limit đơn giản cho đăng nhập - chống brute force
@@ -8,16 +9,11 @@ const store = new Map<string, { count: number; resetAt: number }>()
 const MAX_ATTEMPTS = 5
 const WINDOW_MS = 15 * 60 * 1000 // 15 phút
 
-function getKey(event: any): string {
-  const forwarded = getHeader(event, 'x-forwarded-for')
-  if (forwarded) {
-    return forwarded.split(',')[0].trim()
-  }
-  return getRequestIP(event) || 'unknown'
-}
+// Generic in-memory rate limiter stores
+const genericStore = new Map<string, { count: number; resetAt: number }>()
 
 export function checkLoginRateLimit(event: any): void {
-  const key = getKey(event)
+  const key = getRequestIpKey(event)
   const now = Date.now()
   const entry = store.get(key)
 
@@ -45,7 +41,7 @@ export function checkLoginRateLimit(event: any): void {
 }
 
 export function recordLoginFailure(event: any): void {
-  const key = getKey(event)
+  const key = getRequestIpKey(event)
   const now = Date.now()
   const entry = store.get(key)
 
@@ -61,6 +57,50 @@ export function recordLoginFailure(event: any): void {
 }
 
 export function clearLoginFailure(event: any): void {
-  const key = getKey(event)
+  const key = getRequestIpKey(event)
   store.delete(key)
+}
+
+export function checkRateLimit(opts: {
+  key: string
+  max: number
+  windowMs: number
+  statusMessage?: string
+  auditAction?: string
+  auditMetadata?: any
+}): void {
+  const { key, max, windowMs } = opts
+  const now = Date.now()
+  const entry = genericStore.get(key)
+  if (entry && now > entry.resetAt) {
+    genericStore.delete(key)
+  }
+  const curr = genericStore.get(key)
+  if (curr) {
+    if (curr.count >= max) {
+      if (opts.auditAction) {
+        addAuditLog({
+          actorType: 'system',
+          action: opts.auditAction,
+          targetType: 'rate_limit',
+          targetId: key,
+          metadata: { max, windowMs, ...(opts.auditMetadata || {}) },
+        }).catch(() => {})
+      }
+      throw createError({
+        statusCode: 429,
+        statusMessage: opts.statusMessage || 'Thao tác quá nhanh, vui lòng thử lại sau.',
+      })
+    }
+    curr.count++
+  } else {
+    genericStore.set(key, { count: 1, resetAt: now + windowMs })
+  }
+}
+
+export function rateLimitKey(parts: Array<string | number | null | undefined>): string {
+  return parts
+    .map((p) => (p == null ? '' : String(p)))
+    .filter(Boolean)
+    .join(':')
 }

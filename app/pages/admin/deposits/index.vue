@@ -207,7 +207,6 @@ const exportingCsv = ref(false);
 let searchTimer = null;
 const pagination = ref({ page: 1, limit: 10, total: 0, totalPages: 1 });
 const pageSize = ref(10);
-let autoRefreshTimer = null;
 const sortMode = ref("created_desc");
 
 async function fetchAdmins() {
@@ -386,16 +385,10 @@ onMounted(async () => {
   await fetchAdmins();
   await fetchRate();
   await fetchDeposits(1);
-  autoRefreshTimer = setInterval(() => {
-    fetchDeposits(pagination.value.page || 1, { silent: true });
-  }, 5000);
-});
-
-onUnmounted(() => {
-  if (autoRefreshTimer) {
-    clearInterval(autoRefreshTimer);
-    autoRefreshTimer = null;
-  }
+  useAutoRefresh(
+    () => fetchDeposits(pagination.value.page || 1, { silent: true }),
+    { intervalMs: 15000, pauseWhenHidden: true },
+  );
 });
 </script>
 

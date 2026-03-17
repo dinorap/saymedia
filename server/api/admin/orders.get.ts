@@ -1,5 +1,7 @@
 import pool from '../../utils/db'
 import { ensureOrderRefundSchema } from '../../utils/orderRefund'
+import { ensureCommerceSchema } from '../../utils/commerce'
+import { checkRateLimit, rateLimitKey } from '../../utils/rateLimit'
 
 export default defineEventHandler(async (event) => {
   const currentUser = event.context.user
@@ -9,6 +11,7 @@ export default defineEventHandler(async (event) => {
 
   const query = getQuery(event)
   await ensureOrderRefundSchema()
+  await ensureCommerceSchema()
   const adminId = query.admin_id ? parseInt(String(query.admin_id), 10) : null
   const userId = query.user_id ? parseInt(String(query.user_id), 10) : null
   const status = query.status ? String(query.status) : ''
@@ -16,6 +19,21 @@ export default defineEventHandler(async (event) => {
   const fromDate = query.from ? String(query.from).trim() : ''
   const toDate = query.to ? String(query.to).trim() : ''
   const formatCsv = query.format === 'csv'
+
+  if (formatCsv && currentUser.role !== 'admin_0') {
+    throw createError({ statusCode: 403, statusMessage: 'Chỉ admin_0 mới được export CSV' })
+  }
+  if (formatCsv) {
+    checkRateLimit({
+      key: rateLimitKey(['export_csv', 'admin_orders', currentUser.id]),
+      max: 3,
+      windowMs: 60_000,
+      statusMessage: 'Bạn export quá nhanh, vui lòng thử lại sau.',
+      auditAction: 'rate_limited_export_csv',
+      auditMetadata: { scope: 'admin_orders' },
+    })
+  }
+
   let page = parseInt(String(query.page || 1), 10)
   if (!Number.isFinite(page) || page < 1) page = 1
   let limit = parseInt(String(query.limit || 10), 10)
@@ -94,7 +112,7 @@ export default defineEventHandler(async (event) => {
 
   const orderExpression =
     sortField === 'amount'
-      ? 'o.amount'
+      ? 'COALESCE(o.amount_credit, ROUND(o.amount))'
       : sortField === 'status'
         ? 'o.status'
         : 'o.created_at'
@@ -107,7 +125,8 @@ export default defineEventHandler(async (event) => {
       o.admin_id,
       o.seller_admin_id,
       o.product_owner_admin_id,
-      o.amount,
+      COALESCE(o.amount_credit, ROUND(o.amount)) AS amount,
+      o.amount_credit,
       o.paid_part,
       o.bonus_part,
       o.seller_ref,
