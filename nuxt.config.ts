@@ -1,7 +1,7 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
-  devtools: { enabled: true },
+  devtools: { enabled: process.env.NODE_ENV !== 'production' },
 
   runtimeConfig: {
     depositVndPerCredit: Number(process.env.DEPOSIT_VND_PER_CREDIT || 1000),
@@ -13,7 +13,7 @@ export default defineNuxtConfig({
   },
 
   devServer: {
-    port: 9000
+    port: 4012
   },
 
   nitro: {
@@ -24,8 +24,11 @@ export default defineNuxtConfig({
 
   vite: {
     server: {
-      // Cho phép truy cập dev server qua tunnel như ngrok/localhost.run
-      allowedHosts: ['.ngrok-free.dev', '.localhost.run'],
+      // Cho phép truy cập dev server qua tunnel như ngrok/localhost.run/trycloudflare.com
+      allowedHosts:
+        process.env.NODE_ENV === 'production'
+          ? undefined
+          : ['.ngrok-free.dev', '.localhost.run', '.trycloudflare.com'],
       // host: true, // không còn thuộc tính host trong kiểu ServerOptions mới
     },
   },
