@@ -1,4 +1,5 @@
 import pool from '../../utils/db'
+import { ensureUserStatsSchema } from '../../utils/userStats'
 
 export default defineEventHandler(async (event) => {
   const currentUser = event.context.user
@@ -7,6 +8,8 @@ export default defineEventHandler(async (event) => {
   }
 
   const queryParams = getQuery(event)
+  await ensureUserStatsSchema()
+
   const adminId = queryParams.admin_id ? parseInt(String(queryParams.admin_id), 10) : null
   const search = queryParams.search ? String(queryParams.search).trim() : ''
   const status = queryParams.status ? String(queryParams.status).trim() : ''

@@ -1,5 +1,6 @@
 import pool from "../../utils/db";
 import { ensureCommerceSchema } from "../../utils/commerce";
+import { ensureProductKeySchema } from "../../utils/productKeys";
 
 export default defineEventHandler(async (event) => {
   const currentUser = event.context.user;
@@ -7,6 +8,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 401, statusMessage: "Chưa đăng nhập" });
   }
   await ensureCommerceSchema();
+  await ensureProductKeySchema();
 
   const query = getQuery(event);
   const search = query.search ? String(query.search).trim() : "";

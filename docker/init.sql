@@ -19,6 +19,7 @@ CREATE TABLE users (
     paid_credit BIGINT NOT NULL DEFAULT 0,
     bonus_credit BIGINT NOT NULL DEFAULT 0,
     status ENUM('active', 'blocked') DEFAULT 'active',
+    last_login TIMESTAMP NULL DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (admin_id) REFERENCES admins(id) ON DELETE RESTRICT
 );
@@ -235,9 +236,13 @@ CREATE TABLE IF NOT EXISTS product_keys (
     product_name VARCHAR(255) NOT NULL,
     `key` VARCHAR(255) NOT NULL UNIQUE,
     valid_duration ENUM('2h','12h','1d','3d','7d','10d','30d','90d','lifetime') NOT NULL,
+    price BIGINT UNSIGNED NOT NULL DEFAULT 0,
+    admin_id INT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_product_keys_product_id (product_id),
     INDEX idx_product_keys_product_name (product_name),
+    INDEX idx_product_keys_admin_id (admin_id),
+    CONSTRAINT fk_product_keys_admin FOREIGN KEY (admin_id) REFERENCES admins(id) ON DELETE SET NULL,
     CONSTRAINT fk_product_keys_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE SET NULL
 );
 
