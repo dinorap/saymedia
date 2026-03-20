@@ -1,4 +1,6 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
+const isTunnel = process.env.TUNNEL === '1'
+
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: process.env.NODE_ENV !== 'production' },
@@ -13,6 +15,9 @@ export default defineNuxtConfig({
   },
 
   devServer: {
+    // Khi tunnel/proxy từ bên ngoài, Nuxt dev cần lắng nghe IPv4
+    // (tránh trường hợp chỉ listen ::1 khiến cloudflared tunnel tới 127.0.0.1 bị fail).
+    host: '0.0.0.0',
     port: 4012
   },
 
@@ -25,11 +30,11 @@ export default defineNuxtConfig({
   vite: {
     server: {
       // Cho phép truy cập dev server qua tunnel như ngrok/localhost.run/trycloudflare.com
-      allowedHosts:
-        process.env.NODE_ENV === 'production'
-          ? undefined
-          : ['.ngrok-free.dev', '.localhost.run', '.trycloudflare.com'],
+      // Nuxt/Vite dev đôi khi trả 404 khi Host header không khớp,
+      // nên khi dev (nhất là qua trycloudflare) ta mở rộng allowedHosts.
+      allowedHosts: process.env.NODE_ENV === 'production' ? undefined : ['*'],
       // host: true, // không còn thuộc tính host trong kiểu ServerOptions mới
+      hmr: isTunnel ? false : undefined,
     },
   },
 
