@@ -37,6 +37,16 @@
           </div>
         </div>
         <div class="bubble-input-row">
+          <button
+            type="button"
+            class="bubble-icon-btn"
+            :disabled="sending"
+            :aria-pressed="showIconPicker ? 'true' : 'false'"
+            aria-label="Chọn icon"
+            @click="toggleIconPicker"
+          >
+            😊
+          </button>
           <input
             v-model="draft"
             type="text"
@@ -55,6 +65,15 @@
           >
             ➤
           </button>
+        </div>
+
+        <div v-if="showIconPicker" class="bubble-icon-picker">
+          <ClientOnly>
+            <emoji-picker
+              class="bubble-emoji-picker"
+              @emoji-click="handleEmojiClick"
+            ></emoji-picker>
+          </ClientOnly>
         </div>
       </div>
     </div>
@@ -83,6 +102,8 @@ const lastSeenAt = ref(0);
 const unreadCount = ref(0);
 const hasUnread = computed(() => unreadCount.value > 0);
 
+const showIconPicker = ref(false);
+
 const STORAGE_KEY_PREFIX = "support_last_seen_";
 
 function getLastSeenStorageKey(id) {
@@ -108,6 +129,25 @@ function saveLastSeenToStorage(id, ts) {
   } catch {
     // ignore
   }
+}
+
+function toggleIconPicker() {
+  if (sending.value) return;
+  showIconPicker.value = !showIconPicker.value;
+}
+
+function appendEmoji(emojiUnicode) {
+  const text = String(emojiUnicode || "").trim();
+  if (!text) return;
+  const needSpace = draft.value && !/\s$/.test(draft.value);
+  draft.value = `${draft.value}${needSpace ? " " : ""}${text}`;
+}
+
+function handleEmojiClick(event) {
+  const detail = event?.detail;
+  const unicode = detail?.unicode || detail?.emoji?.unicode;
+  appendEmoji(unicode);
+  showIconPicker.value = false;
 }
 
 let ws = null;
@@ -329,6 +369,7 @@ async function sendMessage() {
   if (!threadId.value || !draft.value.trim() || sending.value) return;
   const text = draft.value.trim();
   sending.value = true;
+  showIconPicker.value = false;
   try {
     if (ws && ws.readyState === WebSocket.OPEN && wsConnected) {
       ws.send(
@@ -356,6 +397,8 @@ async function sendMessage() {
 }
 
 onMounted(async () => {
+  // emoji-picker-element is a web component; load on client only.
+  await import("emoji-picker-element");
   visible.value = true;
   if (roleCookie.value === "user") {
     await initBubble();
@@ -599,6 +642,39 @@ onUnmounted(() => {
   display: flex;
   gap: 4px;
   margin-top: 4px;
+}
+
+.bubble-icon-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.65);
+  background: rgba(15, 23, 42, 0.98);
+  color: var(--text-primary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+.bubble-icon-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.bubble-icon-picker {
+  display: block;
+  margin-top: 6px;
+  padding: 6px 2px;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.bubble-emoji-picker {
+  width: 100%;
+  height: 240px;
 }
 
 .bubble-input {

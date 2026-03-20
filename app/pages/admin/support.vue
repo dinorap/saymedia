@@ -127,6 +127,15 @@
           </p>
         </main>
         <footer class="support-chat-input-row">
+          <button
+            type="button"
+            class="support-icon-btn"
+            :disabled="sending"
+            aria-label="Chọn icon"
+            @click="toggleIconPicker"
+          >
+            😊
+          </button>
           <input
             v-model="draft"
             type="text"
@@ -143,6 +152,14 @@
             {{ $t("admin.supportSend") }}
           </button>
         </footer>
+        <div v-if="showIconPicker" class="support-icon-picker">
+          <ClientOnly>
+            <emoji-picker
+              class="support-emoji-picker"
+              @emoji-click="handleEmojiClick"
+            ></emoji-picker>
+          </ClientOnly>
+        </div>
       </div>
     </div>
   </div>
@@ -160,6 +177,7 @@ const activeThread = ref(null);
 const messages = ref([]);
 const draft = ref("");
 const sending = ref(false);
+const showIconPicker = ref(false);
 const messagesEl = ref(null);
 const scope = ref("mine"); // 'mine' | 'all' (only for admin_0)
 const lastSeenMap = ref({});
@@ -432,10 +450,30 @@ function formatTime(val) {
   });
 }
 
+function toggleIconPicker() {
+  if (sending.value) return;
+  showIconPicker.value = !showIconPicker.value;
+}
+
+function appendEmoji(emojiUnicode) {
+  const text = String(emojiUnicode || "").trim();
+  if (!text) return;
+  const needSpace = draft.value && !/\s$/.test(draft.value);
+  draft.value = `${draft.value}${needSpace ? " " : ""}${text}`;
+}
+
+function handleEmojiClick(event) {
+  const detail = event?.detail;
+  const unicode = detail?.unicode || detail?.emoji?.unicode;
+  appendEmoji(unicode);
+  showIconPicker.value = false;
+}
+
 async function sendMessage() {
   if (!activeThreadId.value || !draft.value.trim() || sending.value) return;
   const text = draft.value.trim();
   sending.value = true;
+  showIconPicker.value = false;
   try {
     if (ws && ws.readyState === WebSocket.OPEN && wsConnected) {
       ws.send(
@@ -463,7 +501,9 @@ async function sendMessage() {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
+  // emoji-picker-element is a web component: load only on client.
+  await import("emoji-picker-element");
   loadThreads();
   setupWebSocket();
 });
@@ -775,6 +815,39 @@ onUnmounted(() => {
   gap: 6px;
   padding-top: 0.5rem;
   border-top: 1px solid rgba(30, 64, 175, 0.8);
+}
+
+.support-icon-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.65);
+  background: rgba(15, 23, 42, 0.98);
+  color: var(--text-primary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.support-icon-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.support-icon-picker {
+  padding: 10px 10px 12px;
+  border-top: 1px solid rgba(148, 163, 184, 0.35);
+  display: block;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.support-emoji-picker {
+  width: 100%;
+  height: 240px;
 }
 
 .support-input {

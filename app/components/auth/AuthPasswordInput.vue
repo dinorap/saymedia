@@ -7,6 +7,7 @@
       :autocomplete="autocomplete"
       class="auth-input"
       @input="$emit('update:modelValue', $event.target.value)"
+      @keydown.enter.prevent="$emit('enter')"
     />
     <button
       type="button"
@@ -33,7 +34,7 @@ defineProps({
   autocomplete: { type: String, default: 'off' }
 })
 
-defineEmits(['update:modelValue'])
+defineEmits(['update:modelValue', 'enter'])
 
 const show = ref(false)
 </script>

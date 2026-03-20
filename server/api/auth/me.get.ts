@@ -2,6 +2,7 @@ import jwt from 'jsonwebtoken'
 import pool from '../../utils/db'
 import { ensureAdminContactSchema } from '../../utils/adminContact'
 import { getJwtSecret } from '../../utils/jwt'
+import { ensureUserProfileSchema } from '../../utils/userProfile'
 
 const JWT_SECRET = getJwtSecret()
 
@@ -20,6 +21,8 @@ export default defineEventHandler(async (event) => {
       admin_id?: number;
       email?: string;
       credit?: number;
+      display_name?: string | null;
+      phone?: string | null;
       ref_code?: string;
       ui_theme?: string | null;
     } = {
@@ -30,10 +33,16 @@ export default defineEventHandler(async (event) => {
     }
     if (decoded.role === 'user') {
       try {
-        const [rows]: any = await pool.query('SELECT email, credit FROM users WHERE id = ?', [decoded.id])
+        await ensureUserProfileSchema()
+        const [rows]: any = await pool.query(
+          'SELECT email, credit, display_name, phone FROM users WHERE id = ?',
+          [decoded.id],
+        )
         if (rows.length > 0) {
           user.email = rows[0].email
           user.credit = Number(rows[0].credit || 0)
+          user.display_name = rows[0].display_name ?? null
+          user.phone = rows[0].phone ?? null
         }
       } catch {
         const [rows]: any = await pool.query('SELECT email FROM users WHERE id = ?', [decoded.id])

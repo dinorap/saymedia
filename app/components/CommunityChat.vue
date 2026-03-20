@@ -55,6 +55,16 @@
       </div>
 
       <div class="chat-input-row">
+        <button
+          type="button"
+          class="chat-icon-btn"
+          :disabled="sending"
+          :aria-pressed="showIconPicker ? 'true' : 'false'"
+          aria-label="Chọn icon"
+          @click="toggleIconPicker"
+        >
+          😊
+        </button>
         <input
           v-model="draft"
           class="chat-input"
@@ -76,6 +86,15 @@
           Gửi
         </button>
       </div>
+
+      <div v-if="showIconPicker" class="chat-icon-picker">
+        <ClientOnly>
+          <emoji-picker
+            class="chat-emoji-picker"
+            @emoji-click="handleEmojiClick"
+          ></emoji-picker>
+        </ClientOnly>
+      </div>
     </div>
   </div>
 </template>
@@ -87,7 +106,11 @@ const sending = ref(false);
 const messagesEl = ref(null);
 
 const me = ref(null);
-const isLoggedIn = computed(() => !!me.value);
+// auth_token là httpOnly nên client không tự đọc được; dùng user_role để biết đã login.
+const userRoleCookie = useCookie("user_role", { path: "/" });
+const isLoggedIn = computed(() => !!userRoleCookie.value || !!me.value);
+
+const showIconPicker = ref(false);
 
 let ws;
 let reconnectTimer;
@@ -115,6 +138,32 @@ function formatTime(val) {
   });
 }
 
+function toggleIconPicker() {
+  if (sending.value) return;
+  showIconPicker.value = !showIconPicker.value;
+}
+
+function appendEmoji(emojiUnicode) {
+  const text = String(emojiUnicode || "").trim();
+  if (!text) return;
+  const needSpace = draft.value && !/\s$/.test(draft.value);
+  draft.value = `${draft.value}${needSpace ? " " : ""}${text}`;
+}
+
+function handleEmojiClick(event) {
+  // event.detail format example:
+  // { emoji: {...}, skinTone: 0, unicode: "😀" }
+  const detail = event?.detail;
+  const unicode =
+    detail?.unicode ||
+    detail?.emoji?.unicode ||
+    // fallback: sometimes only "unicode" exists
+    detail?.emoji?.unicode;
+
+  appendEmoji(unicode);
+  showIconPicker.value = false;
+}
+
 async function loadMe() {
   try {
     const res = await $fetch("/api/auth/me");
@@ -125,6 +174,18 @@ async function loadMe() {
     me.value = null;
   }
 }
+
+// Khi login xảy ra sau khi component đã mount (ví dụ login modal),
+// user_role cookie sẽ thay đổi nhưng auth_token (httpOnly) không tự cập nhật vào client.
+// Ta ưu tiên bật UI theo user_role, còn me sẽ cố load lại để hiển thị đúng thông tin.
+watch(
+  () => userRoleCookie.value,
+  async (val) => {
+    if (val && !me.value) {
+      await loadMe();
+    }
+  },
+);
 
 async function loadHistory() {
   try {
@@ -143,6 +204,7 @@ async function handleSend() {
   const text = draft.value.trim();
   if (!text) return;
   sending.value = true;
+  showIconPicker.value = false;
   try {
     if (ws && ws.readyState === WebSocket.OPEN && wsConnected) {
       ws.send(JSON.stringify({ type: "message", content: text }));
@@ -224,6 +286,8 @@ function setupWebSocket() {
 }
 
 onMounted(async () => {
+  // emoji-picker-element is a web component that must be loaded on client only.
+  await import("emoji-picker-element");
   await loadMe();
   await loadHistory();
   setupWebSocket();
@@ -464,6 +528,26 @@ onUnmounted(() => {
   );
 }
 
+.chat-icon-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.8);
+  background: rgba(15, 23, 42, 0.96);
+  color: var(--text-primary);
+  font-size: 1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.chat-icon-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .chat-input {
   flex: 1;
   min-width: 0;
@@ -493,5 +577,18 @@ onUnmounted(() => {
 .chat-send-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.chat-icon-picker {
+  padding: 10px 10px 12px;
+  border-top: 1px solid rgba(148, 163, 184, 0.35);
+  display: block;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.chat-emoji-picker {
+  width: 100%;
+  height: 240px;
 }
 </style>

@@ -211,7 +211,7 @@
                   <label>
                     Nội dung chuyển khoản:
                     <span class="required-note"
-                      >Bắt buộc ghi đúng để nhận điểm tự động</span
+                      >Bắt buộc ghi đúng để nhận AI Credit tự động</span
                     >
                   </label>
                   <div class="transfer-content-box">
@@ -395,7 +395,7 @@
                 <h3 class="usdt-title">Thanh toán qua USDT</h3>
                 <p class="usdt-text">
                   Vui lòng liên hệ qua kênh hỗ trợ để được hướng dẫn thanh toán
-                  USDT và xác nhận nạp điểm.
+                  USDT và xác nhận nạp AI Credit.
                 </p>
                 <a
                   href="https://t.me/saymedia_ai"
@@ -406,7 +406,7 @@
                   Mở Telegram hỗ trợ
                 </a>
                 <p class="usdt-note">
-                  Sau khi thanh toán, admin sẽ cộng điểm thủ công vào tài khoản
+                  Sau khi thanh toán, admin sẽ cộng AI Credit thủ công vào tài khoản
                   của bạn.
                 </p>
               </div>

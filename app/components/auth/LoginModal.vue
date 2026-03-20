@@ -18,6 +18,7 @@
           v-model="password"
           :placeholder="$t('auth.password')"
           autocomplete="current-password"
+          @enter="loginWithPassword"
         />
         <div class="auth-form-options">
           <button type="button" class="auth-link-btn" @click="showForgot = true">{{ $t("auth.forgotPassword") }}</button>

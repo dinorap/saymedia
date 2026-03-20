@@ -256,6 +256,14 @@
                   ✏️
                 </button>
                 <button
+                  type="button"
+                  class="btn-icon"
+                  :title="'Thông tin người dùng'"
+                  @click="openUserInfoModal(u)"
+                >
+                  👤
+                </button>
+                <button
                   v-if="isSuperAdmin"
                   type="button"
                   class="btn-icon"
@@ -365,7 +373,7 @@
                     <th>#</th>
                     <th>Sản phẩm</th>
                     <th>Người giới thiệu</th>
-                    <th>Số điểm</th>
+                    <th>Số AI Credit</th>
                     <th>Trạng thái</th>
                     <th>Thời gian</th>
                   </tr>
@@ -426,6 +434,44 @@
               type="button"
               class="btn-secondary"
               @click="showOrdersModal = false"
+            >
+              {{ $t("admin.close") || "Đóng" }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- Modal: user info (display_name + phone) -->
+    <Teleport to="body">
+      <div
+        v-if="showUserInfoModal"
+        class="modal-overlay"
+        @click.self="showUserInfoModal = false"
+      >
+        <div class="modal">
+          <h3 class="modal-title">Thông tin người dùng</h3>
+          <div class="modal-body">
+            <div class="user-info-grid">
+              <div class="info-row">
+                <span class="info-label">Tên</span>
+                <span class="info-value">{{
+                  userInfoModalUser?.display_name || "-"
+                }}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Số điện thoại</span>
+                <span class="info-value">{{
+                  userInfoModalUser?.phone || "-"
+                }}</span>
+              </div>
+            </div>
+          </div>
+          <div class="modal-actions">
+            <button
+              type="button"
+              class="btn-secondary"
+              @click="showUserInfoModal = false"
             >
               {{ $t("admin.close") || "Đóng" }}
             </button>
@@ -864,6 +910,8 @@ const historyUser = ref(null);
 const showOrdersModal = ref(false);
 const showDepositsModal = ref(false);
 const showCreditModal = ref(false);
+const showUserInfoModal = ref(false);
+const userInfoModalUser = ref(null);
 const ordersHistory = ref([]);
 const depositsHistory = ref([]);
 const creditHistory = ref([]);
@@ -906,6 +954,12 @@ function goToUserCreditLedger(user) {
   historyUser.value = user;
   showCreditModal.value = true;
   fetchUserCredit();
+}
+
+function openUserInfoModal(user) {
+  if (!user?.id) return;
+  userInfoModalUser.value = user;
+  showUserInfoModal.value = true;
 }
 
 async function fetchUserOrders(page) {
@@ -984,8 +1038,8 @@ function statusClass(status) {
   return "badge--muted";
 }
 
-async function fetchAdmins() {
-  loadingAdmins.value = true;
+async function fetchAdmins(opts = { silent: false }) {
+  if (!opts?.silent) loadingAdmins.value = true;
   try {
     const res = await $fetch("/api/admin/admins");
     if (res?.success && res.data) admins.value = res.data;
@@ -993,7 +1047,7 @@ async function fetchAdmins() {
     console.error("[admins]", e);
     admins.value = [];
   } finally {
-    loadingAdmins.value = false;
+    if (!opts?.silent) loadingAdmins.value = false;
   }
 }
 
@@ -1320,8 +1374,8 @@ onMounted(() => {
   }
   fetchUsers(1);
   autoRefreshTimer = setInterval(() => {
-    if (isSuperAdmin.value) {
-      fetchAdmins();
+    if (isSuperAdmin.value && activeTab.value === "admins") {
+      fetchAdmins({ silent: true });
     }
     fetchUsers(userPage.value || 1, { silent: true });
   }, 5000);
@@ -1666,10 +1720,27 @@ onUnmounted(() => {
   flex: 1;
 }
 
-.modal-wide .modal-actions {
-  margin-top: 0;
-  padding: 0.85rem 1.25rem 1rem;
-  border-top: 1px solid rgb(var(--accent-rgb) / 0.2);
+.user-info-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.info-row {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 1rem;
+  align-items: center;
+}
+
+.info-label {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.info-value {
+  color: var(--text-primary);
+  font-weight: 600;
 }
 
 .pagination--modal {

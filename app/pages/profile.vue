@@ -5,89 +5,152 @@
     <main class="profile-main">
       <section class="profile-card" v-if="!loading && user">
         <div class="profile-hero">
-          <div class="profile-avatar-wrap">
-            <div class="profile-avatar">
-              <span>{{ user.username?.charAt(0)?.toUpperCase() }}</span>
+          <div class="profile-hero-grid">
+            <div class="profile-identity">
+              <div class="profile-avatar-wrap">
+                <div class="profile-avatar">
+                  <span>{{ profileDisplayName?.charAt(0)?.toUpperCase() }}</span>
+                </div>
+              </div>
+              <h1 class="profile-name">{{ profileDisplayName }}</h1>
+              <p v-if="user.email" class="profile-email">{{ user.email }}</p>
+            </div>
+
+            <div class="profile-balance-panel">
+              <div class="profile-balance-block">
+                <span class="profile-balance-label">{{
+                  $t("profile.balanceLabel")
+                }}</span>
+                <p class="profile-balance-value">
+                  {{ formatVnd(user.credit || 0) }}
+                  <span class="profile-balance-unit">{{
+                    $t("profile.pointsUnit")
+                  }}</span>
+                </p>
+                <button
+                  type="button"
+                  class="btn-deposit"
+                  @click="onDepositClick"
+                >
+                  <span class="btn-deposit-icon">⊕</span>
+                  {{ $t("profile.depositButton") }}
+                </button>
+              </div>
             </div>
           </div>
-          <h1 class="profile-name">{{ user.username }}</h1>
-          <p v-if="user.email" class="profile-email">{{ user.email }}</p>
 
-          <div class="profile-balance-block">
-            <span class="profile-balance-label">{{
-              $t("profile.balanceLabel")
-            }}</span>
-            <p class="profile-balance-value">
-              {{ formatVnd(user.credit || 0) }}
-              <span class="profile-balance-unit">{{
-                $t("profile.pointsUnit")
-              }}</span>
-            </p>
-            <button
-              type="button"
-              class="btn-deposit"
-              @click="showDepositModal = true"
-            >
-              <span class="btn-deposit-icon">⊕</span>
-              {{ $t("profile.depositButton") }}
-            </button>
-          </div>
         </div>
 
-        <div v-if="Number(user.credit || 0) <= 0" class="profile-tip">
-          {{ $t("profile.tipNoPoints") }}
-        </div>
-
-        <div class="profile-stats">
-          <div class="profile-stat-card">
-            <span class="profile-stat-value">{{
-              quickStats.depositCount
-            }}</span>
-            <span class="profile-stat-label">{{
-              $t("profile.statsDeposits")
-            }}</span>
+        <div class="profile-content-grid">
+          <div class="profile-left-col">
+            <div class="profile-customer-edit">
+              <h3 class="profile-customer-title">Thông tin khách hàng</h3>
+              <p class="profile-customer-subtitle">
+                Để việc mua/bán diễn ra trơn tru và chúng tôi có thể liên hệ hỗ
+                trợ kịp thời, vui lòng cập nhật 2 thông tin bên dưới.
+              </p>
+              <div class="profile-info">
+                <div class="profile-field">
+                  <span class="profile-label">Tên người dùng</span>
+                  <input
+                    v-model="profileInfoForm.display_name"
+                    class="profile-input"
+                    type="text"
+                    placeholder="Nhập tên người dùng"
+                  />
+                </div>
+                <div class="profile-field">
+                  <span class="profile-label">Số điện thoại</span>
+                  <input
+                    v-model="profileInfoForm.phone"
+                    class="profile-input"
+                    type="tel"
+                    inputmode="tel"
+                    placeholder="Nhập số điện thoại"
+                  />
+                </div>
+              </div>
+              <p v-if="profileInfoError" class="profile-error-msg">
+                {{ profileInfoError }}
+              </p>
+              <div class="profile-actions">
+                <button
+                  type="button"
+                  class="btn-secondary"
+                  :disabled="profileInfoSaving"
+                  @click="resetProfileInfo"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="button"
+                  class="btn-primary"
+                  :disabled="profileInfoSaving"
+                  @click="saveProfileInfo"
+                >
+                  {{ profileInfoSaving ? "Đang lưu..." : "Lưu thông tin" }}
+                </button>
+              </div>
+            </div>
           </div>
-          <div class="profile-stat-card">
-            <span class="profile-stat-value">{{ quickStats.orderCount }}</span>
-            <span class="profile-stat-label">{{
-              $t("profile.statsOrders")
-            }}</span>
-          </div>
-        </div>
 
-        <div class="profile-section">
-          <h3 class="profile-section-title">
-            {{ $t("profile.sectionActions") }}
-          </h3>
-          <div class="profile-actions">
-            <button
-              type="button"
-              class="btn-secondary"
-              @click="showHistoryModal = true"
-            >
-              {{ $t("payment.history.title") }}
-            </button>
-            <button
-              type="button"
-              class="btn-secondary"
-              @click="showOrderHistoryModal = true"
-            >
-              {{ $t("admin.orders") }}
-            </button>
-            <button
-              type="button"
-              class="btn-secondary"
-              @click="showCreditLedgerModal = true"
-            >
-              {{ $t("admin.creditLedger") || "Sổ sao kê tín chỉ" }}
-            </button>
-            <button
-              type="button"
-              class="btn-primary"
-              @click="showChangePassword = true"
-            >
-              {{ $t("admin.changePassword") }}
-            </button>
+          <div class="profile-right-col">
+            <div v-if="Number(user.credit || 0) <= 0" class="profile-tip">
+              {{ $t("profile.tipNoPoints") }}
+            </div>
+
+            <div class="profile-stats">
+              <div class="profile-stat-card">
+                <span class="profile-stat-value">{{
+                  quickStats.depositCount
+                }}</span>
+                <span class="profile-stat-label">{{
+                  $t("profile.statsDeposits")
+                }}</span>
+              </div>
+              <div class="profile-stat-card">
+                <span class="profile-stat-value">{{ quickStats.orderCount }}</span>
+                <span class="profile-stat-label">{{
+                  $t("profile.statsOrders")
+                }}</span>
+              </div>
+            </div>
+
+            <div class="profile-section profile-actions-section">
+              <h3 class="profile-section-title">
+                {{ $t("profile.sectionActions") }}
+              </h3>
+              <div class="profile-actions">
+                <button
+                  type="button"
+                  class="btn-secondary"
+                  @click="showHistoryModal = true"
+                >
+                  {{ $t("payment.history.title") }}
+                </button>
+                <button
+                  type="button"
+                  class="btn-secondary"
+                  @click="showOrderHistoryModal = true"
+                >
+                  {{ $t("admin.orders") }}
+                </button>
+                <button
+                  type="button"
+                  class="btn-secondary"
+                  @click="showCreditLedgerModal = true"
+                >
+                  {{ $t("admin.creditLedger") || "Sổ sao kê tín chỉ" }}
+                </button>
+                <button
+                  type="button"
+                  class="btn-primary"
+                  @click="showChangePassword = true"
+                >
+                  {{ $t("admin.changePassword") }}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -170,6 +233,70 @@
       </div>
     </Teleport>
 
+    <!-- Modal hoàn thiện thông tin để nạp tiền -->
+    <Teleport to="body">
+      <div
+        v-if="showProfileInfoModal"
+        class="profile-modal-overlay"
+        @click.self="showProfileInfoModal = false"
+      >
+        <div class="profile-modal">
+          <h3 class="profile-modal-title">
+            Thông tin để hỗ trợ mua bán tốt hơn
+          </h3>
+          <p class="profile-modal-desc">
+            Để việc mua/bán của bạn diễn ra trơn tru và chúng tôi có thể liên hệ
+            hỗ trợ kịp thời, phục vụ tốt hơn cho bạn, vui lòng cho biết các
+            thông tin sau trước khi thực hiện nạp tiền:
+          </p>
+          <form
+            class="profile-modal-form"
+            @submit.prevent="saveProfileInfo({ continueDeposit: true })"
+          >
+            <div class="profile-form-row">
+              <label>Tên người dùng</label>
+              <input
+                v-model="profileInfoForm.display_name"
+                type="text"
+                class="profile-input"
+                required
+              />
+            </div>
+            <div class="profile-form-row">
+              <label>Số điện thoại</label>
+              <input
+                v-model="profileInfoForm.phone"
+                type="tel"
+                inputmode="tel"
+                class="profile-input"
+                required
+              />
+            </div>
+            <p v-if="profileInfoError" class="profile-error-msg">
+              {{ profileInfoError }}
+            </p>
+            <div class="profile-modal-actions">
+              <button
+                type="button"
+                class="btn-secondary"
+                :disabled="profileInfoSaving"
+                @click="showProfileInfoModal = false"
+              >
+                Để sau
+              </button>
+              <button
+                type="submit"
+                class="btn-primary"
+                :disabled="profileInfoSaving"
+              >
+                {{ profileInfoSaving ? "Đang lưu..." : "Lưu & Nạp tiền" }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </Teleport>
+
     <PaymentModal
       :model-value="showDepositModal"
       @update:model-value="showDepositModal = $event"
@@ -216,6 +343,7 @@ const user = ref(null);
 const loading = ref(true);
 const errorMessage = ref("");
 const showDepositModal = ref(false);
+const showProfileInfoModal = ref(false);
 const showHistoryModal = ref(false);
 const showOrderHistoryModal = ref(false);
 const showCreditLedgerModal = ref(false);
@@ -233,6 +361,84 @@ const pwForm = reactive({
 const pwError = ref("");
 const pwSaving = ref(false);
 
+// Thông tin khách hàng (dùng để hỗ trợ nhanh hơn)
+const profileInfoForm = reactive({
+  display_name: "",
+  phone: "",
+});
+const profileInfoSaving = ref(false);
+const profileInfoError = ref("");
+
+const profileDisplayName = computed(() => {
+  const u = user.value || {};
+  const dn = String(u?.display_name ?? "").trim();
+  return dn || String(u?.username ?? "");
+});
+
+const isProfileInfoComplete = computed(() => {
+  const dn = String(user.value?.display_name ?? "").trim();
+  const ph = String(user.value?.phone ?? "").trim();
+  return !!dn && !!ph;
+});
+
+function syncProfileInfoFormFromUser() {
+  profileInfoForm.display_name = String(user.value?.display_name ?? "");
+  profileInfoForm.phone = String(user.value?.phone ?? "");
+  profileInfoError.value = "";
+}
+
+function resetProfileInfo() {
+  syncProfileInfoFormFromUser();
+}
+
+async function saveProfileInfo(opts) {
+  const continueDeposit = !!opts?.continueDeposit;
+  profileInfoError.value = "";
+
+  const display_name = String(profileInfoForm.display_name ?? "").trim();
+  const phone = String(profileInfoForm.phone ?? "").trim();
+  if (!display_name) {
+    profileInfoError.value = "Vui lòng nhập tên người dùng.";
+    return;
+  }
+  if (!phone) {
+    profileInfoError.value = "Vui lòng nhập số điện thoại.";
+    return;
+  }
+
+  profileInfoSaving.value = true;
+  try {
+    await $fetch("/api/auth/update-profile", {
+      method: "POST",
+      body: { display_name, phone },
+    });
+
+    await loadProfile({ silent: true });
+    showToast("Đã lưu thông tin thành công!", "success");
+
+    if (continueDeposit) {
+      showProfileInfoModal.value = false;
+      showDepositModal.value = true;
+    }
+  } catch (e) {
+    profileInfoError.value =
+      e?.data?.statusMessage ||
+      e?.data?.message ||
+      "Lưu thất bại, vui lòng thử lại.";
+  } finally {
+    profileInfoSaving.value = false;
+  }
+}
+
+function onDepositClick() {
+  if (isProfileInfoComplete.value) {
+    showDepositModal.value = true;
+    return;
+  }
+  profileInfoError.value = "";
+  showProfileInfoModal.value = true;
+}
+
 async function loadProfile(opts) {
   const silent = !!opts?.silent;
   if (!silent) loading.value = true;
@@ -240,6 +446,7 @@ async function loadProfile(opts) {
     const data = await $fetch("/api/auth/me");
     if (data?.success && data.user) {
       user.value = data.user;
+      syncProfileInfoFormFromUser();
     } else {
       if (!silent)
         errorMessage.value = t("auth.unauthorized") || "Vui lòng đăng nhập lại";
@@ -541,7 +748,7 @@ async function submitChangePassword() {
 
 .profile-card {
   width: 100%;
-  max-width: 480px;
+  max-width: 980px;
   color: var(--text-primary);
   border-radius: 1.25rem;
   padding: 0;
@@ -554,8 +761,63 @@ async function submitChangePassword() {
 .profile-hero {
   padding: 2rem 1.75rem 1.75rem;
   text-align: center;
-  background: linear-gradient(180deg, rgb(var(--accent-rgb) / 0.12) 0%, transparent 70%);
+  background: linear-gradient(
+    180deg,
+    rgb(var(--accent-rgb) / 0.12) 0%,
+    transparent 70%
+  );
   border-bottom: 1px solid rgb(var(--accent-rgb) / 0.15);
+}
+
+.profile-hero-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  align-items: center;
+}
+
+.profile-identity {
+  text-align: center;
+}
+
+.profile-balance-panel {
+  display: flex;
+  justify-content: center;
+}
+
+.profile-balance-panel .profile-balance-block {
+  width: 100%;
+  max-width: none;
+}
+
+.profile-content-grid {
+  display: grid;
+  grid-template-columns: 0.95fr 1.05fr;
+  gap: 1rem;
+  padding: 1.25rem 1.75rem 1.75rem;
+  align-items: start;
+}
+
+.profile-left-col {
+  min-width: 0;
+}
+
+.profile-right-col {
+  min-width: 0;
+}
+
+.profile-actions-section {
+  border-top: none;
+  padding-top: 0;
+}
+
+.profile-right-col .profile-tip {
+  margin: 0 0 1rem;
+}
+
+.profile-right-col .profile-stats {
+  padding: 0;
+  margin-bottom: 1rem;
 }
 
 .profile-avatar-wrap {
@@ -636,13 +898,19 @@ async function submitChangePassword() {
   border-radius: 999px;
   cursor: pointer;
   background: linear-gradient(135deg, #059669 0%, #10b981 50%, #34d399 100%);
-  box-shadow: 0 4px 20px rgba(16, 185, 129, 0.4), 0 0 30px rgba(16, 185, 129, 0.15);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow:
+    0 4px 20px rgba(16, 185, 129, 0.4),
+    0 0 30px rgba(16, 185, 129, 0.15);
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .btn-deposit:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 28px rgba(16, 185, 129, 0.5), 0 0 40px rgba(16, 185, 129, 0.2);
+  box-shadow:
+    0 6px 28px rgba(16, 185, 129, 0.5),
+    0 0 40px rgba(16, 185, 129, 0.2);
 }
 
 .btn-deposit-icon {
@@ -711,11 +979,11 @@ async function submitChangePassword() {
 }
 
 .profile-field {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: 160px 1fr;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.5rem 0;
+  padding: 0.55rem 0;
   font-size: 0.95rem;
 }
 
@@ -749,6 +1017,10 @@ async function submitChangePassword() {
   .profile-hero {
     padding: 1.5rem 1.25rem 1.25rem;
   }
+
+  .profile-hero-grid {
+    grid-template-columns: 1fr;
+  }
   .profile-balance-value {
     font-size: 1.5rem;
   }
@@ -757,6 +1029,46 @@ async function submitChangePassword() {
     padding-left: 1.25rem;
     padding-right: 1.25rem;
   }
+  .profile-content-grid {
+    grid-template-columns: 1fr;
+    padding-left: 1.25rem;
+    padding-right: 1.25rem;
+  }
+  .profile-field {
+    grid-template-columns: 1fr;
+  }
+  .profile-label {
+    margin-bottom: 0.25rem;
+  }
+}
+
+.profile-customer-edit {
+  margin-top: 0;
+  padding: 1.1rem 1.25rem;
+  text-align: left;
+  border-radius: 1rem;
+  background: rgba(2, 132, 199, 0.08);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+}
+
+.profile-customer-title {
+  margin: 0 0 0.35rem;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.profile-customer-subtitle {
+  margin: 0 0 1rem;
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.profile-modal-desc {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  margin: 0 0 1rem;
+  line-height: 1.5;
 }
 
 .profile-card--plain {
@@ -815,12 +1127,16 @@ async function submitChangePassword() {
   align-items: center;
   justify-content: center;
   z-index: 50;
+  background: rgba(2, 6, 23, 0.7);
+  backdrop-filter: blur(8px);
 }
 
 .profile-modal {
   width: 100%;
   max-width: 420px;
   color: var(--text-primary);
+  background: rgba(5, 15, 35, 0.98);
+  border: 1px solid rgb(var(--accent-rgb) / 0.25);
   border-radius: 1rem;
   padding: 1.75rem;
   box-shadow: var(--neon-shadow);
@@ -849,8 +1165,10 @@ async function submitChangePassword() {
   padding: 0.6rem 0.8rem;
   border-radius: 0.5rem;
   border: 1px solid var(--input-border);
-  color: var(--text-primary);
-  color: var(--text-primary);
+  /* Input ở trang profile dùng nền sáng, nên chữ phải là màu tối để đọc rõ */
+  background: rgba(255, 255, 255, 0.96);
+  color: #0b1220;
+  caret-color: #0b1220;
   font-size: 0.95rem;
   outline: none;
   transition:
@@ -861,6 +1179,7 @@ async function submitChangePassword() {
 .profile-input:focus {
   border-color: var(--input-focus-border);
   box-shadow: var(--input-focus-glow);
+  color: #0b1220;
 }
 
 .profile-error-msg {
