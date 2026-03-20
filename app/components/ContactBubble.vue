@@ -113,6 +113,22 @@ function saveLastSeenToStorage(id, ts) {
 let ws = null;
 let wsReconnectTimer = null;
 let wsManuallyClosed = false;
+let wsConnected = false;
+
+function subscribeCurrentThread() {
+  if (!threadId.value) return;
+  if (!ws || ws.readyState !== WebSocket.OPEN || !wsConnected) return;
+  try {
+    ws.send(
+      JSON.stringify({
+        type: "subscribe",
+        threadId: threadId.value,
+      }),
+    );
+  } catch {
+    // ignore
+  }
+}
 
 async function scrollToBottom() {
   if (!messagesEl.value) return;
@@ -187,7 +203,7 @@ async function initBubble() {
   }
 }
 
-function setupWebSocket() {
+async function setupWebSocket() {
   if (typeof window === "undefined") return;
   if (!threadId.value) return;
 
@@ -201,23 +217,41 @@ function setupWebSocket() {
   wsManuallyClosed = false;
 
   const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-  const url = `${protocol}://${window.location.host}/ws/support`;
+  let wsAuthToken = "";
+  try {
+    const res = await $fetch("/api/support/ws-token");
+    wsAuthToken = String(res?.token || "");
+  } catch {
+    wsAuthToken = "";
+  }
+  if (!wsAuthToken) {
+    if (!wsManuallyClosed) {
+      wsReconnectTimer = setTimeout(() => {
+        setupWebSocket();
+      }, 3000);
+    }
+    return;
+  }
+  const query = `?ws_token=${encodeURIComponent(wsAuthToken)}`;
+  const url = `${protocol}://${window.location.host}/ws/support${query}`;
 
   ws = new WebSocket(url);
 
   ws.addEventListener("open", () => {
+    wsConnected = true;
     if (wsReconnectTimer) {
       clearTimeout(wsReconnectTimer);
       wsReconnectTimer = null;
     }
-    if (threadId.value) {
+    if (wsAuthToken) {
       ws.send(
         JSON.stringify({
-          type: "subscribe",
-          threadId: threadId.value,
+          type: "auth",
+          token: wsAuthToken,
         }),
       );
     }
+    subscribeCurrentThread();
   });
 
   ws.addEventListener("message", (event) => {
@@ -225,7 +259,7 @@ function setupWebSocket() {
       const data = JSON.parse(event.data);
       if (
         data.type === "support_message" &&
-        data.threadId === threadId.value &&
+        Number(data.threadId) === Number(threadId.value) &&
         data.message
       ) {
         messages.value.push(data.message);
@@ -247,6 +281,7 @@ function setupWebSocket() {
   });
 
   ws.addEventListener("close", () => {
+    wsConnected = false;
     ws = null;
     if (!wsManuallyClosed) {
       wsReconnectTimer = setTimeout(() => {
@@ -295,11 +330,24 @@ async function sendMessage() {
   const text = draft.value.trim();
   sending.value = true;
   try {
-    await $fetch("/api/support/messages", {
-      method: "POST",
-      body: { thread_id: threadId.value, content: text },
-    });
-    draft.value = "";
+    if (ws && ws.readyState === WebSocket.OPEN && wsConnected) {
+      ws.send(
+        JSON.stringify({
+          type: "message",
+          threadId: threadId.value,
+          content: text,
+        }),
+      );
+      draft.value = "";
+    } else {
+      // Fallback duy nhất khi WS chưa sẵn sàng
+      await $fetch("/api/support/messages", {
+        method: "POST",
+        body: { thread_id: threadId.value, content: text },
+      });
+      draft.value = "";
+      await loadThreadMessages();
+    }
   } catch {
     // ignore
   } finally {
@@ -320,6 +368,13 @@ watch(
     if (val) {
       scrollToBottom();
     }
+  },
+);
+
+watch(
+  () => threadId.value,
+  () => {
+    subscribeCurrentThread();
   },
 );
 
@@ -369,6 +424,7 @@ onUnmounted(() => {
     } catch {
       // ignore
     }
+    wsConnected = false;
     ws = null;
   }
 });

@@ -92,6 +92,7 @@ const isLoggedIn = computed(() => !!me.value);
 let ws;
 let reconnectTimer;
 let manuallyClosed = false;
+let wsConnected = false;
 
 function isMine(m) {
   if (!me.value) return false;
@@ -125,18 +126,35 @@ async function loadMe() {
   }
 }
 
+async function loadHistory() {
+  try {
+    const res = await $fetch("/api/chat/messages");
+    if (Array.isArray(res)) {
+      messages.value = res;
+      scrollToBottom();
+    }
+  } catch {
+    // ignore
+  }
+}
+
 async function handleSend() {
   if (!isLoggedIn.value) return;
   const text = draft.value.trim();
   if (!text) return;
   sending.value = true;
   try {
-    if (ws && ws.readyState === WebSocket.OPEN) {
+    if (ws && ws.readyState === WebSocket.OPEN && wsConnected) {
       ws.send(JSON.stringify({ type: "message", content: text }));
       draft.value = "";
     } else {
-      // Nếu WebSocket chưa sẵn sàng thì thử khởi động lại,
-      // và báo lỗi nhẹ thay vì fallback sang HTTP.
+      // Fallback HTTP giúp vẫn gửi được khi WS đang reconnect/chưa kịp mở.
+      await $fetch("/api/chat/messages", {
+        method: "POST",
+        body: { content: text },
+      });
+      draft.value = "";
+      await loadHistory();
       setupWebSocket();
     }
   } catch (e) {
@@ -164,6 +182,7 @@ function setupWebSocket() {
   ws = new WebSocket(url);
 
   ws.addEventListener("open", () => {
+    wsConnected = true;
     if (reconnectTimer) {
       clearTimeout(reconnectTimer);
       reconnectTimer = null;
@@ -186,6 +205,7 @@ function setupWebSocket() {
   });
 
   ws.addEventListener("close", () => {
+    wsConnected = false;
     ws = null;
     if (!manuallyClosed) {
       reconnectTimer = setTimeout(() => {
@@ -205,6 +225,7 @@ function setupWebSocket() {
 
 onMounted(async () => {
   await loadMe();
+  await loadHistory();
   setupWebSocket();
 });
 
@@ -220,6 +241,7 @@ onUnmounted(() => {
     } catch {
       // ignore
     }
+    wsConnected = false;
     ws = null;
   }
 });

@@ -171,6 +171,22 @@ const searchTerm = ref("");
 let ws = null;
 let wsReconnectTimer = null;
 let wsManuallyClosed = false;
+let wsConnected = false;
+
+function subscribeActiveThread() {
+  if (!activeThreadId.value) return;
+  if (!ws || ws.readyState !== WebSocket.OPEN || !wsConnected) return;
+  try {
+    ws.send(
+      JSON.stringify({
+        type: "subscribe",
+        threadId: activeThreadId.value,
+      }),
+    );
+  } catch {
+    // ignore
+  }
+}
 
 async function loadThreads() {
   try {
@@ -270,7 +286,7 @@ async function loadActiveThread() {
   }
 }
 
-function setupWebSocket() {
+async function setupWebSocket() {
   if (typeof window === "undefined") return;
 
   if (
@@ -283,23 +299,41 @@ function setupWebSocket() {
   wsManuallyClosed = false;
 
   const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-  const url = `${protocol}://${window.location.host}/ws/support`;
+  let wsAuthToken = "";
+  try {
+    const res = await $fetch("/api/support/ws-token");
+    wsAuthToken = String(res?.token || "");
+  } catch {
+    wsAuthToken = "";
+  }
+  if (!wsAuthToken) {
+    if (!wsManuallyClosed) {
+      wsReconnectTimer = setTimeout(() => {
+        setupWebSocket();
+      }, 3000);
+    }
+    return;
+  }
+  const query = `?ws_token=${encodeURIComponent(wsAuthToken)}`;
+  const url = `${protocol}://${window.location.host}/ws/support${query}`;
 
   ws = new WebSocket(url);
 
   ws.addEventListener("open", () => {
+    wsConnected = true;
     if (wsReconnectTimer) {
       clearTimeout(wsReconnectTimer);
       wsReconnectTimer = null;
     }
-    if (activeThreadId.value) {
+    if (wsAuthToken) {
       ws.send(
         JSON.stringify({
-          type: "subscribe",
-          threadId: activeThreadId.value,
+          type: "auth",
+          token: wsAuthToken,
         }),
       );
     }
+    subscribeActiveThread();
   });
 
   ws.addEventListener("message", async (event) => {
@@ -352,6 +386,7 @@ function setupWebSocket() {
   });
 
   ws.addEventListener("close", () => {
+    wsConnected = false;
     ws = null;
     if (!wsManuallyClosed) {
       wsReconnectTimer = setTimeout(() => {
@@ -385,18 +420,7 @@ function selectThread(id) {
   activeThreadId.value = id;
   unreadMap.value[id] = 0;
   loadActiveThread();
-  if (ws && ws.readyState === WebSocket.OPEN) {
-    try {
-      ws.send(
-        JSON.stringify({
-          type: "subscribe",
-          threadId: id,
-        }),
-      );
-    } catch {
-      // ignore
-    }
-  }
+  subscribeActiveThread();
 }
 
 function formatTime(val) {
@@ -413,12 +437,25 @@ async function sendMessage() {
   const text = draft.value.trim();
   sending.value = true;
   try {
-    await $fetch("/api/support/messages", {
-      method: "POST",
-      body: { thread_id: activeThreadId.value, content: text },
-    });
-    draft.value = "";
-    // không cần reload lại qua HTTP, tin nhắn mới sẽ đến qua WebSocket
+    if (ws && ws.readyState === WebSocket.OPEN && wsConnected) {
+      ws.send(
+        JSON.stringify({
+          type: "message",
+          threadId: activeThreadId.value,
+          content: text,
+        }),
+      );
+      draft.value = "";
+    } else {
+      await $fetch("/api/support/messages", {
+        method: "POST",
+        body: { thread_id: activeThreadId.value, content: text },
+      });
+      draft.value = "";
+      // fallback khi WS chưa mở/đứt tạm thời: reload để thấy tin nhắn ngay.
+      await loadActiveThread();
+      await loadThreads();
+    }
   } catch {
     // ignore
   } finally {
@@ -426,18 +463,19 @@ async function sendMessage() {
   }
 }
 
-let autoRefreshTimer = null;
 onMounted(() => {
   loadThreads();
   setupWebSocket();
-  autoRefreshTimer = setInterval(loadThreads, 5000);
 });
 
+watch(
+  () => activeThreadId.value,
+  () => {
+    subscribeActiveThread();
+  },
+);
+
 onUnmounted(() => {
-  if (autoRefreshTimer) {
-    clearInterval(autoRefreshTimer);
-    autoRefreshTimer = null;
-  }
   wsManuallyClosed = true;
   if (wsReconnectTimer) {
     clearTimeout(wsReconnectTimer);
@@ -449,6 +487,7 @@ onUnmounted(() => {
     } catch {
       // ignore
     }
+    wsConnected = false;
     ws = null;
   }
 });

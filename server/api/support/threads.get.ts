@@ -21,10 +21,15 @@ export default defineEventHandler(async (event) => {
     });
   }
 
-  if (current.role !== "admin_0" && current.role !== "admin_1") {
+  if (
+    current.role !== "admin_0" &&
+    current.role !== "admin_1" &&
+    current.role !== "admin_2"
+  ) {
     throw createError({
       statusCode: 403,
-      statusMessage: "Chỉ admin_0 / admin_1 mới xem được danh sách chat hỗ trợ.",
+      statusMessage:
+        "Chỉ admin_0 / admin_1 / admin_2 mới xem được danh sách chat hỗ trợ.",
     });
   }
 

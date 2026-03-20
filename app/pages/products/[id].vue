@@ -578,6 +578,8 @@ const productChatHasUnread = ref(0);
 let productChatWs = null;
 let productChatWsReconnectTimer = null;
 let productChatWsManuallyClosed = false;
+let productChatWsConnected = false;
+let productChatWsAuthToken = "";
 
 const reviewsLoading = ref(false);
 const reviews = ref([]);
@@ -743,11 +745,27 @@ async function sendProductChat() {
   const text = productChatDraft.value.trim();
   productChatSending.value = true;
   try {
-    await $fetch("/api/support/messages", {
-      method: "POST",
-      body: { thread_id: productChatThreadId.value, content: text },
-    });
-    productChatDraft.value = "";
+    if (
+      productChatWs &&
+      productChatWs.readyState === WebSocket.OPEN &&
+      productChatWsConnected
+    ) {
+      productChatWs.send(
+        JSON.stringify({
+          type: "message",
+          threadId: productChatThreadId.value,
+          content: text,
+        }),
+      );
+      productChatDraft.value = "";
+    } else {
+      // Fallback: keep UX working if WS chưa sẵn sàng.
+      await $fetch("/api/support/messages", {
+        method: "POST",
+        body: { thread_id: productChatThreadId.value, content: text },
+      });
+      productChatDraft.value = "";
+    }
   } catch {
     // ignore
   } finally {
@@ -779,22 +797,51 @@ function setupProductChatWebSocket() {
       clearTimeout(productChatWsReconnectTimer);
       productChatWsReconnectTimer = null;
     }
-    if (productChatThreadId.value && productChatWs) {
-      productChatWs.send(
-        JSON.stringify({
-          type: "subscribe",
-          threadId: productChatThreadId.value,
-        }),
-      );
-    }
+    productChatWsConnected = false;
+    productChatWsAuthToken = "";
+
+    $fetch("/api/support/ws-token")
+      .then((res) => {
+        productChatWsAuthToken = String(res?.token || "");
+      })
+      .finally(() => {
+        if (!productChatWsAuthToken) {
+          try {
+            productChatWs.close();
+          } catch {}
+          return;
+        }
+        productChatWs.send(
+          JSON.stringify({
+            type: "auth",
+            token: productChatWsAuthToken,
+          }),
+        );
+      });
   });
 
   productChatWs.addEventListener("message", async (event) => {
     try {
       const data = JSON.parse(event.data);
+      if (data?.type === "auth_ok") {
+        productChatWsConnected = true;
+        if (productChatThreadId.value && productChatWs) {
+          productChatWs.send(
+            JSON.stringify({
+              type: "subscribe",
+              threadId: productChatThreadId.value,
+            }),
+          );
+        }
+        return;
+      }
+      if (data?.type === "error") {
+        productChatWsConnected = false;
+        return;
+      }
       if (
         data.type === "support_message" &&
-        data.threadId === productChatThreadId.value &&
+        Number(data.threadId) === Number(productChatThreadId.value) &&
         data.message
       ) {
         productChatMessages.value.push(data.message);
@@ -820,6 +867,7 @@ function setupProductChatWebSocket() {
 
   productChatWs.addEventListener("close", () => {
     productChatWs = null;
+    productChatWsConnected = false;
     if (!productChatWsManuallyClosed) {
       productChatWsReconnectTimer = setTimeout(() => {
         setupProductChatWebSocket();

@@ -1,6 +1,6 @@
 import pool from "../../utils/db";
 import { ensureSupportChatSchema } from "../../utils/supportChat";
-import { broadcastSupportMessage } from "../../routes/ws/support";
+import { broadcastSupportMessage } from "../../utils/supportWsHub";
 import { requireAuth } from "../../utils/authHelpers";
 import { checkRateLimit, rateLimitKey } from "../../utils/rateLimit";
 
