@@ -22,7 +22,7 @@ export default defineEventHandler(async (event) => {
 
   const [rows]: any = await pool.query(
     `
-      SELECT id, author_id, author_role, author_name, content, created_at
+      SELECT id, author_id, author_role, author_name, content, image_url, created_at
       FROM community_messages
       ORDER BY created_at DESC, id DESC
       LIMIT ?
@@ -42,6 +42,7 @@ export default defineEventHandler(async (event) => {
       authorRole: m.author_role,
       authorName: m.author_name,
       content: m.content,
+      imageUrl: m.image_url,
       createdAt: m.created_at,
     }))
 }

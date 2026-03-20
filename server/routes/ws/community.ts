@@ -20,7 +20,7 @@ async function loadRecentMessages(limit = 100) {
   await ensureChatSchema();
   const [rows]: any = await pool.query(
     `
-      SELECT id, author_id, author_role, author_name, content, created_at
+      SELECT id, author_id, author_role, author_name, content, image_url, created_at
       FROM community_messages
       ORDER BY created_at DESC, id DESC
       LIMIT ?
@@ -37,11 +37,23 @@ async function loadRecentMessages(limit = 100) {
       authorRole: m.author_role,
       authorName: m.author_name,
       content: m.content,
+      imageUrl: m.image_url,
       createdAt: m.created_at,
     }));
 }
 
-async function createMessageFromPeer(peer: CommunityPeer, contentRaw: string) {
+function sanitizeChatImageUrl(urlRaw: unknown): string {
+  const url = String(urlRaw || "").trim();
+  if (!url) return '';
+  // Upload endpoint trả về dạng `/uploads/chat/<file>`
+  if (!url.startsWith('/uploads/chat/')) return '';
+  return url;
+}
+
+async function createMessageFromPeer(
+  peer: CommunityPeer,
+  payload: { contentRaw?: string; imageUrlRaw?: unknown },
+) {
   const event = getEventFromPeer(peer);
   if (!event) {
     throw new Error("No event context");
@@ -71,11 +83,14 @@ async function createMessageFromPeer(peer: CommunityPeer, contentRaw: string) {
     statusMessage: "RATE_LIMITED",
   });
 
-  let content = String(contentRaw || "").trim();
-  if (!content) {
-    throw new Error("EMPTY_CONTENT");
+  let content = String(payload?.contentRaw || "").trim();
+  const imageUrl = sanitizeChatImageUrl(payload?.imageUrlRaw);
+
+  // Cho phép gửi ảnh mà không cần content.
+  if (!content && !imageUrl) {
+    throw new Error("EMPTY_MESSAGE");
   }
-  if (content.length > 500) {
+  if (content && content.length > 500) {
     content = content.slice(0, 500);
   }
 
@@ -87,10 +102,10 @@ async function createMessageFromPeer(peer: CommunityPeer, contentRaw: string) {
 
   const [result]: any = await pool.query(
     `
-      INSERT INTO community_messages (author_id, author_role, author_name, content)
-      VALUES (?, ?, ?, ?)
+      INSERT INTO community_messages (author_id, author_role, author_name, content, image_url)
+      VALUES (?, ?, ?, ?, ?)
     `,
-    [authorId, authorRole, authorName, content],
+    [authorId, authorRole, authorName, content, imageUrl || null],
   );
 
   const insertedId = result?.insertId;
@@ -101,6 +116,7 @@ async function createMessageFromPeer(peer: CommunityPeer, contentRaw: string) {
     authorRole,
     authorName,
     content,
+    imageUrl: imageUrl || null,
     createdAt: new Date(),
   };
 }
@@ -168,7 +184,10 @@ export default defineWebSocketHandler({
       }
 
       if (data?.type === "message") {
-        const created = await createMessageFromPeer(peer, data.content);
+        const created = await createMessageFromPeer(peer, {
+          contentRaw: data.content,
+          imageUrlRaw: data.imageUrl,
+        });
         broadcast({
           type: "message",
           message: created,

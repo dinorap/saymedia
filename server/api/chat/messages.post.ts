@@ -16,9 +16,16 @@ export default defineEventHandler(async (event) => {
 
   const body = await readBody(event)
   let content = String(body?.content || '').trim()
-  if (!content) {
-    throw createError({ statusCode: 400, statusMessage: 'Nội dung trống.' })
+  const imageUrl = String(body?.imageUrl || '').trim()
+
+  const safeImageUrl = imageUrl && imageUrl.startsWith('/uploads/chat/')
+    ? imageUrl
+    : ''
+
+  if (!content && !safeImageUrl) {
+    throw createError({ statusCode: 400, statusMessage: 'Nội dung hoặc ảnh là bắt buộc.' })
   }
+
   if (content.length > 500) {
     content = content.slice(0, 500)
   }
@@ -31,10 +38,10 @@ export default defineEventHandler(async (event) => {
 
   await pool.query(
     `
-      INSERT INTO community_messages (author_id, author_role, author_name, content)
-      VALUES (?, ?, ?, ?)
+      INSERT INTO community_messages (author_id, author_role, author_name, content, image_url)
+      VALUES (?, ?, ?, ?, ?)
     `,
-    [authorId, authorRole, authorName, content],
+    [authorId, authorRole, authorName, content || '', safeImageUrl || null],
   )
 
   return { success: true }

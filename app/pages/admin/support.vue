@@ -118,8 +118,19 @@
               'support-msg--mine': m.sender_type === 'admin',
             }"
           >
-            <div class="support-msg-content">
-              {{ m.content }}
+            <div v-if="m.imageUrl" class="support-image-wrap">
+              <img
+                :src="m.imageUrl"
+                class="support-chat-image"
+                alt="Ảnh"
+                loading="lazy"
+              />
+              <div v-if="m.content" class="support-msg-content">
+                {{ m.content }}
+              </div>
+            </div>
+            <div v-else class="support-msg-content">
+              <span v-if="m.content">{{ m.content }}</span>
             </div>
           </div>
           <p v-if="!messages.length" class="support-empty">
@@ -136,12 +147,29 @@
           >
             😊
           </button>
+          <button
+            type="button"
+            class="support-icon-btn"
+            :disabled="sending || uploadingImage"
+            aria-label="Gửi ảnh"
+            @click="triggerImagePick"
+          >
+            📷
+          </button>
+          <input
+            ref="fileInputEl"
+            type="file"
+            accept="image/*"
+            style="display: none"
+            @change="onFileSelected"
+          />
           <input
             v-model="draft"
             type="text"
             class="support-input"
             :placeholder="$t('admin.supportInputPlaceholder')"
             @keyup.enter="sendMessage"
+            @paste="onPasteImage"
           />
           <button
             type="button"
@@ -177,6 +205,8 @@ const activeThread = ref(null);
 const messages = ref([]);
 const draft = ref("");
 const sending = ref(false);
+const uploadingImage = ref(false);
+const fileInputEl = ref(null);
 const showIconPicker = ref(false);
 const messagesEl = ref(null);
 const scope = ref("mine"); // 'mine' | 'all' (only for admin_0)
@@ -469,11 +499,93 @@ function handleEmojiClick(event) {
   showIconPicker.value = false;
 }
 
-async function sendMessage() {
-  if (!activeThreadId.value || !draft.value.trim() || sending.value) return;
-  const text = draft.value.trim();
+function triggerImagePick() {
+  if (sending.value || uploadingImage.value) return;
+  fileInputEl.value?.click();
+}
+
+async function onFileSelected(e) {
+  const input = e.target;
+  const file = input?.files?.[0];
+  if (!file) return;
+  if (!file.type?.startsWith("image/")) return;
+  try {
+    await handleSelectedImageFile(file);
+  } finally {
+    if (input) input.value = "";
+  }
+}
+
+function getImageFileFromClipboardData(clipboardData) {
+  if (!clipboardData) return null;
+  const items = clipboardData.items;
+  if (items && items.length) {
+    for (const item of Array.from(items)) {
+      const kind = item?.kind;
+      const type = item?.type;
+      if (kind === "file" && type && String(type).startsWith("image/")) {
+        const file = item.getAsFile?.();
+        if (file) return file;
+      }
+    }
+  }
+  const files = clipboardData.files;
+  if (files && files.length) {
+    const file = files[0];
+    if (file && file.type && String(file.type).startsWith("image/")) return file;
+  }
+  return null;
+}
+
+async function handleSelectedImageFile(file) {
+  if (!activeThreadId.value || sending.value) return;
+  if (!file?.type?.startsWith("image/")) return;
+
+  uploadingImage.value = true;
+  try {
+    const fd = new FormData();
+    fd.append("file", file);
+
+    const res = await $fetch("/api/upload/chat-image", {
+      method: "POST",
+      body: fd,
+    });
+
+    const url = String(res?.url || "");
+    if (!url) return;
+
+    const caption = draft.value.trim();
+    await sendSupportMessage({ contentText: caption, imageUrl: url });
+  } finally {
+    uploadingImage.value = false;
+  }
+}
+
+async function onPasteImage(e) {
+  if (sending.value || uploadingImage.value) return;
+  if (!activeThreadId.value) return;
+
+  const file = getImageFileFromClipboardData(e?.clipboardData);
+  if (!file) return;
+
+  e.preventDefault();
+  await handleSelectedImageFile(file);
+}
+
+async function sendSupportMessage({
+  contentText,
+  imageUrl = "",
+}) {
+  if (!activeThreadId.value || sending.value) return;
+
+  const text = String(contentText || "").trim();
+  const safeImageUrl = String(imageUrl || "").trim();
+
+  if (!text && !safeImageUrl) return;
+
   sending.value = true;
   showIconPicker.value = false;
+
   try {
     if (ws && ws.readyState === WebSocket.OPEN && wsConnected) {
       ws.send(
@@ -481,13 +593,18 @@ async function sendMessage() {
           type: "message",
           threadId: activeThreadId.value,
           content: text,
+          imageUrl: safeImageUrl || undefined,
         }),
       );
       draft.value = "";
     } else {
       await $fetch("/api/support/messages", {
         method: "POST",
-        body: { thread_id: activeThreadId.value, content: text },
+        body: {
+          thread_id: activeThreadId.value,
+          content: text,
+          imageUrl: safeImageUrl || undefined,
+        },
       });
       draft.value = "";
       // fallback khi WS chưa mở/đứt tạm thời: reload để thấy tin nhắn ngay.
@@ -499,6 +616,13 @@ async function sendMessage() {
   } finally {
     sending.value = false;
   }
+}
+
+async function sendMessage() {
+  if (!activeThreadId.value || sending.value) return;
+  const text = draft.value.trim();
+  if (!text) return;
+  await sendSupportMessage({ contentText: text });
 }
 
 onMounted(async () => {
@@ -798,6 +922,24 @@ onUnmounted(() => {
   border: 1px solid rgba(51, 65, 85, 0.9);
   font-size: 0.82rem;
   line-height: 1.45;
+}
+
+.support-chat-image {
+  max-width: 260px;
+  max-height: 260px;
+  width: auto;
+  height: auto;
+  border-radius: 10px;
+  display: block;
+  margin: 0 0 6px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+}
+
+.support-image-wrap {
+  /* Không dùng background/padding của support-msg-content cho phần ảnh */
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .support-msg--mine .support-msg-content {

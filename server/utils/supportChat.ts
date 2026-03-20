@@ -31,10 +31,19 @@ export async function ensureSupportChatSchema() {
       sender_type ENUM('user', 'admin') NOT NULL,
       sender_id INT NOT NULL,
       content TEXT NOT NULL,
+      image_url TEXT NULL,
       created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (thread_id) REFERENCES support_threads(id) ON DELETE CASCADE
     )
   `);
+
+  try {
+    await pool.query(
+      "ALTER TABLE support_messages ADD COLUMN image_url TEXT NULL",
+    );
+  } catch {
+    // Column may already exist.
+  }
 
   supportSchemaReady = true;
 }

@@ -15,9 +15,18 @@ export async function ensureChatSchema() {
       author_role VARCHAR(20) NOT NULL,
       author_name VARCHAR(100) NOT NULL,
       content TEXT NOT NULL,
+      image_url TEXT NULL,
       created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
     )
   `)
+
+  try {
+    await pool.query(
+      "ALTER TABLE community_messages ADD COLUMN image_url TEXT NULL",
+    )
+  } catch {
+    // Column may already exist.
+  }
 
   chatSchemaReady = true
 }
@@ -28,6 +37,7 @@ export interface ChatMessageRow {
   author_role: string
   author_name: string
   content: string
+  image_url?: string | null
   created_at: Date
 }
 

@@ -493,7 +493,14 @@
                 }"
               >
                 <div class="detail-contact-message-content">
-                  {{ m.content }}
+                  <img
+                    v-if="m.imageUrl"
+                    :src="m.imageUrl"
+                    class="detail-contact-chat-image"
+                    alt="Ảnh"
+                    loading="lazy"
+                  />
+                  <span v-if="m.content">{{ m.content }}</span>
                 </div>
               </div>
               <div
@@ -513,6 +520,23 @@
                   'Nhập nội dung cần hỗ trợ...'
                 "
                 @keyup.enter="sendProductChat"
+                @paste="onProductChatPaste"
+              />
+              <button
+                type="button"
+                class="detail-contact-image-btn"
+                :disabled="productChatSending || productChatUploadingImage"
+                aria-label="Gửi ảnh"
+                @click="triggerProductChatImagePick"
+              >
+                📷
+              </button>
+              <input
+                ref="productChatFileInputEl"
+                type="file"
+                accept="image/*"
+                style="display: none"
+                @change="onProductChatFileSelected"
               />
               <button
                 type="button"
@@ -571,6 +595,8 @@ const productChatThreadId = ref(null);
 const productChatMessages = ref([]);
 const productChatDraft = ref("");
 const productChatSending = ref(false);
+const productChatUploadingImage = ref(false);
+const productChatFileInputEl = ref<HTMLInputElement | null>(null);
 const productChatMessagesEl = ref(null);
 const productChatLastSeen = ref(0);
 const productChatHasUnread = ref(0);
@@ -734,15 +760,92 @@ async function openProductChat() {
   }
 }
 
-async function sendProductChat() {
-  if (
-    !productChatThreadId.value ||
-    !productChatDraft.value.trim() ||
-    productChatSending.value
-  ) {
-    return;
+function triggerProductChatImagePick() {
+  if (productChatSending.value || productChatUploadingImage.value) return;
+  productChatFileInputEl.value?.click();
+}
+
+async function onProductChatFileSelected(e: Event) {
+  const input = e.target as HTMLInputElement;
+  const file = input?.files?.[0];
+  if (!file) return;
+  if (!file.type?.startsWith("image/")) return;
+  try {
+    await handleProductChatSelectedImageFile(file);
+  } finally {
+    if (input) input.value = "";
   }
-  const text = productChatDraft.value.trim();
+}
+
+function getImageFileFromClipboardData(clipboardData: DataTransfer | null) {
+  if (!clipboardData) return null;
+  const items = clipboardData.items;
+  if (items && items.length) {
+    for (const item of Array.from(items)) {
+      const kind = item?.kind;
+      const type = item?.type;
+      if (kind === "file" && type && String(type).startsWith("image/")) {
+        const file = item.getAsFile?.();
+        if (file) return file;
+      }
+    }
+  }
+  const files = clipboardData.files;
+  if (files && files.length) {
+    const file = files[0];
+    if (file && file.type && String(file.type).startsWith("image/")) return file;
+  }
+  return null;
+}
+
+async function handleProductChatSelectedImageFile(file: File) {
+  if (!productChatThreadId.value || productChatSending.value) return;
+  if (!file?.type?.startsWith("image/")) return;
+
+  productChatUploadingImage.value = true;
+  try {
+    const fd = new FormData();
+    fd.append("file", file);
+
+    const res = await $fetch("/api/upload/chat-image", {
+      method: "POST",
+      body: fd,
+    });
+
+    const url = String(res?.url || "");
+    if (!url) return;
+
+    const caption = productChatDraft.value.trim();
+    await sendProductChatMessage({ contentText: caption, imageUrl: url });
+  } finally {
+    productChatUploadingImage.value = false;
+  }
+}
+
+async function onProductChatPaste(e: ClipboardEvent) {
+  if (productChatSending.value || productChatUploadingImage.value) return;
+  if (!productChatThreadId.value) return;
+
+  const file = getImageFileFromClipboardData(e?.clipboardData || null);
+  if (!file) return;
+
+  e.preventDefault();
+  await handleProductChatSelectedImageFile(file);
+}
+
+async function sendProductChatMessage({
+  contentText,
+  imageUrl = "",
+}: {
+  contentText: string;
+  imageUrl?: string;
+}) {
+  if (!productChatThreadId.value || productChatSending.value) return;
+
+  const text = String(contentText || "").trim();
+  const safeImageUrl = String(imageUrl || "").trim();
+  if (!text && !safeImageUrl) return;
+
   productChatSending.value = true;
   try {
     if (
@@ -755,6 +858,7 @@ async function sendProductChat() {
           type: "message",
           threadId: productChatThreadId.value,
           content: text,
+          imageUrl: safeImageUrl || undefined,
         }),
       );
       productChatDraft.value = "";
@@ -762,15 +866,27 @@ async function sendProductChat() {
       // Fallback: keep UX working if WS chưa sẵn sàng.
       await $fetch("/api/support/messages", {
         method: "POST",
-        body: { thread_id: productChatThreadId.value, content: text },
+        body: {
+          thread_id: productChatThreadId.value,
+          content: text,
+          imageUrl: safeImageUrl || undefined,
+        },
       });
       productChatDraft.value = "";
+      await loadProductChatMessages();
     }
   } catch {
     // ignore
   } finally {
     productChatSending.value = false;
   }
+}
+
+async function sendProductChat() {
+  if (!productChatThreadId.value || productChatSending.value) return;
+  const text = productChatDraft.value.trim();
+  if (!text) return;
+  await sendProductChatMessage({ contentText: text });
 }
 
 function setupProductChatWebSocket() {
@@ -2196,6 +2312,17 @@ watch(
   line-height: 1.45;
 }
 
+.detail-contact-chat-image {
+  max-width: 260px;
+  max-height: 260px;
+  width: auto;
+  height: auto;
+  border-radius: 10px;
+  display: block;
+  margin: 0 0 6px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+}
+
 .detail-contact-message--mine .detail-contact-message-content {
   background: linear-gradient(
     135deg,
@@ -2215,6 +2342,26 @@ watch(
   display: flex;
   align-items: center;
   gap: 4px;
+}
+
+.detail-contact-image-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.65);
+  background: rgba(15, 23, 42, 0.98);
+  color: var(--text-primary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.95rem;
+  flex-shrink: 0;
+}
+
+.detail-contact-image-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .detail-contact-input {

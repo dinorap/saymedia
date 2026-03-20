@@ -45,7 +45,14 @@
               <span class="chat-time">{{ formatTime(m.createdAt) }}</span>
             </div>
             <div class="chat-content">
-              {{ m.content }}
+              <img
+                v-if="m.imageUrl"
+                :src="m.imageUrl"
+                class="chat-image"
+                alt="Ảnh"
+                loading="lazy"
+              />
+              <span v-if="m.content">{{ m.content }}</span>
             </div>
           </div>
         </div>
@@ -65,6 +72,22 @@
         >
           😊
         </button>
+        <button
+          type="button"
+          class="chat-icon-btn"
+          :disabled="sending || !isLoggedIn || uploadingImage"
+          aria-label="Gửi ảnh"
+          @click="triggerImagePick"
+        >
+          📷
+        </button>
+        <input
+          ref="fileInputEl"
+          type="file"
+          accept="image/*"
+          style="display: none"
+          @change="onFileSelected"
+        />
         <input
           v-model="draft"
           class="chat-input"
@@ -76,6 +99,7 @@
           "
           :disabled="sending || !isLoggedIn"
           @keyup.enter="handleSend"
+          @paste="onPasteImage"
         />
         <button
           type="button"
@@ -103,7 +127,9 @@
 const messages = ref([]);
 const draft = ref("");
 const sending = ref(false);
+const uploadingImage = ref(false);
 const messagesEl = ref(null);
+const fileInputEl = ref(null);
 
 const me = ref(null);
 // auth_token là httpOnly nên client không tự đọc được; dùng user_role để biết đã login.
@@ -203,17 +229,40 @@ async function handleSend() {
   if (!isLoggedIn.value) return;
   const text = draft.value.trim();
   if (!text) return;
+  await sendChatMessage({ contentText: text });
+}
+
+function triggerImagePick() {
+  if (sending.value) return;
+  fileInputEl.value?.click();
+}
+
+async function sendChatMessage({
+  contentText,
+  imageUrl = "",
+}) {
+  if (!isLoggedIn.value) return;
+  const text = String(contentText || "").trim();
+  const safeImageUrl = String(imageUrl || "").trim();
+  if (!text && !safeImageUrl) return;
+
   sending.value = true;
   showIconPicker.value = false;
   try {
     if (ws && ws.readyState === WebSocket.OPEN && wsConnected) {
-      ws.send(JSON.stringify({ type: "message", content: text }));
+      ws.send(
+        JSON.stringify({
+          type: "message",
+          content: text,
+          imageUrl: safeImageUrl || undefined,
+        }),
+      );
       draft.value = "";
     } else {
       // Fallback HTTP giúp vẫn gửi được khi WS đang reconnect/chưa kịp mở.
       await $fetch("/api/chat/messages", {
         method: "POST",
-        body: { content: text },
+        body: { content: text, imageUrl: safeImageUrl || undefined },
       });
       draft.value = "";
       await loadHistory();
@@ -225,6 +274,79 @@ async function handleSend() {
   } finally {
     sending.value = false;
   }
+}
+
+async function onFileSelected(e) {
+  const input = e?.target;
+  const file = input?.files?.[0];
+  if (!file) return;
+
+  // Basic guard: chỉ nhận ảnh.
+  if (!file.type?.startsWith("image/")) return;
+
+  try {
+    await handleSelectedImageFile(file);
+  } finally {
+    if (input) input.value = "";
+  }
+}
+
+function getImageFileFromClipboardData(clipboardData) {
+  if (!clipboardData) return null;
+
+  // Thường gặp nhất: clipboardData.items
+  const items = clipboardData.items;
+  if (items && items.length) {
+    for (const item of Array.from(items)) {
+      const kind = item?.kind;
+      const type = item?.type;
+      if (kind === "file" && type && String(type).startsWith("image/")) {
+        const file = item.getAsFile?.();
+        if (file) return file;
+      }
+    }
+  }
+
+  // Fallback: clipboardData.files
+  const files = clipboardData.files;
+  if (files && files.length) {
+    const file = files[0];
+    if (file && file.type && String(file.type).startsWith("image/")) return file;
+  }
+
+  return null;
+}
+
+async function handleSelectedImageFile(file) {
+  uploadingImage.value = true;
+  try {
+    const fd = new FormData();
+    fd.append("file", file);
+
+    const res = await $fetch("/api/upload/chat-image", {
+      method: "POST",
+      body: fd,
+    });
+
+    const url = String(res?.url || "");
+    if (!url) return;
+
+    // Nếu đang có text thì gửi kèm làm caption.
+    const caption = draft.value.trim();
+    await sendChatMessage({ contentText: caption, imageUrl: url });
+  } finally {
+    uploadingImage.value = false;
+  }
+}
+
+async function onPasteImage(e) {
+  if (!isLoggedIn.value) return;
+  const file = getImageFileFromClipboardData(e?.clipboardData);
+  if (!file) return;
+
+  // Chặn paste text, thay bằng upload ảnh.
+  e.preventDefault();
+  await handleSelectedImageFile(file);
 }
 
 function setupWebSocket() {
@@ -487,6 +609,17 @@ onUnmounted(() => {
   color: var(--text-primary);
   white-space: pre-wrap;
   line-height: 1.5;
+}
+
+.chat-image {
+  max-width: 240px;
+  max-height: 240px;
+  width: auto;
+  height: auto;
+  border-radius: 12px;
+  display: block;
+  margin-bottom: 6px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
 }
 
 .chat-message--mine .chat-name,

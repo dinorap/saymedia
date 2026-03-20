@@ -28,8 +28,19 @@
               'bubble-message--mine': m.sender_type === 'user',
             }"
           >
-            <div class="bubble-message-content">
-              {{ m.content }}
+            <div v-if="m.imageUrl" class="bubble-image-wrap">
+              <img
+                :src="m.imageUrl"
+                class="bubble-chat-image"
+                alt="Ảnh"
+                loading="lazy"
+              />
+              <div v-if="m.content" class="bubble-message-content">
+                {{ m.content }}
+              </div>
+            </div>
+            <div v-else class="bubble-message-content">
+              <span v-if="m.content">{{ m.content }}</span>
             </div>
           </div>
           <div v-if="!messages.length" class="bubble-empty">
@@ -47,6 +58,22 @@
           >
             😊
           </button>
+          <button
+            type="button"
+            class="bubble-icon-btn"
+            :disabled="sending || uploadingImage"
+            aria-label="Gửi ảnh"
+            @click="triggerImagePick"
+          >
+            📷
+          </button>
+          <input
+            ref="fileInputEl"
+            type="file"
+            accept="image/*"
+            style="display: none"
+            @change="onFileSelected"
+          />
           <input
             v-model="draft"
             type="text"
@@ -56,6 +83,7 @@
               'Nhập nội dung cần hỗ trợ...'
             "
             @keyup.enter="sendMessage"
+            @paste="onPasteImage"
           />
           <button
             type="button"
@@ -96,6 +124,8 @@ const threadId = ref(null);
 const messages = ref([]);
 const draft = ref("");
 const sending = ref(false);
+const uploadingImage = ref(false);
+const fileInputEl = ref(null);
 const messagesEl = ref(null);
 const roleCookie = useCookie("user_role", { path: "/" });
 const lastSeenAt = ref(0);
@@ -365,11 +395,88 @@ async function toggleBubble() {
   }
 }
 
-async function sendMessage() {
-  if (!threadId.value || !draft.value.trim() || sending.value) return;
-  const text = draft.value.trim();
+function triggerImagePick() {
+  if (sending.value || uploadingImage.value) return;
+  fileInputEl.value?.click();
+}
+
+async function onFileSelected(e) {
+  const input = e.target;
+  const file = input?.files?.[0];
+  if (!file) return;
+  if (!file.type?.startsWith("image/")) return;
+  try {
+    await handleSelectedImageFile(file);
+  } finally {
+    if (input) input.value = "";
+  }
+}
+
+function getImageFileFromClipboardData(clipboardData) {
+  if (!clipboardData) return null;
+  const items = clipboardData.items;
+  if (items && items.length) {
+    for (const item of Array.from(items)) {
+      const kind = item?.kind;
+      const type = item?.type;
+      if (kind === "file" && type && String(type).startsWith("image/")) {
+        const file = item.getAsFile?.();
+        if (file) return file;
+      }
+    }
+  }
+  const files = clipboardData.files;
+  if (files && files.length) {
+    const file = files[0];
+    if (file && file.type && String(file.type).startsWith("image/")) return file;
+  }
+  return null;
+}
+
+async function handleSelectedImageFile(file) {
+  if (!threadId.value || sending.value) return;
+  if (!file?.type?.startsWith("image/")) return;
+
+  uploadingImage.value = true;
+  try {
+    const fd = new FormData();
+    fd.append("file", file);
+
+    const res = await $fetch("/api/upload/chat-image", {
+      method: "POST",
+      body: fd,
+    });
+
+    const url = String(res?.url || "");
+    if (!url) return;
+
+    const caption = draft.value.trim();
+    await sendBubbleMessage({ contentText: caption, imageUrl: url });
+  } finally {
+    uploadingImage.value = false;
+  }
+}
+
+async function onPasteImage(e) {
+  if (sending.value || uploadingImage.value) return;
+  const file = getImageFileFromClipboardData(e?.clipboardData);
+  if (!file) return;
+  if (!threadId.value) return;
+
+  e.preventDefault();
+  await handleSelectedImageFile(file);
+}
+
+async function sendBubbleMessage({ contentText, imageUrl = "" }) {
+  if (!threadId.value || sending.value) return;
+
+  const text = String(contentText || "").trim();
+  const safeImageUrl = String(imageUrl || "").trim();
+  if (!text && !safeImageUrl) return;
+
   sending.value = true;
   showIconPicker.value = false;
+
   try {
     if (ws && ws.readyState === WebSocket.OPEN && wsConnected) {
       ws.send(
@@ -377,6 +484,7 @@ async function sendMessage() {
           type: "message",
           threadId: threadId.value,
           content: text,
+          imageUrl: safeImageUrl || undefined,
         }),
       );
       draft.value = "";
@@ -384,7 +492,11 @@ async function sendMessage() {
       // Fallback duy nhất khi WS chưa sẵn sàng
       await $fetch("/api/support/messages", {
         method: "POST",
-        body: { thread_id: threadId.value, content: text },
+        body: {
+          thread_id: threadId.value,
+          content: text,
+          imageUrl: safeImageUrl || undefined,
+        },
       });
       draft.value = "";
       await loadThreadMessages();
@@ -394,6 +506,13 @@ async function sendMessage() {
   } finally {
     sending.value = false;
   }
+}
+
+async function sendMessage() {
+  if (!threadId.value || sending.value) return;
+  const text = draft.value.trim();
+  if (!text) return;
+  await sendBubbleMessage({ contentText: text });
 }
 
 onMounted(async () => {
@@ -491,7 +610,11 @@ onUnmounted(() => {
   border-radius: 999px;
   border: 1px solid rgb(var(--accent-rgb) / 0.65);
   background:
-    radial-gradient(circle at 0 0, rgb(var(--accent-rgb) / 0.35), transparent 55%),
+    radial-gradient(
+      circle at 0 0,
+      rgb(var(--accent-rgb) / 0.35),
+      transparent 55%
+    ),
     rgba(5, 15, 35, 0.98);
   color: #e5e7eb;
   cursor: pointer;
@@ -524,7 +647,7 @@ onUnmounted(() => {
 }
 
 .bubble-panel {
-  width: 320px;
+  width: 390px;
   border-radius: 16px;
   border: 1px solid rgb(var(--accent-rgb) / 0.55);
   background: rgba(5, 15, 35, 0.98);
@@ -581,7 +704,7 @@ onUnmounted(() => {
 }
 
 .bubble-messages {
-  height: 200px;
+  height: 400px;
   overflow-y: auto;
   padding-right: 2px;
   display: flex;
@@ -621,6 +744,24 @@ onUnmounted(() => {
   background: rgba(15, 23, 42, 0.95);
   border: 1px solid rgba(51, 65, 85, 0.9);
   font-size: 0.82rem;
+}
+
+.bubble-chat-image {
+  max-width: 240px;
+  max-height: 240px;
+  width: auto;
+  height: auto;
+  border-radius: 10px;
+  display: block;
+  margin: 0 0 6px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+}
+
+.bubble-image-wrap {
+  /* Không dùng nền/padding của bubble-message-content cho phần ảnh. */
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .bubble-message--mine .bubble-message-content {

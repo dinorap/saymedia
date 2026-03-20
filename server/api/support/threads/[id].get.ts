@@ -66,7 +66,7 @@ export default defineEventHandler(async (event) => {
 
   const [messages]: any = await pool.query(
     `
-      SELECT id, thread_id, sender_type, sender_id, content, created_at
+      SELECT id, thread_id, sender_type, sender_id, content, image_url AS imageUrl, created_at
       FROM support_messages
       WHERE thread_id = ?
       ORDER BY created_at ASC, id ASC

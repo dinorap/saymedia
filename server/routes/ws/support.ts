@@ -21,6 +21,13 @@ function getEventFromPeer(peer: any): H3Event | undefined {
   return peer?.ctx?.event as H3Event | undefined;
 }
 
+function sanitizeChatImageUrl(urlRaw: unknown): string {
+  const url = String(urlRaw || '').trim();
+  if (!url) return '';
+  if (!url.startsWith('/uploads/chat/')) return '';
+  return url;
+}
+
 function requireWsAuth(peer: SupportPeer) {
   const cached = peerAuth.get(peer);
   if (cached) return cached;
@@ -125,7 +132,12 @@ export default defineWebSocketHandler({
     if (data?.type === "message" && data.threadId) {
       const threadId = Number(data.threadId);
       let content = String(data.content || "").trim();
-      if (!threadId || Number.isNaN(threadId) || !content) return;
+      const imageUrl = sanitizeChatImageUrl(data.imageUrl);
+
+      if (!threadId || Number.isNaN(threadId)) return;
+      // Cho phép gửi ảnh mà không cần content.
+      if (!content && !imageUrl) return;
+
       if (content.length > 2000) content = content.slice(0, 2000);
 
       let current: { id: number; role: string };
@@ -159,10 +171,10 @@ export default defineWebSocketHandler({
 
         const [result]: any = await pool.query(
           `
-            INSERT INTO support_messages (thread_id, sender_type, sender_id, content)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO support_messages (thread_id, sender_type, sender_id, content, image_url)
+            VALUES (?, ?, ?, ?, ?)
           `,
-          [threadId, senderType, current.id, content],
+          [threadId, senderType, current.id, content || '', imageUrl || null],
         );
 
         await pool.query(
@@ -176,6 +188,7 @@ export default defineWebSocketHandler({
           sender_type: senderType,
           sender_id: Number(current.id),
           content,
+          imageUrl: imageUrl || null,
           created_at: new Date(),
         };
 

@@ -10,14 +10,17 @@ export default defineEventHandler(async (event) => {
   const body = await readBody(event);
   const threadId = Number(body?.thread_id);
   let content = String(body?.content || "").trim();
+  const imageUrl = String(body?.imageUrl || "").trim();
+  const safeImageUrl =
+    imageUrl && imageUrl.startsWith('/uploads/chat/') ? imageUrl : '';
 
   if (!threadId || Number.isNaN(threadId)) {
     throw createError({ statusCode: 400, statusMessage: "Thread không hợp lệ" });
   }
-  if (!content) {
-    throw createError({ statusCode: 400, statusMessage: "Nội dung trống" });
+  if (!content && !safeImageUrl) {
+    throw createError({ statusCode: 400, statusMessage: "Nội dung hoặc ảnh là bắt buộc" });
   }
-  if (content.length > 2000) {
+  if (content && content.length > 2000) {
     content = content.slice(0, 2000);
   }
 
@@ -76,10 +79,10 @@ export default defineEventHandler(async (event) => {
 
   await pool.query(
     `
-      INSERT INTO support_messages (thread_id, sender_type, sender_id, content)
-      VALUES (?, ?, ?, ?)
+      INSERT INTO support_messages (thread_id, sender_type, sender_id, content, image_url)
+      VALUES (?, ?, ?, ?, ?)
     `,
-    [threadId, senderType, decoded.id, content],
+    [threadId, senderType, decoded.id, content || '', safeImageUrl || null],
   );
 
   await pool.query(
@@ -90,7 +93,7 @@ export default defineEventHandler(async (event) => {
   try {
     const [rows]: any = await pool.query(
       `
-        SELECT id, thread_id, sender_type, sender_id, content, created_at
+        SELECT id, thread_id, sender_type, sender_id, content, image_url AS imageUrl, created_at
         FROM support_messages
         WHERE thread_id = ?
         ORDER BY created_at DESC, id DESC

@@ -8,6 +8,7 @@ export interface SupportBroadcastMessage {
     sender_type: "user" | "admin";
     sender_id: number;
     content: string;
+    imageUrl?: string | null;
     created_at: string | Date;
   };
 }
