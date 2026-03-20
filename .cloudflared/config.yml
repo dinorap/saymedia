@@ -1,0 +1,7 @@
+tunnel: saymedia-new
+credentials-file: C:\Users\Liketech\.cloudflared\d0fe8128-8979-4f6e-8a58-ba76c24c8fe6.json
+
+ingress:
+  - hostname: saymediaai.com
+    service: http://127.0.0.1:4012
+  - service: http_status:404
