@@ -30,13 +30,25 @@ echo Nuxt preview da san sang.
 
 timeout /t 2 /nobreak >nul
 
+echo Kiem tra Nginx tren 127.0.0.1:80 ...
+for /l %%i in (1,1,20) do (
+  powershell -NoProfile -Command "if (Test-NetConnection -ComputerName 127.0.0.1 -Port 80 -InformationLevel Quiet) { exit 0 } else { exit 1 }" >nul 2>&1
+  if !errorlevel! EQU 0 goto nginx_ready
+  timeout /t 1 /nobreak >nul
+)
+echo Nginx chua san sang tren port 80. Dung script.
+goto cleanup
+
+:nginx_ready
+echo Nginx da san sang.
+
 set "TUNNEL_NAME=saymedia-new"
 
 echo Dang khoi tao Cloudflare Tunnel...
 echo Domain: https://saymediaai.com
 
 REM 👉 Chay tunnel
-.\cloudflared.exe tunnel run %TUNNEL_NAME%
+.\cloudflared.exe tunnel run %TUNNEL_NAME% --url http://localhost:80
 
 :cleanup
 echo.

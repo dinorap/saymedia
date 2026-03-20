@@ -45,15 +45,28 @@ for /l %%i in (1,1,30) do (
 )
 
 echo Nuxt chua san sang. Dung script.
+if defined NUXT_PID taskkill /PID %NUXT_PID% /T /F >nul 2>&1
 exit /b 1
 
 :nuxt_ready
 echo Nuxt da san sang.
 
+echo Kiem tra Nginx tren 127.0.0.1:80 ...
+for /l %%i in (1,1,20) do (
+  powershell -NoProfile -Command "if (Test-NetConnection -ComputerName 127.0.0.1 -Port 80 -InformationLevel Quiet) { exit 0 } else { exit 1 }" >nul 2>&1
+  if !errorlevel! EQU 0 goto nginx_ready
+  timeout /t 1 /nobreak >nul
+)
+echo Nginx chua san sang tren port 80. Dung script.
+if defined NUXT_PID taskkill /PID %NUXT_PID% /T /F >nul 2>&1
+exit /b 1
+
+:nginx_ready
+
 echo Dang khoi tao Cloudflare Tunnel (domain saymediaai.com)...
 
 REM 👉 CHẠY TUNNEL CHUẨN (KHÔNG QUICK)
-start "" cmd /k ".\cloudflared.exe tunnel run saymedia-new"
+start "" cmd /k ".\cloudflared.exe tunnel run saymedia-new --url http://localhost:80"
 
 echo Mo trinh duyet toi https://saymediaai.com/ ...
 REM Tunnel đôi khi cần vài giây để sẵn sàng trước khi load asset
