@@ -344,10 +344,7 @@
                   <span class="expected-value">{{ totalExpectedCredit }}</span>
                 </div>
 
-                <p class="paypal-amount-hint">
-                  Tối thiểu 10.000đ. Sử dụng PayPal sandbox trước khi chuyển
-                  sang live.
-                </p>
+                <p class="paypal-amount-hint">Nạp tối thiểu giá trị 10.000đ.</p>
 
                 <div class="paypal-actions">
                   <div
@@ -394,8 +391,8 @@
                   Mở Telegram hỗ trợ
                 </a>
                 <p class="usdt-note">
-                  Sau khi thanh toán, admin sẽ cộng AI Credit thủ công vào tài khoản
-                  của bạn.
+                  Sau khi thanh toán, admin sẽ cộng AI Credit thủ công vào tài
+                  khoản của bạn.
                 </p>
               </div>
             </div>

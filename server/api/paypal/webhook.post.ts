@@ -14,7 +14,18 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const webhookEvent = await readBody(event)
+  const rawBody = (await readRawBody(event, 'utf8')) || ''
+  if (!rawBody) {
+    throw createError({ statusCode: 400, statusMessage: 'Webhook payload rỗng' })
+  }
+
+  let webhookEvent: any
+  try {
+    webhookEvent = JSON.parse(rawBody)
+  } catch {
+    throw createError({ statusCode: 400, statusMessage: 'Webhook payload không hợp lệ' })
+  }
+
   const result = await handlePaypalWebhook({
     headers: {
       transmissionId,
@@ -23,6 +34,7 @@ export default defineEventHandler(async (event) => {
       certUrl,
       authAlgo,
     },
+    rawBody,
     webhookEvent,
   })
 

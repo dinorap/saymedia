@@ -7,7 +7,7 @@ import crypto from 'crypto'
 
 const PAYPAL_MODE = process.env.PAYPAL_MODE === 'live' ? 'live' : 'sandbox'
 const PAYPAL_API_BASE =
-  PAYPAL_MODE === 'live' ? 'https://api.paypal.com' : 'https://api.sandbox.paypal.com'
+  PAYPAL_MODE === 'live' ? 'https://api-m.paypal.com' : 'https://api-m.sandbox.paypal.com'
 
 const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID || ''
 const PAYPAL_SECRET = process.env.PAYPAL_SECRET || ''
@@ -20,6 +20,55 @@ const DEFAULT_PAYPAL_VND_RATE = Number(process.env.PAYPAL_VND_RATE || '24000') |
 
 let cachedUsdVndRate = DEFAULT_PAYPAL_VND_RATE
 let cachedUsdVndFetchedAt = 0
+const certPemCache = new Map<string, { pem: string; expiresAt: number }>()
+const WEBHOOK_CERT_CACHE_MS = 6 * 60 * 60 * 1000
+
+function crc32Decimal(input: string) {
+  let crc = 0 ^ -1
+  for (let i = 0; i < input.length; i++) {
+    let c = input.charCodeAt(i)
+    crc ^= c
+    for (let j = 0; j < 8; j++) {
+      const mask = -(crc & 1)
+      crc = (crc >>> 1) ^ (0xedb88320 & mask)
+    }
+  }
+  return (crc ^ -1) >>> 0
+}
+
+function isTrustedPaypalCertUrl(url: string) {
+  try {
+    const u = new URL(url)
+    if (u.protocol !== 'https:') return false
+    const host = u.hostname.toLowerCase()
+    return (
+      host === 'api-m.paypal.com' ||
+      host === 'api-m.sandbox.paypal.com' ||
+      host === 'api.paypal.com' ||
+      host === 'api.sandbox.paypal.com'
+    )
+  } catch {
+    return false
+  }
+}
+
+async function getPaypalCertPem(certUrl: string) {
+  if (!isTrustedPaypalCertUrl(certUrl)) {
+    throw createError({ statusCode: 400, statusMessage: 'paypal-cert-url không hợp lệ' })
+  }
+
+  const cached = certPemCache.get(certUrl)
+  const now = Date.now()
+  if (cached && cached.expiresAt > now) return cached.pem
+
+  const res = await fetch(certUrl)
+  if (!res.ok) {
+    throw createError({ statusCode: 502, statusMessage: 'Không tải được chứng chỉ PayPal' })
+  }
+  const pem = await res.text()
+  certPemCache.set(certUrl, { pem, expiresAt: now + WEBHOOK_CERT_CACHE_MS })
+  return pem
+}
 
 async function getUsdVndRate() {
   const now = Date.now()
@@ -89,7 +138,7 @@ async function verifyPayPalWebhookSignature(
     certUrl: string
     authAlgo: string
   },
-  webhookEvent: any,
+  rawBody: string,
 ) {
   if (!PAYPAL_WEBHOOK_ID) {
     throw createError({
@@ -98,32 +147,22 @@ async function verifyPayPalWebhookSignature(
     })
   }
 
-  const accessToken = await getPayPalAccessToken()
-  const res = await fetch(`${PAYPAL_API_BASE}/v1/notifications/verify-webhook-signature`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      transmission_id: headers.transmissionId,
-      transmission_time: headers.transmissionTime,
-      cert_url: headers.certUrl,
-      auth_algo: headers.authAlgo,
-      transmission_sig: headers.transmissionSig,
-      webhook_id: PAYPAL_WEBHOOK_ID,
-      webhook_event: webhookEvent,
-    }),
-  })
+  const crc32 = crc32Decimal(rawBody)
+  const message = `${headers.transmissionId}|${headers.transmissionTime}|${PAYPAL_WEBHOOK_ID}|${crc32}`
+  const certPem = await getPaypalCertPem(headers.certUrl)
+  const signatureBuffer = Buffer.from(headers.transmissionSig, 'base64')
 
-  if (!res.ok) {
-    const text = await res.text()
-    console.error('PayPal webhook verify error', text)
-    return false
-  }
+  const algo = String(headers.authAlgo || '').toUpperCase()
+  const verifyAlgo = algo.includes('SHA512')
+    ? 'RSA-SHA512'
+    : algo.includes('SHA1')
+      ? 'RSA-SHA1'
+      : 'RSA-SHA256'
 
-  const data: any = await res.json()
-  return String(data?.verification_status || '').toUpperCase() === 'SUCCESS'
+  const verifier = crypto.createVerify(verifyAlgo)
+  verifier.update(message)
+  verifier.end()
+  return verifier.verify(certPem, signatureBuffer)
 }
 
 function extractOrderIdFromWebhookEvent(webhookEvent: any) {
@@ -225,38 +264,16 @@ export async function createPaypalDepositOrder(
   }
 }
 
-export async function capturePaypalDepositOrder(userId: number, orderId: string) {
-  if (!orderId) {
-    throw createError({ statusCode: 400, statusMessage: 'Thiếu orderId' })
-  }
-
+async function finalizePaypalDepositOrder(
+  userId: number,
+  orderId: string,
+  source: 'paypal_capture' | 'paypal_webhook' = 'paypal_capture',
+) {
   await ensurePaymentSchema()
   await ensureCreditLedgerSchema()
 
-  const accessToken = await getPayPalAccessToken()
-
-  const res = await fetch(`${PAYPAL_API_BASE}/v2/checkout/orders/${orderId}/capture`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      'Content-Type': 'application/json',
-    },
-  })
-
-  if (!res.ok) {
-    const text = await res.text()
-    console.error('PayPal capture error', text)
-    throw createError({ statusCode: 502, statusMessage: 'Xác nhận thanh toán PayPal thất bại' })
-  }
-
-  const data: any = await res.json()
-
-  const status = data.status
-  if (status !== 'COMPLETED') {
-    throw createError({
-      statusCode: 400,
-      statusMessage: 'Thanh toán PayPal chưa hoàn tất',
-    })
+  if (!orderId) {
+    throw createError({ statusCode: 400, statusMessage: 'Thiếu orderId' })
   }
 
   const conn = await pool.getConnection()
@@ -469,7 +486,7 @@ export async function capturePaypalDepositOrder(userId: number, orderId: string)
       // có thể 0 nếu không có khuyến mãi
       bonus_credit: bonusCredit || 0,
       user_id: userId,
-      source: 'paypal_capture',
+      source,
     },
   })
 
@@ -481,6 +498,38 @@ export async function capturePaypalDepositOrder(userId: number, orderId: string)
   }
 }
 
+export async function capturePaypalDepositOrder(userId: number, orderId: string) {
+  if (!orderId) {
+    throw createError({ statusCode: 400, statusMessage: 'Thiếu orderId' })
+  }
+
+  const accessToken = await getPayPalAccessToken()
+  const res = await fetch(`${PAYPAL_API_BASE}/v2/checkout/orders/${orderId}/capture`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+  })
+
+  if (!res.ok) {
+    const text = await res.text()
+    console.error('PayPal capture error', text)
+    throw createError({ statusCode: 502, statusMessage: 'Xác nhận thanh toán PayPal thất bại' })
+  }
+
+  const data: any = await res.json()
+  const status = data.status
+  if (status !== 'COMPLETED') {
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'Thanh toán PayPal chưa hoàn tất',
+    })
+  }
+
+  return finalizePaypalDepositOrder(userId, orderId, 'paypal_capture')
+}
+
 export async function handlePaypalWebhook(input: {
   headers: {
     transmissionId: string
@@ -489,11 +538,12 @@ export async function handlePaypalWebhook(input: {
     certUrl: string
     authAlgo: string
   }
+  rawBody: string
   webhookEvent: any
 }) {
-  const { headers, webhookEvent } = input
+  const { headers, rawBody, webhookEvent } = input
 
-  const isValid = await verifyPayPalWebhookSignature(headers, webhookEvent)
+  const isValid = await verifyPayPalWebhookSignature(headers, rawBody)
   if (!isValid) {
     throw createError({ statusCode: 400, statusMessage: 'Webhook PayPal không hợp lệ' })
   }
@@ -504,6 +554,15 @@ export async function handlePaypalWebhook(input: {
       ok: true,
       ignored: true,
       reason: `Unsupported event_type: ${eventType || 'unknown'}`,
+    }
+  }
+
+  const resourceStatus = String(webhookEvent?.resource?.status || '').toUpperCase()
+  if (resourceStatus && resourceStatus !== 'COMPLETED') {
+    return {
+      ok: true,
+      ignored: true,
+      reason: `Capture status is not COMPLETED: ${resourceStatus}`,
     }
   }
 
@@ -525,7 +584,7 @@ export async function handlePaypalWebhook(input: {
     }
   }
 
-  const captureResult = await capturePaypalDepositOrder(userId, orderId)
+  const captureResult = await finalizePaypalDepositOrder(userId, orderId, 'paypal_webhook')
   return {
     ok: true,
     ignored: false,
