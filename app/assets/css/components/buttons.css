@@ -72,3 +72,12 @@
   color: var(--text-primary);
   transform: translateY(-1px);
 }
+
+@media (max-width: 640px) {
+  .btn-primary,
+  .btn-secondary,
+  .btn-ghost {
+    padding: 0.7rem 1rem;
+    font-size: 0.92rem;
+  }
+}

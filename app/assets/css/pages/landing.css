@@ -292,3 +292,65 @@
   color      : var(--text-secondary);
   line-height: 1.35;
 }
+
+@media (max-width: 1200px) {
+  .landing-page .hero {
+    padding: 88px 24px 72px;
+  }
+  .landing-page .stats-container {
+    padding: 0 24px 56px;
+    gap: 14px;
+  }
+  .landing-page .stat-card {
+    width: 100%;
+    max-width: 320px;
+  }
+}
+
+@media (max-width: 768px) {
+  .landing-page .hero {
+    flex-direction: column;
+    align-items: flex-start;
+    min-height: auto;
+    padding: 88px 16px 52px;
+    gap: 18px;
+  }
+  .landing-page .hero-content {
+    max-width: 100%;
+  }
+  .landing-page .hero-content h1 {
+    font-size: 34px;
+    margin-bottom: 14px;
+  }
+  .landing-page .hero-content p {
+    font-size: 16px;
+    margin-bottom: 20px;
+  }
+  .landing-page .cta-buttons {
+    width: 100%;
+  }
+  .landing-page .btn-primary,
+  .landing-page .btn-secondary {
+    width: 100%;
+    margin-right: 0;
+    text-align: center;
+    justify-content: center;
+  }
+  .landing-page .hero-image {
+    width: 100%;
+    justify-content: center;
+  }
+  .landing-page .hero-decor {
+    width: 220px;
+    height: 220px;
+  }
+  .landing-page .glow-orb {
+    width: 132px;
+    height: 132px;
+  }
+  .landing-page .stats-container {
+    flex-direction: column;
+    align-items: center;
+    padding: 0 16px 44px;
+  }
+}

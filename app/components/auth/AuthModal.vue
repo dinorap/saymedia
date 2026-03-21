@@ -116,4 +116,27 @@ function handleOverlayClick(event) {
 .auth-modal-card--standalone {
   margin: 0 auto;
 }
+
+@media (max-width: 640px) {
+  .auth-modal-container {
+    padding: 0.75rem;
+  }
+  .auth-modal-card {
+    padding: 1rem;
+    border-radius: 12px;
+  }
+  .auth-modal-close {
+    top: 10px;
+    right: 10px;
+    width: 32px;
+    height: 32px;
+  }
+}
+
+@media (max-width: 480px) {
+  .auth-modal-card {
+    padding: 0.85rem;
+    border-radius: 10px;
+  }
+}
 </style>

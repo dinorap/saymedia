@@ -1699,6 +1699,7 @@ watch(
   font-size: 1.55rem;
   font-weight: 750;
   line-height: 1.25;
+  letter-spacing: 0.01em;
 }
 .detail-short {
   margin: 0 0 16px;
@@ -1804,6 +1805,11 @@ watch(
   flex-wrap: wrap;
   gap: 10px;
   margin-bottom: 20px;
+}
+
+.detail-actions .btn-primary,
+.detail-actions .btn-secondary {
+  min-height: 42px;
 }
 .detail-long-text {
   margin: 0;
@@ -2409,7 +2415,7 @@ watch(
 
 @media (max-width: 1024px) {
   .detail-main {
-    padding: 24px 20px 40px;
+    padding: 92px 20px 40px;
   }
   .detail-hero {
     flex-direction: column;
@@ -2424,6 +2430,93 @@ watch(
   }
   .reviews-summary {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .detail-main {
+    padding: 92px 12px 28px;
+  }
+  .detail-hero {
+    gap: 14px;
+  }
+  .detail-thumb {
+    height: 220px;
+    object-fit: cover;
+  }
+  .thumb-strip {
+    padding: 8px;
+    gap: 8px;
+  }
+  .thumb-btn {
+    width: 70px;
+    height: 52px;
+  }
+  .buy-card {
+    padding: 12px 10px;
+    border-radius: 14px;
+  }
+  .detail-title {
+    font-size: 1.28rem;
+    margin-bottom: 6px;
+  }
+  .detail-short {
+    font-size: 0.86rem;
+    margin-bottom: 12px;
+  }
+  .buy-price .price {
+    font-size: 1.45rem;
+  }
+  .buy-meta-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .buy-duration-select,
+  .buy-qty-input {
+    min-width: 0;
+    width: 100%;
+  }
+  .detail-actions {
+    margin-bottom: 14px;
+  }
+  .detail-actions .btn-primary,
+  .detail-actions .btn-secondary {
+    width: 100%;
+  }
+  .detail-panels {
+    border-radius: 14px;
+    padding: 12px;
+  }
+  .panel-card {
+    padding: 10px;
+  }
+  .review-item {
+    padding: 10px;
+  }
+  .similar-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .detail-main {
+    padding: 88px 10px 18px;
+  }
+  .media-card,
+  .buy-card,
+  .detail-panels,
+  .panel-card,
+  .review-item,
+  .similar-card {
+    border-radius: 12px;
+  }
+  .detail-actions .btn-primary,
+  .detail-actions .btn-secondary {
+    min-height: 40px;
+  }
+  .review-textarea {
+    font-size: 16px;
   }
 }
 </style>

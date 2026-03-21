@@ -724,4 +724,30 @@ onUnmounted(() => {
   width: 100%;
   height: 240px;
 }
+
+@media (max-width: 640px) {
+  .chat-messages {
+    height: 300px;
+    padding: 8px;
+  }
+  .chat-message {
+    max-width: 96%;
+  }
+  .chat-content {
+    font-size: 0.84rem;
+    line-height: 1.4;
+  }
+  .chat-image {
+    max-width: 170px;
+    max-height: 170px;
+  }
+  .chat-icon-btn {
+    width: 34px;
+    height: 34px;
+  }
+  .chat-send-btn {
+    padding: 8px 10px;
+    font-size: 0.84rem;
+  }
+}
 </style>

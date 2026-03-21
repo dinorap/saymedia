@@ -901,4 +901,35 @@ async function submitRefundRequest() {
   min-width: 96px;
   flex-shrink: 0;
 }
+
+@media (max-width: 768px) {
+  .history-overlay {
+    padding: 0.6rem;
+  }
+  .history-header,
+  .history-body,
+  .history-footer {
+    padding-left: 0.85rem;
+    padding-right: 0.85rem;
+  }
+  .history-table {
+    font-size: 0.82rem;
+  }
+  .history-table th,
+  .history-table td {
+    padding: 0.45rem 0.5rem;
+  }
+  .filter-group {
+    width: 100%;
+  }
+  .filter-group input[type="date"],
+  .filter-group .filter-select,
+  .filter-group .filter-search-input {
+    min-width: 0;
+    width: 100%;
+  }
+  .filter-search .filter-search-input {
+    min-width: 0;
+  }
+}
 </style>

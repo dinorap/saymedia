@@ -846,4 +846,27 @@ onUnmounted(() => {
   opacity: 0.6;
   cursor: not-allowed;
 }
+
+@media (max-width: 640px) {
+  .contact-bubble {
+    right: 10px;
+    bottom: 10px;
+  }
+  .bubble-btn {
+    width: 42px;
+    height: 42px;
+  }
+  .bubble-panel {
+    width: min(94vw, 390px);
+    padding: 8px 9px;
+    border-radius: 13px;
+  }
+  .bubble-messages {
+    height: 320px;
+  }
+  .bubble-chat-image {
+    max-width: 170px;
+    max-height: 170px;
+  }
+}
 </style>

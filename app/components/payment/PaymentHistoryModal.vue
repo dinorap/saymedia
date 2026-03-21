@@ -395,4 +395,35 @@ function formatDate(val) {
   cursor: pointer;
   font-size: 0.9rem;
 }
+
+@media (max-width: 768px) {
+  .history-overlay {
+    padding: 0.6rem;
+  }
+  .history-header,
+  .history-body,
+  .history-footer {
+    padding-left: 0.85rem;
+    padding-right: 0.85rem;
+  }
+  .filter-group {
+    width: 100%;
+  }
+  .filter-group input[type="date"],
+  .filter-group .filter-select,
+  .filter-group .filter-search-input {
+    min-width: 0;
+    width: 100%;
+  }
+  .filter-search .filter-search-input {
+    min-width: 0;
+  }
+  .history-table {
+    font-size: 0.82rem;
+  }
+  .history-table th,
+  .history-table td {
+    padding: 0.45rem 0.5rem;
+  }
+}
 </style>

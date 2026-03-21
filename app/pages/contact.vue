@@ -222,10 +222,37 @@ import SiteHeader from "~/components/SiteHeader.vue";
 
 @media (max-width: 1024px) {
   .contact-main {
-    padding: 80px 20px 60px;
+    padding: 92px 20px 60px;
   }
   .contact-hero-inner {
     flex-direction: column;
+  }
+}
+
+@media (max-width: 640px) {
+  .contact-main {
+    padding: 92px 16px 44px;
+  }
+  .contact-hero-inner {
+    padding: 14px 14px 12px;
+    gap: 14px;
+  }
+  .contact-title {
+    font-size: 1.35rem;
+  }
+  .contact-line .label {
+    min-width: 0;
+    margin-right: 6px;
+  }
+  .contact-info {
+    min-width: 0;
+    width: 100%;
+  }
+  .contact-form-section {
+    margin-top: 18px;
+  }
+  .contact-form-card {
+    padding: 14px;
   }
 }
 </style>

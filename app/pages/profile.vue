@@ -1042,6 +1042,55 @@ async function submitChangePassword() {
   }
 }
 
+@media (max-width: 768px) {
+  .profile-main {
+    align-items: flex-start;
+    padding: 92px 0.75rem 1.25rem;
+  }
+  .profile-card {
+    border-radius: 1rem;
+  }
+  .profile-hero {
+    padding: 1.25rem 1rem 1rem;
+  }
+  .profile-hero-grid,
+  .profile-content-grid {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+  .profile-content-grid {
+    padding: 0.95rem 1rem 1rem;
+  }
+  .profile-stats {
+    grid-template-columns: 1fr;
+  }
+  .profile-section,
+  .profile-right-col .profile-stats {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  .profile-field {
+    grid-template-columns: 1fr;
+    gap: 0.35rem;
+  }
+  .profile-actions {
+    grid-template-columns: 1fr;
+  }
+  .profile-customer-edit {
+    padding: 0.95rem 1rem;
+  }
+  .profile-name {
+    font-size: 1.25rem;
+  }
+  .profile-balance-value {
+    font-size: 1.35rem;
+  }
+  .btn-deposit {
+    padding: 0.75rem 1rem;
+    font-size: 0.96rem;
+  }
+}
+
 .profile-customer-edit {
   margin-top: 0;
   padding: 1.1rem 1.25rem;

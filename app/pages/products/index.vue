@@ -632,6 +632,16 @@ onUnmounted(() => {
   gap: 16px;
   cursor: pointer;
   background: rgba(5, 15, 35, 0.95);
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+
+.product-card:hover {
+  border-color: rgb(var(--accent-rgb) / 0.62);
+  box-shadow: 0 0 24px rgb(var(--accent-rgb) / 0.24);
+  transform: translateY(-1px);
 }
 
 .product-stock-badge {
@@ -830,14 +840,103 @@ onUnmounted(() => {
 }
 
 @media (max-width: 1024px) {
-  .header {
-    padding: 18px 24px;
-  }
   .products-main {
-    padding: 28px 24px 40px;
+    padding: 92px 20px 40px;
   }
   .products-list {
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .products-hero-inner {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .products-toolbar {
+    padding: 0.65rem 0.75rem;
+  }
+  .toolbar-left {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .toolbar-group {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .input--sm {
+    min-width: 0;
+    width: 100%;
+  }
+  .product-card {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    padding: 12px;
+  }
+  .product-left {
+    align-items: center;
+  }
+  .product-thumb-wrap {
+    width: 110px;
+    height: 110px;
+  }
+  .product-row {
+    flex-direction: column;
+    gap: 10px;
+  }
+  .product-actions {
+    width: 100%;
+    align-items: stretch;
+  }
+  .product-meta-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .product-duration-select,
+  .product-qty-input {
+    width: 100%;
+  }
+  .product-actions-row {
+    width: 100%;
+  }
+  .product-actions-row .btn-secondary,
+  .product-actions-row .btn-primary {
+    flex: 1;
+    min-width: 0;
+  }
+  .products-hero-title {
+    font-size: 1.2rem;
+  }
+  .products-hero-subtitle {
+    font-size: 0.84rem;
+  }
+  .product-name {
+    font-size: 0.95rem;
+  }
+  .product-desc {
+    font-size: 0.84rem;
+    min-height: 0;
+  }
+  .product-stock-badge {
+    position: static;
+    margin-bottom: 2px;
+  }
+}
+
+@media (max-width: 480px) {
+  .products-main {
+    padding: 88px 10px 18px;
+  }
+  .products-hero-inner,
+  .products-toolbar,
+  .product-card {
+    border-radius: 12px;
+  }
+  .product-actions-row .btn-secondary,
+  .product-actions-row .btn-primary {
+    min-height: 40px;
   }
 }
 </style>

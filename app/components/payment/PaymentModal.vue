@@ -965,6 +965,7 @@ onBeforeUnmount(() => {
   display: flex;
   gap: 1rem;
   margin-bottom: 0;
+  flex-wrap: wrap;
 }
 
 .payment-tab {
@@ -979,6 +980,7 @@ onBeforeUnmount(() => {
 
   align-items: center;
   gap: 0.5rem;
+  min-height: 40px;
 }
 
 .payment-tab.active {
@@ -1114,6 +1116,7 @@ onBeforeUnmount(() => {
   border-radius: 16px;
   padding: 1rem;
   text-align: center;
+  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.08);
 }
 
 .account-name,
@@ -1243,6 +1246,7 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 0.75rem;
   font-size: 0.9rem;
+  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.06);
 }
 
 .expected-label {
@@ -1531,6 +1535,87 @@ onBeforeUnmount(() => {
     gap: 1rem;
     overflow: auto;
     padding-bottom: 0.25rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .modal-overlay {
+    padding: 0.5rem;
+  }
+  .modal-content {
+    width: 96vw;
+    height: 96vh;
+    border-radius: 14px;
+  }
+  .modal-header {
+    padding: 0.7rem 0.85rem;
+  }
+  .modal-body {
+    padding: 0.8rem;
+    gap: 0.7rem;
+  }
+  .payment-tabs {
+    gap: 0.5rem;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 2px;
+  }
+  .payment-tab {
+    padding: 0.55rem 0.7rem;
+    font-size: 0.84rem;
+    white-space: nowrap;
+    flex: 0 0 auto;
+  }
+  .qr-placeholder-text,
+  .qr-code-placeholder img {
+    width: min(68vw, 250px);
+    height: min(68vw, 250px);
+  }
+  .quick-amount-buttons {
+    grid-template-columns: 1fr;
+  }
+  .promo-inline {
+    flex-direction: column;
+  }
+  .expected-credit-row {
+    padding: 0.6rem 0.7rem;
+  }
+  .expected-value {
+    font-size: 0.92rem;
+  }
+  .transfer-content,
+  .account-details,
+  .account-info {
+    border-radius: 10px;
+    padding: 0.75rem;
+  }
+  .confirm-payment-btn {
+    border-radius: 12px;
+    min-height: 42px;
+    font-size: 0.92rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .modal-overlay {
+    padding: 0;
+    align-items: flex-end;
+  }
+  .modal-content {
+    width: 100vw;
+    height: 94vh;
+    border-radius: 14px 14px 0 0;
+    border-bottom: none;
+  }
+  .modal-body {
+    padding: 0.7rem;
+  }
+  .payment-tab {
+    min-height: 38px;
+  }
+  .payment-form-section input,
+  .promo-input {
+    font-size: 16px; /* avoid iOS zoom on focus */
   }
 }
 </style>

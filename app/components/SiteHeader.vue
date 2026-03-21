@@ -1,15 +1,17 @@
 <template>
   <header class="site-header">
-    <NuxtLink to="/" class="site-logo">
-      <img src="/logo.png" alt="SayMedia AI" class="site-logo-img" />
-    </NuxtLink>
-    <nav class="site-nav-links">
-      <NuxtLink to="/">{{ $t("nav.home") }}</NuxtLink>
-      <NuxtLink to="/products">{{ $t("nav.services") }}</NuxtLink>
-      <NuxtLink to="/pricing">{{ $t("nav.pricing") }}</NuxtLink>
-      <NuxtLink to="/contact">{{ $t("nav.contact") }}</NuxtLink>
-      <NuxtLink to="/announcements">{{ $t("admin.announcements") }}</NuxtLink>
-    </nav>
+    <div class="site-header-left">
+      <NuxtLink to="/" class="site-logo">
+        <img src="/logo.png" alt="SayMedia AI" class="site-logo-img" />
+      </NuxtLink>
+      <nav class="site-nav-links">
+        <NuxtLink to="/">{{ $t("nav.home") }}</NuxtLink>
+        <NuxtLink to="/products">{{ $t("nav.services") }}</NuxtLink>
+        <NuxtLink to="/pricing">{{ $t("nav.pricing") }}</NuxtLink>
+        <NuxtLink to="/contact">{{ $t("nav.contact") }}</NuxtLink>
+        <NuxtLink to="/announcements">{{ $t("admin.announcements") }}</NuxtLink>
+      </nav>
+    </div>
     <div class="site-auth-buttons">
       <div class="site-lang-switcher">
         <button
@@ -94,7 +96,135 @@
         {{ $t("auth.login") }}
       </button>
     </div>
+    <div class="site-mobile-controls">
+      <NuxtLink to="/cart" class="site-mobile-cart" @click="closeMobileMenu">
+        <span class="site-cart-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none">
+            <path
+              d="M7 7h14l-2 8H8L7 7Z"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linejoin="round"
+            />
+            <path
+              d="M7 7 6.4 4.8A2 2 0 0 0 4.47 3.3H3"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+            />
+            <path
+              d="M9 20a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Zm9 0a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z"
+              fill="currentColor"
+            />
+          </svg>
+        </span>
+        <span v-if="cartCount" class="site-cart-badge">{{ cartCount }}</span>
+      </NuxtLink>
+      <NuxtLink
+        v-if="currentUser"
+        to="/profile"
+        class="site-mobile-login"
+        @click="closeMobileMenu"
+      >
+        {{ $t("auth.profile") }}
+      </NuxtLink>
+      <button
+        v-else
+        type="button"
+        class="site-mobile-login"
+        @click="
+          closeMobileMenu();
+          navigateTo('/login');
+        "
+      >
+        {{ $t("auth.login") }}
+      </button>
+      <button
+        type="button"
+        class="site-mobile-menu-btn"
+        :aria-expanded="isMobileMenuOpen ? 'true' : 'false'"
+        aria-label="Open menu"
+        @click="toggleMobileMenu"
+      >
+        <span />
+        <span />
+        <span />
+      </button>
+    </div>
   </header>
+  <Teleport to="body">
+    <div
+      v-if="isMobileMenuOpen"
+      class="site-mobile-overlay"
+      @click="closeMobileMenu"
+    >
+      <aside class="site-mobile-drawer" @click.stop>
+        <div class="site-mobile-drawer-top">
+          <div class="site-lang-switcher">
+            <button
+              type="button"
+              class="site-lang-btn"
+              :class="{ active: locale === 'en' }"
+              @click="setLocale('en')"
+            >
+              EN
+            </button>
+            <span class="site-lang-sep">|</span>
+            <button
+              type="button"
+              class="site-lang-btn"
+              :class="{ active: locale === 'vi' }"
+              @click="setLocale('vi')"
+            >
+              VI
+            </button>
+          </div>
+          <button
+            type="button"
+            class="site-mobile-close-btn"
+            aria-label="Close menu"
+            @click="closeMobileMenu"
+          >
+            ✕
+          </button>
+        </div>
+        <nav class="site-mobile-nav-links">
+          <NuxtLink to="/" @click="closeMobileMenu">{{ $t("nav.home") }}</NuxtLink>
+          <NuxtLink to="/products" @click="closeMobileMenu">{{ $t("nav.services") }}</NuxtLink>
+          <NuxtLink to="/pricing" @click="closeMobileMenu">{{ $t("nav.pricing") }}</NuxtLink>
+          <NuxtLink to="/contact" @click="closeMobileMenu">{{ $t("nav.contact") }}</NuxtLink>
+          <NuxtLink to="/announcements" @click="closeMobileMenu">{{
+            $t("admin.announcements")
+          }}</NuxtLink>
+          <NuxtLink to="/cart" @click="closeMobileMenu">{{ $t("cart.title") }}</NuxtLink>
+          <NuxtLink v-if="currentUser" to="/profile" @click="closeMobileMenu">
+            {{ $t("auth.profile") }}
+          </NuxtLink>
+        </nav>
+        <div class="site-mobile-actions">
+          <button
+            v-if="currentUser"
+            type="button"
+            class="site-btn-login"
+            @click="doLogout()"
+          >
+            {{ $t("auth.logout") }}
+          </button>
+          <button
+            v-else
+            type="button"
+            class="site-btn-login"
+            @click="
+              closeMobileMenu();
+              navigateTo('/login');
+            "
+          >
+            {{ $t("auth.login") }}
+          </button>
+        </div>
+      </aside>
+    </div>
+  </Teleport>
   <Teleport to="body">
     <div
       v-if="showAnnouncementPopup && popupAnnouncements.length"
@@ -184,6 +314,7 @@ const { count, clear: clearCart } = useCart();
 const cartCount = computed(() => Number(count.value || 0));
 const showDropdown = ref(false);
 const currentUser = ref(null);
+const isMobileMenuOpen = ref(false);
 let closeTimeout = null;
 
 const popupAnnouncements = ref([]);
@@ -236,6 +367,14 @@ function cancelClose() {
 
 const route = useRoute();
 
+function toggleMobileMenu() {
+  isMobileMenuOpen.value = !isMobileMenuOpen.value;
+}
+
+function closeMobileMenu() {
+  isMobileMenuOpen.value = false;
+}
+
 onMounted(async () => {
   const role = roleCookie.value;
   // Hiển thị tên + menu tài khoản cho mọi role không phải admin dashboard
@@ -259,6 +398,19 @@ watch(
   () => { maybeShowAnnouncementPopup(); },
   { immediate: false },
 );
+
+watch(
+  () => route.path,
+  () => {
+    closeMobileMenu();
+  },
+  { immediate: false },
+);
+
+watch(isMobileMenuOpen, (open) => {
+  if (!import.meta.client) return;
+  document.body.style.overflow = open ? "hidden" : "";
+});
 
 async function doLogout() {
   try {
@@ -288,6 +440,7 @@ async function doLogout() {
   }
   currentUser.value = null;
   showDropdown.value = false;
+  closeMobileMenu();
   return navigateTo("/");
 }
 
@@ -419,6 +572,11 @@ function nextPopupImage() {
   if (!activeImages.value.length) return;
   activeImageIndex.value = (activeImageIndex.value + 1) % activeImages.value.length;
 }
+
+onUnmounted(() => {
+  if (!import.meta.client) return;
+  document.body.style.overflow = "";
+});
 </script>
 
 <style scoped>
@@ -448,6 +606,13 @@ function nextPopupImage() {
   display: flex;
   align-items: center;
   text-decoration: none;
+}
+
+.site-header-left {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  min-width: 0;
 }
 
 .site-logo-img {
@@ -486,6 +651,141 @@ function nextPopupImage() {
   display: flex;
   align-items: center;
   gap: 16px;
+}
+
+.site-mobile-controls {
+  display: none;
+  align-items: center;
+  gap: 10px;
+}
+
+.site-mobile-cart {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  border: 1px solid var(--blue-border);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-primary);
+  text-decoration: none;
+}
+
+.site-mobile-menu-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid var(--blue-border);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-primary);
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+}
+
+.site-mobile-login {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 38px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid var(--blue-border);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-primary);
+  text-decoration: none;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.site-mobile-login:hover {
+  border-color: var(--blue-bright);
+  color: var(--blue-bright);
+}
+
+.site-mobile-menu-btn span {
+  width: 16px;
+  height: 2px;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.site-mobile-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1150;
+  background: rgba(2, 6, 23, 0.68);
+  backdrop-filter: blur(6px);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.site-mobile-drawer {
+  width: min(340px, 86vw);
+  height: 100%;
+  background: rgba(5, 15, 35, 0.96);
+  border-left: 1px solid var(--blue-border);
+  box-shadow: -10px 0 34px rgba(0, 0, 0, 0.42);
+  padding: 18px 14px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.site-mobile-drawer-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.site-mobile-close-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  border: 1px solid var(--blue-border);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.site-mobile-nav-links {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.site-mobile-nav-links a {
+  text-decoration: none;
+  color: var(--text-primary);
+  font-weight: 500;
+  padding: 10px 12px;
+  border-radius: 9px;
+}
+
+.site-mobile-nav-links a.router-link-active {
+  background: rgb(var(--accent-rgb) / 0.16);
+  border: 1px solid rgb(var(--accent-rgb) / 0.35);
+}
+
+.site-mobile-nav-links a:hover {
+  background: var(--blue-soft);
+  color: var(--blue-bright);
+}
+
+.site-mobile-actions {
+  margin-top: auto;
+  display: flex;
+}
+
+.site-mobile-actions .site-btn-login {
+  width: 100%;
 }
 
 .site-cart-btn {
@@ -877,7 +1177,69 @@ function nextPopupImage() {
 
 @media (max-width: 1024px) {
   .site-header {
-    padding: 16px 24px;
+    padding: 12px 16px;
+  }
+  .site-logo-img {
+    height: 42px;
+  }
+  .site-nav-links,
+  .site-auth-buttons {
+    display: none;
+  }
+  .site-mobile-controls {
+    display: flex;
+  }
+}
+
+@media (max-width: 640px) {
+  .site-mobile-drawer {
+    padding: 14px 12px 14px;
+    gap: 10px;
+  }
+  .site-mobile-nav-links a {
+    padding: 9px 10px;
+    font-size: 0.92rem;
+  }
+  .site-mobile-actions .site-btn-login {
+    padding: 10px 14px;
+    font-size: 0.9rem;
+  }
+  .announcement-popup {
+    padding: 14px;
+    border-radius: 14px;
+  }
+  .announcement-popup-title {
+    margin-right: 0;
+    font-size: 1.02rem;
+  }
+  .announcement-popup-content {
+    max-height: 38vh;
+    font-size: 0.84rem;
+    padding: 10px 11px;
+  }
+  .announcement-popup-thumb {
+    max-height: 220px;
+  }
+}
+
+@media (max-width: 480px) {
+  .site-header {
+    padding: calc(10px + env(safe-area-inset-top, 0px)) 12px 10px;
+  }
+  .site-mobile-drawer {
+    width: 100vw;
+    padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+    border-left: none;
+  }
+  .site-mobile-menu-btn,
+  .site-mobile-cart {
+    width: 38px;
+    height: 38px;
+  }
+  .site-mobile-login {
+    height: 38px;
+    padding: 0 10px;
+    font-size: 0.78rem;
   }
 }
 </style>

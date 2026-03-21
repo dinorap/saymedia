@@ -193,7 +193,7 @@ import SiteHeader from "~/components/SiteHeader.vue";
 
 @media (max-width: 1024px) {
   .pricing-main {
-    padding: 80px 20px 60px;
+    padding: 92px 20px 60px;
   }
   .pricing-hero-inner {
     flex-direction: column;
@@ -205,6 +205,25 @@ import SiteHeader from "~/components/SiteHeader.vue";
   }
   .pricing-grid {
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .pricing-main {
+    padding: 92px 16px 44px;
+  }
+  .pricing-hero-inner {
+    padding: 14px;
+  }
+  .pricing-title {
+    font-size: 1.4rem;
+  }
+  .pricing-grid {
+    margin-top: 16px;
+    gap: 12px;
+  }
+  .pricing-card {
+    padding: 14px;
   }
 }
 </style>

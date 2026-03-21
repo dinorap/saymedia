@@ -130,6 +130,11 @@ async function register() {
   font-size: 1.8rem;
   font-weight: 700;
 }
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
 .auth-form-group {
   display: flex;
   flex-direction: column;
@@ -145,7 +150,7 @@ async function register() {
   width: 100%;
   padding: 12px 15px;
   border: 1px solid #475569;
-  border-radius: 6px;
+  border-radius: 10px;
   font-size: 1rem;
   box-sizing: border-box;
   background: #0f172a;
@@ -162,7 +167,7 @@ async function register() {
 .auth-btn {
   padding: 12px;
   border: none;
-  border-radius: 6px;
+  border-radius: 10px;
   font-weight: 600;
   font-size: 1rem;
   cursor: pointer;
@@ -228,5 +233,31 @@ async function register() {
 }
 .auth-back-link:hover {
   text-decoration: underline;
+}
+
+.auth-form-group label,
+.auth-form-link {
+  letter-spacing: 0.01em;
+}
+
+@media (max-width: 640px) {
+  .auth-form-title {
+    font-size: 1.35rem;
+  }
+  .auth-form-group {
+    gap: 0.65rem;
+  }
+  .auth-input {
+    padding: 10px 12px;
+    font-size: 0.95rem;
+  }
+  .auth-btn {
+    padding: 10px;
+    font-size: 0.95rem;
+  }
+  .auth-msg {
+    margin-top: 0.5rem;
+    font-size: 0.82rem;
+  }
 }
 </style>

@@ -137,5 +137,22 @@ const { locale } = useI18n();
     text-align: left;
   }
 }
+
+@media (max-width: 640px) {
+  .site-footer {
+    padding: 12px 14px 16px;
+  }
+  .footer-cols {
+    gap: 14px;
+  }
+  .footer-col {
+    min-width: 0;
+  }
+  .footer-text,
+  .footer-meta,
+  .footer-links {
+    font-size: 0.78rem;
+  }
+}
 </style>
 

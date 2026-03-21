@@ -289,4 +289,33 @@ function formatDate(val) {
 .down {
   color: #ff6b6b;
 }
+
+@media (max-width: 768px) {
+  .overlay {
+    padding: 0.6rem;
+  }
+  .head,
+  .body {
+    padding: 0.8rem;
+  }
+  .filter-group {
+    width: 100%;
+  }
+  .filter-group select,
+  .filter-group input[type="date"],
+  .filter-group .filter-search-input {
+    min-width: 0;
+    width: 100%;
+  }
+  .filter-search .filter-search-input {
+    min-width: 0;
+  }
+  .data-table {
+    font-size: 0.82rem;
+  }
+  .data-table th,
+  .data-table td {
+    padding: 0.45rem 0.5rem;
+  }
+}
 </style>

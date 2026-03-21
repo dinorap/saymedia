@@ -114,5 +114,22 @@ const { toast, hide } = useToast();
   opacity: 0;
   transform: translateY(8px) scale(0.98);
 }
+
+@media (max-width: 640px) {
+  .toast-container {
+    right: 0.75rem;
+    left: 0.75rem;
+    bottom: 0.75rem;
+  }
+  .toast {
+    min-width: 0;
+    max-width: 100%;
+    padding: 0.75rem 0.8rem;
+    gap: 0.6rem;
+  }
+  .toast-message {
+    font-size: 0.84rem;
+  }
+}
 </style>
 

@@ -111,6 +111,16 @@ body {
   background-color: var(--bg-deep);
   color           : var(--text-primary);
   font-family     : 'Inter', 'Segoe UI', system-ui, sans-serif;
+  line-height     : 1.45;
+  -webkit-font-smoothing: antialiased;
+  text-rendering  : optimizeLegibility;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
 }
 
 /* Global thin scrollbar */
@@ -135,6 +145,12 @@ body {
 
 *::-webkit-scrollbar-thumb:hover {
   background-color: rgba(148, 163, 184, 0.9);
+}
+
+@media (max-width: 640px) {
+  body {
+    line-height: 1.4;
+  }
 }
 
 /* Icon cuốn lịch / đồng hồ ở ô chọn ngày giờ — màu trắng (WebKit) */

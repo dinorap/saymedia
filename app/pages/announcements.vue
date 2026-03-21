@@ -200,7 +200,7 @@ onUnmounted(() => {
 
 @media (max-width: 1200px) {
   .announcements-main {
-    padding: 32px 24px 60px;
+    padding: 92px 24px 60px;
   }
   .announcements-list-inner {
     grid-template-columns: minmax(0, 1fr);
@@ -209,7 +209,32 @@ onUnmounted(() => {
 
 @media (max-width: 768px) {
   .announcements-main {
-    padding: 24px 16px 48px;
+    padding: 92px 16px 48px;
+  }
+  .announcements-hero {
+    margin-bottom: 20px;
+  }
+  .announcements-title {
+    font-size: 1.5rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .announcement-card {
+    padding: 10px;
+    align-items: flex-start;
+  }
+  .announcement-thumb {
+    width: 72px;
+    height: 72px;
+    border-radius: 10px;
+  }
+  .announcement-title {
+    font-size: 0.96rem;
+  }
+  .announcement-content {
+    -webkit-line-clamp: 3;
+    font-size: 0.82rem;
   }
 }
 </style>

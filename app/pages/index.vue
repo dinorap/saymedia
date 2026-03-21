@@ -446,4 +446,42 @@ const isLoggedIn = computed(() => roleCookie.value === "user");
     align-items: flex-start;
   }
 }
+
+@media (max-width: 768px) {
+  .landing-section {
+    padding: 0 16px 44px;
+  }
+  .landing-two-col {
+    padding: 0 16px 44px;
+  }
+  .landing-social-head-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .landing-section-head--chat {
+    text-align: left;
+  }
+  .landing-social-row {
+    flex-direction: column;
+    gap: 14px;
+  }
+  .landing-social-col:first-child,
+  .landing-social-col--chat {
+    flex: 1;
+  }
+  .landing-section-title {
+    font-size: 1.45rem;
+    margin-bottom: 6px;
+  }
+  .landing-section-subtitle {
+    font-size: 0.88rem;
+  }
+  .how-step {
+    padding: 10px 12px;
+  }
+  .how-step-text {
+    font-size: 0.84rem;
+  }
+}
 </style>
