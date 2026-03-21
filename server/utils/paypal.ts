@@ -12,6 +12,7 @@ const PAYPAL_API_BASE =
 const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID || ''
 const PAYPAL_SECRET = process.env.PAYPAL_SECRET || ''
 const PAYPAL_CURRENCY = process.env.PAYPAL_CURRENCY || 'USD'
+const PAYPAL_WEBHOOK_ID = process.env.PAYPAL_WEBHOOK_ID || ''
 
 // Tỷ giá VND cho 1 đơn vị tiền PayPal (thường là 1 USD) – mặc định từ .env.
 // Ta sẽ dùng nó làm fallback nếu API tỷ giá thị trường lỗi.
@@ -78,6 +79,77 @@ async function getPayPalAccessToken() {
 
   const data: any = await res.json()
   return data.access_token as string
+}
+
+async function verifyPayPalWebhookSignature(
+  headers: {
+    transmissionId: string
+    transmissionTime: string
+    transmissionSig: string
+    certUrl: string
+    authAlgo: string
+  },
+  webhookEvent: any,
+) {
+  if (!PAYPAL_WEBHOOK_ID) {
+    throw createError({
+      statusCode: 500,
+      statusMessage: 'Chưa cấu hình PAYPAL_WEBHOOK_ID',
+    })
+  }
+
+  const accessToken = await getPayPalAccessToken()
+  const res = await fetch(`${PAYPAL_API_BASE}/v1/notifications/verify-webhook-signature`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      transmission_id: headers.transmissionId,
+      transmission_time: headers.transmissionTime,
+      cert_url: headers.certUrl,
+      auth_algo: headers.authAlgo,
+      transmission_sig: headers.transmissionSig,
+      webhook_id: PAYPAL_WEBHOOK_ID,
+      webhook_event: webhookEvent,
+    }),
+  })
+
+  if (!res.ok) {
+    const text = await res.text()
+    console.error('PayPal webhook verify error', text)
+    return false
+  }
+
+  const data: any = await res.json()
+  return String(data?.verification_status || '').toUpperCase() === 'SUCCESS'
+}
+
+function extractOrderIdFromWebhookEvent(webhookEvent: any) {
+  const eventType = String(webhookEvent?.event_type || '')
+  const resource = webhookEvent?.resource || {}
+  if (eventType === 'CHECKOUT.ORDER.APPROVED' || eventType === 'CHECKOUT.ORDER.COMPLETED') {
+    return String(resource?.id || '').trim()
+  }
+  if (eventType.startsWith('PAYMENT.CAPTURE.')) {
+    return String(resource?.supplementary_data?.related_ids?.order_id || '').trim()
+  }
+  return ''
+}
+
+async function getUserIdByPaypalOrderId(orderId: string) {
+  const [[tx]]: any = await pool.query(
+    `
+      SELECT user_id
+      FROM payment_transactions
+      WHERE provider = 'paypal'
+        AND provider_payment_id = ?
+      LIMIT 1
+    `,
+    [orderId],
+  )
+  return Number(tx?.user_id || 0) || 0
 }
 
 export async function createPaypalDepositOrder(
@@ -406,6 +478,60 @@ export async function capturePaypalDepositOrder(userId: number, orderId: string)
     amount: vndAmount,
     credited,
     transId,
+  }
+}
+
+export async function handlePaypalWebhook(input: {
+  headers: {
+    transmissionId: string
+    transmissionTime: string
+    transmissionSig: string
+    certUrl: string
+    authAlgo: string
+  }
+  webhookEvent: any
+}) {
+  const { headers, webhookEvent } = input
+
+  const isValid = await verifyPayPalWebhookSignature(headers, webhookEvent)
+  if (!isValid) {
+    throw createError({ statusCode: 400, statusMessage: 'Webhook PayPal không hợp lệ' })
+  }
+
+  const eventType = String(webhookEvent?.event_type || '')
+  if (eventType !== 'PAYMENT.CAPTURE.COMPLETED') {
+    return {
+      ok: true,
+      ignored: true,
+      reason: `Unsupported event_type: ${eventType || 'unknown'}`,
+    }
+  }
+
+  const orderId = extractOrderIdFromWebhookEvent(webhookEvent)
+  if (!orderId) {
+    return {
+      ok: true,
+      ignored: true,
+      reason: 'Missing order_id in webhook event',
+    }
+  }
+
+  const userId = await getUserIdByPaypalOrderId(orderId)
+  if (!userId) {
+    return {
+      ok: true,
+      ignored: true,
+      reason: 'Order not found in local transactions',
+    }
+  }
+
+  const captureResult = await capturePaypalDepositOrder(userId, orderId)
+  return {
+    ok: true,
+    ignored: false,
+    eventType,
+    orderId,
+    captureResult,
   }
 }
 

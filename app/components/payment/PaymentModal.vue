@@ -41,18 +41,6 @@
               {{ $t("payment.deposit.expiresIn") }}:
               {{ formatTimeRemaining(qrTimeRemaining) }}
             </div>
-            <button
-              v-if="isDev && qrData && qrTimeRemaining > 0"
-              type="button"
-              class="test-payment-btn-header"
-              @click="testPayment"
-              :disabled="testingPayment"
-            >
-              <span v-if="testingPayment">{{
-                $t("payment.deposit.testingPayment")
-              }}</span>
-              <span v-else>{{ $t("payment.deposit.testPayment") }}</span>
-            </button>
             <button class="modal-close" @click="handleClose">&times;</button>
           </div>
         </div>
@@ -442,7 +430,6 @@ const qrExpired = ref(false);
 const qrCountdownInterval = ref(null);
 const loading = ref(false);
 const error = ref("");
-const testingPayment = ref(false);
 const activePaymentTab = ref("bank");
 const promoCode = ref("");
 
@@ -888,58 +875,6 @@ const handleClose = () => {
   activePaymentTab.value = "bank";
 };
 
-const isDev = import.meta.env.DEV;
-
-const testPayment = async () => {
-  if (!qrData.value || !qrData.value.trans_id) {
-    error.value = t("payment.deposit.errors.noTransactionId");
-    return;
-  }
-
-  if (qrExpired.value || qrTimeRemaining.value <= 0) {
-    error.value = t("payment.deposit.errors.qrExpiredShort");
-    return;
-  }
-
-  testingPayment.value = true;
-  error.value = "";
-
-  try {
-    const res = await $fetch(`/api/payment/test/simulate-payment`, {
-      method: "POST",
-      body: {
-        trans_id: qrData.value.trans_id,
-      },
-    });
-
-    if (res.success) {
-      stopQrCountdown();
-      qrData.value = null;
-      handleClose();
-      emit("success", {
-        amount: res.actual_amount || res.amount,
-        newCredit: res.new_credit,
-      });
-      showToast("Nạp tiền test thành công!", "success");
-    }
-  } catch (err) {
-    if (err.data?.error) {
-      error.value = err.data.error;
-      if (
-        err.data.error.includes("hết hạn") ||
-        err.data.error.includes("expired")
-      ) {
-        qrExpired.value = true;
-        stopQrCountdown();
-      }
-    } else {
-      error.value = t("payment.deposit.errors.testPaymentError");
-    }
-  } finally {
-    testingPayment.value = false;
-  }
-};
-
 onBeforeUnmount(() => {
   stopQrCountdown();
   stopPaymentPolling();
@@ -996,30 +931,6 @@ onBeforeUnmount(() => {
   font-weight: 600;
   font-size: 0.9rem;
   white-space: nowrap;
-}
-
-.test-payment-btn-header {
-  padding: 0.5rem 0.75rem;
-  background: linear-gradient(135deg, #0ea5e9 0%, #0369a1 100%);
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  white-space: nowrap;
-}
-
-.test-payment-btn-header:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 5px 15px rgba(245, 158, 11, 0.3);
-}
-
-.test-payment-btn-header:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-  transform: none;
 }
 
 .modal-close {
