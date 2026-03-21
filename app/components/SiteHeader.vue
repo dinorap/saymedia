@@ -6,10 +6,12 @@
       </NuxtLink>
       <nav class="site-nav-links">
         <NuxtLink to="/">{{ $t("nav.home") }}</NuxtLink>
+
         <NuxtLink to="/products">{{ $t("nav.services") }}</NuxtLink>
-        <NuxtLink to="/pricing">{{ $t("nav.pricing") }}</NuxtLink>
-        <NuxtLink to="/contact">{{ $t("nav.contact") }}</NuxtLink>
         <NuxtLink to="/announcements">{{ $t("admin.announcements") }}</NuxtLink>
+        <NuxtLink to="/about">{{ $t("nav.about") }}</NuxtLink>
+        <NuxtLink to="/contact">{{ $t("nav.contact") }}</NuxtLink>
+        <NuxtLink to="/pricing">{{ $t("nav.pricing") }}</NuxtLink>
       </nav>
     </div>
     <div class="site-auth-buttons">
@@ -124,20 +126,51 @@
         v-if="currentUser"
         to="/profile"
         class="site-mobile-login"
+        :aria-label="$t('auth.profile')"
+        :title="$t('auth.profile')"
         @click="closeMobileMenu"
       >
-        {{ $t("auth.profile") }}
+        <span class="site-mobile-login-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none">
+            <circle cx="12" cy="8" r="3.5" stroke="currentColor" stroke-width="1.8" />
+            <path
+              d="M5 19.5c1.2-3.2 3.9-4.8 7-4.8s5.8 1.6 7 4.8"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+            />
+          </svg>
+        </span>
       </NuxtLink>
       <button
         v-else
         type="button"
         class="site-mobile-login"
+        :aria-label="$t('auth.login')"
+        :title="$t('auth.login')"
         @click="
           closeMobileMenu();
           navigateTo('/login');
         "
       >
-        {{ $t("auth.login") }}
+        <span class="site-mobile-login-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none">
+            <path
+              d="M10 7V5.6A1.6 1.6 0 0 1 11.6 4h6.8A1.6 1.6 0 0 1 20 5.6v12.8a1.6 1.6 0 0 1-1.6 1.6h-6.8a1.6 1.6 0 0 1-1.6-1.6V17"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+            <path
+              d="M4 12h10m0 0-2.8-2.8M14 12l-2.8 2.8"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+        </span>
       </button>
       <button
         type="button"
@@ -189,14 +222,27 @@
           </button>
         </div>
         <nav class="site-mobile-nav-links">
-          <NuxtLink to="/" @click="closeMobileMenu">{{ $t("nav.home") }}</NuxtLink>
-          <NuxtLink to="/products" @click="closeMobileMenu">{{ $t("nav.services") }}</NuxtLink>
-          <NuxtLink to="/pricing" @click="closeMobileMenu">{{ $t("nav.pricing") }}</NuxtLink>
-          <NuxtLink to="/contact" @click="closeMobileMenu">{{ $t("nav.contact") }}</NuxtLink>
+          <NuxtLink to="/" @click="closeMobileMenu">{{
+            $t("nav.home")
+          }}</NuxtLink>
+          <NuxtLink to="/about" @click="closeMobileMenu">{{
+            $t("nav.about")
+          }}</NuxtLink>
+          <NuxtLink to="/products" @click="closeMobileMenu">{{
+            $t("nav.services")
+          }}</NuxtLink>
+          <NuxtLink to="/pricing" @click="closeMobileMenu">{{
+            $t("nav.pricing")
+          }}</NuxtLink>
+          <NuxtLink to="/contact" @click="closeMobileMenu">{{
+            $t("nav.contact")
+          }}</NuxtLink>
           <NuxtLink to="/announcements" @click="closeMobileMenu">{{
             $t("admin.announcements")
           }}</NuxtLink>
-          <NuxtLink to="/cart" @click="closeMobileMenu">{{ $t("cart.title") }}</NuxtLink>
+          <NuxtLink to="/cart" @click="closeMobileMenu">{{
+            $t("cart.title")
+          }}</NuxtLink>
           <NuxtLink v-if="currentUser" to="/profile" @click="closeMobileMenu">
             {{ $t("auth.profile") }}
           </NuxtLink>
@@ -232,7 +278,10 @@
       @click.self="closeAnnouncementPopup"
     >
       <div class="announcement-popup">
-        <div v-if="popupAnnouncements.length > 1" class="announcement-popup-topnav">
+        <div
+          v-if="popupAnnouncements.length > 1"
+          class="announcement-popup-topnav"
+        >
           <button
             type="button"
             class="ann-nav-btn"
@@ -266,9 +315,15 @@
           {{ activeAnnouncement?.title }}
         </h3>
         <p class="announcement-popup-meta">
-          <span>{{ activeAnnouncement?.authorName || $t("admin.profileName") }}</span>
+          <span>{{
+            activeAnnouncement?.authorName || $t("admin.profileName")
+          }}</span>
           <span>•</span>
-          <span>{{ formatPopupDate(activeAnnouncement?.updatedAt || activeAnnouncement?.createdAt) }}</span>
+          <span>{{
+            formatPopupDate(
+              activeAnnouncement?.updatedAt || activeAnnouncement?.createdAt,
+            )
+          }}</span>
         </p>
 
         <div v-if="activeImages.length" class="announcement-popup-thumb-wrap">
@@ -295,9 +350,15 @@
           </button>
         </div>
 
-        <pre class="announcement-popup-content">{{ activeAnnouncement?.content }}</pre>
+        <pre class="announcement-popup-content">{{
+          activeAnnouncement?.content
+        }}</pre>
         <div class="announcement-popup-actions">
-          <button type="button" class="announcement-popup-btn" @click="closeAnnouncementPopup">
+          <button
+            type="button"
+            class="announcement-popup-btn"
+            @click="closeAnnouncementPopup"
+          >
             {{ $t("announcements.popupButton") }}
           </button>
         </div>
@@ -334,7 +395,9 @@ const activeImages = computed(() => {
   if (!a) return [];
   const imgs = Array.isArray(a.images) ? a.images : [];
   const legacy = a.imageUrl ? [a.imageUrl] : [];
-  const merged = [...imgs, ...legacy].map((s) => String(s || "").trim()).filter((s) => !!s);
+  const merged = [...imgs, ...legacy]
+    .map((s) => String(s || "").trim())
+    .filter((s) => !!s);
   // unique, keep order
   const out = [];
   for (const u of merged) {
@@ -395,7 +458,9 @@ onMounted(async () => {
 // Chạy lại khi chuyển trang (client-side navigation) để bắt thêm/sửa thông báo, qua ngày mới
 watch(
   () => route.path,
-  () => { maybeShowAnnouncementPopup(); },
+  () => {
+    maybeShowAnnouncementPopup();
+  },
   { immediate: false },
 );
 
@@ -484,8 +549,12 @@ async function maybeShowAnnouncementPopup() {
       "-" +
       String(now.getDate()).padStart(2, "0");
 
-    const lastShownDay = localStorage.getItem("announcements_popup_lastShownDay") || "";
-    const lastSeenUpdatedAt = Number(localStorage.getItem("announcements_popup_lastSeenUpdatedAt") || 0) || 0;
+    const lastShownDay =
+      localStorage.getItem("announcements_popup_lastShownDay") || "";
+    const lastSeenUpdatedAt =
+      Number(
+        localStorage.getItem("announcements_popup_lastSeenUpdatedAt") || 0,
+      ) || 0;
 
     const items = list
       .map((a) => ({
@@ -496,7 +565,9 @@ async function maybeShowAnnouncementPopup() {
 
     const maxUpdatedAt = Math.max(
       0,
-      ...items.map((a) => new Date(a.updatedAt || a.createdAt || 0).getTime() || 0),
+      ...items.map(
+        (a) => new Date(a.updatedAt || a.createdAt || 0).getTime() || 0,
+      ),
     );
 
     const changed = items.filter((a) => {
@@ -545,7 +616,10 @@ function closeAnnouncementPopup() {
           return t;
         }),
       );
-      localStorage.setItem("announcements_popup_lastSeenUpdatedAt", String(maxUpdatedAt));
+      localStorage.setItem(
+        "announcements_popup_lastSeenUpdatedAt",
+        String(maxUpdatedAt),
+      );
     } catch {
       // ignore
     }
@@ -559,18 +633,21 @@ function prevAnnouncement() {
   activeImageIndex.value = 0;
 }
 function nextAnnouncement() {
-  if (activeAnnouncementIndex.value >= popupAnnouncements.value.length - 1) return;
+  if (activeAnnouncementIndex.value >= popupAnnouncements.value.length - 1)
+    return;
   activeAnnouncementIndex.value += 1;
   activeImageIndex.value = 0;
 }
 function prevPopupImage() {
   if (!activeImages.value.length) return;
   activeImageIndex.value =
-    (activeImageIndex.value - 1 + activeImages.value.length) % activeImages.value.length;
+    (activeImageIndex.value - 1 + activeImages.value.length) %
+    activeImages.value.length;
 }
 function nextPopupImage() {
   if (!activeImages.value.length) return;
-  activeImageIndex.value = (activeImageIndex.value + 1) % activeImages.value.length;
+  activeImageIndex.value =
+    (activeImageIndex.value + 1) % activeImages.value.length;
 }
 
 onUnmounted(() => {
@@ -626,6 +703,9 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 8px;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 .site-nav-links a {
@@ -692,17 +772,21 @@ onUnmounted(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  width: 38px;
   height: 38px;
-  padding: 0 12px;
+  padding: 0;
   border-radius: 10px;
   border: 1px solid var(--blue-border);
   background: rgba(255, 255, 255, 0.04);
   color: var(--text-primary);
   text-decoration: none;
-  font-size: 0.82rem;
-  font-weight: 600;
   cursor: pointer;
-  white-space: nowrap;
+}
+
+.site-mobile-login-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .site-mobile-login:hover {
@@ -977,8 +1061,16 @@ onUnmounted(() => {
   position: fixed;
   inset: 0;
   background:
-    radial-gradient(circle at 20% 10%, rgba(56, 189, 248, 0.18), transparent 35%),
-    radial-gradient(circle at 80% 90%, rgba(37, 99, 235, 0.18), transparent 40%),
+    radial-gradient(
+      circle at 20% 10%,
+      rgba(56, 189, 248, 0.18),
+      transparent 35%
+    ),
+    radial-gradient(
+      circle at 80% 90%,
+      rgba(37, 99, 235, 0.18),
+      transparent 40%
+    ),
     rgba(2, 6, 23, 0.74);
   backdrop-filter: blur(10px);
   display: flex;
@@ -992,8 +1084,16 @@ onUnmounted(() => {
   max-width: 640px;
   width: 100%;
   background:
-    radial-gradient(circle at 10% 0%, rgba(56, 189, 248, 0.18), transparent 45%),
-    radial-gradient(circle at 90% 100%, rgba(34, 197, 94, 0.1), transparent 42%),
+    radial-gradient(
+      circle at 10% 0%,
+      rgba(56, 189, 248, 0.18),
+      transparent 45%
+    ),
+    radial-gradient(
+      circle at 90% 100%,
+      rgba(34, 197, 94, 0.1),
+      transparent 42%
+    ),
     rgba(5, 15, 35, 0.92);
   border-radius: 18px;
   border: 1px solid rgba(56, 189, 248, 0.38);
@@ -1237,9 +1337,8 @@ onUnmounted(() => {
     height: 38px;
   }
   .site-mobile-login {
+    width: 38px;
     height: 38px;
-    padding: 0 10px;
-    font-size: 0.78rem;
   }
 }
 </style>
