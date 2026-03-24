@@ -3,6 +3,7 @@ import pool from './db'
 import { assertRuntimeMigrationsAllowed } from './runtimeMigrations'
 
 let schemaReady = false
+let lastPendingCleanupAt = 0
 
 export const PAYMENT_EXPIRE_MINUTES = 5
 export const DEFAULT_VND_PER_CREDIT = 1000
@@ -205,5 +206,24 @@ export function buildQrUrl(amount: number, memo: string) {
 
 export function isExpired(createdAt: Date) {
   return Date.now() - createdAt.getTime() > PAYMENT_EXPIRE_MINUTES * 60 * 1000
+}
+
+export async function cleanupExpiredPendingTransactions(force = false) {
+  const now = Date.now()
+  // Avoid running the same UPDATE too frequently under high traffic.
+  if (!force && now - lastPendingCleanupAt < 30_000) return 0
+  lastPendingCleanupAt = now
+
+  const [result]: any = await pool.query(
+    `
+      UPDATE payment_transactions
+      SET status = 'cancelled'
+      WHERE status = 'pending'
+        AND created_at < (NOW() - INTERVAL ? MINUTE)
+    `,
+    [PAYMENT_EXPIRE_MINUTES],
+  )
+
+  return Number(result?.affectedRows || 0)
 }
 

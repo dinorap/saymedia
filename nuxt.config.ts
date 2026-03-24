@@ -11,6 +11,9 @@ export default defineNuxtConfig({
       paypalClientId: process.env.PAYPAL_CLIENT_ID || '',
       paypalCurrency: process.env.PAYPAL_CURRENCY || 'USD',
       depositVndPerCredit: Number(process.env.DEPOSIT_VND_PER_CREDIT || 1000),
+      sepayBankId: process.env.SEPAY_BANK_ID || process.env.BANK_ID || '',
+      sepayAccountNo: process.env.SEPAY_ACCOUNT_NO || process.env.ACCOUNT_NO || '',
+      sepayOwnerName: process.env.OWNER_NAME || '',
     },
   },
 

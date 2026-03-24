@@ -1,6 +1,10 @@
 import jwt from 'jsonwebtoken'
 import pool from '../../../../utils/db'
-import { ensurePaymentSchema, PAYMENT_EXPIRE_MINUTES } from '../../../../utils/payment'
+import {
+  ensurePaymentSchema,
+  PAYMENT_EXPIRE_MINUTES,
+  cleanupExpiredPendingTransactions,
+} from '../../../../utils/payment'
 import { getJwtSecret } from '../../../../utils/jwt'
 
 const JWT_SECRET = getJwtSecret()
@@ -20,6 +24,7 @@ export default defineEventHandler(async (event) => {
   if (!transId) throw createError({ statusCode: 400, statusMessage: 'Thiếu trans_id' })
 
   await ensurePaymentSchema()
+  await cleanupExpiredPendingTransactions()
 
   const [rows]: any = await pool.query(
     `SELECT trans_id, user_id, amount, status, created_at,

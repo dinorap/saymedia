@@ -7,6 +7,7 @@ import {
   buildTransferMemo,
   buildQrUrl,
   convertVndToCredit,
+  cleanupExpiredPendingTransactions,
 } from '../../utils/payment'
 import { paymentQrSchema, parseBodyOrThrow } from '../../utils/schemas'
 import { getJwtSecret } from '../../utils/jwt'
@@ -41,6 +42,7 @@ export default defineEventHandler(async (event) => {
   }
 
   await ensurePaymentSchema()
+  await cleanupExpiredPendingTransactions()
 
   const transId = generateTransId(decoded.id)
   const memo = buildTransferMemo(transId, amount)

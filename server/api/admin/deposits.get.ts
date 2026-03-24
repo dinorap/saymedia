@@ -1,9 +1,10 @@
 import pool from '../../utils/db'
-import { convertVndToCredit } from '../../utils/payment'
+import { cleanupExpiredPendingTransactions, convertVndToCredit } from '../../utils/payment'
 import { checkRateLimit, rateLimitKey } from '../../utils/rateLimit'
 
 export default defineEventHandler(async (event) => {
   const currentUser = event.context.user
+  await cleanupExpiredPendingTransactions()
   if (!currentUser) {
     throw createError({ statusCode: 401, statusMessage: 'Chưa đăng nhập' })
   }

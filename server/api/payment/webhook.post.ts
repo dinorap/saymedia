@@ -1,5 +1,10 @@
 import pool from '../../utils/db'
-import { ensurePaymentSchema, PAYMENT_EXPIRE_MINUTES, convertVndToCredit } from '../../utils/payment'
+import {
+  ensurePaymentSchema,
+  PAYMENT_EXPIRE_MINUTES,
+  convertVndToCredit,
+  cleanupExpiredPendingTransactions,
+} from '../../utils/payment'
 import { addAuditLog } from '../../utils/audit'
 import { applyDepositCredit, ensureCreditLedgerSchema } from '../../utils/creditLedger'
 import { addDepositSocialProofItem } from '../../utils/socialProof'
@@ -27,6 +32,7 @@ export default defineEventHandler(async (event) => {
   }
 
   await ensurePaymentSchema()
+  await cleanupExpiredPendingTransactions()
   await ensureCreditLedgerSchema()
 
   const extracted = extractTransId(content)

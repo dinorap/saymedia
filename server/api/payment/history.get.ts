@@ -1,9 +1,11 @@
 import pool from '../../utils/db'
 import { requireUser } from '../../utils/authHelpers'
 import { checkRateLimit, rateLimitKey } from '../../utils/rateLimit'
+import { cleanupExpiredPendingTransactions } from '../../utils/payment'
 
 export default defineEventHandler(async (event) => {
   const decoded = requireUser(event)
+  await cleanupExpiredPendingTransactions()
 
   const query = getQuery(event)
   const from = query.from ? String(query.from).trim() : ''

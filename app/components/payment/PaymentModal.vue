@@ -37,7 +37,10 @@
             </button>
           </div>
           <div class="header-right">
-            <div v-if="qrTimeRemaining > 0" class="qr-time-remaining">
+            <div
+              v-if="activePaymentTab === 'bank' && qrTimeRemaining > 0"
+              class="qr-time-remaining"
+            >
               {{ $t("payment.deposit.expiresIn") }}:
               {{ formatTimeRemaining(qrTimeRemaining) }}
             </div>
@@ -185,13 +188,13 @@
                     <span class="detail-label"
                       >{{ $t("payment.deposit.accountHolder") }}:</span
                     >
-                    <span class="detail-value">ACB</span>
+                    <span class="detail-value">{{ paymentOwnerName }}</span>
                   </div>
                   <div class="detail-row">
                     <span class="detail-label">{{
                       $t("payment.deposit.bank")
                     }}</span>
-                    <span class="detail-value">ACB - 23766621</span>
+                    <span class="detail-value">{{ paymentBankDisplay }}</span>
                   </div>
                 </div>
 
@@ -436,6 +439,16 @@ const paypalCurrency =
   runtimeConfig.public.paypalCurrency ||
   runtimeConfig.public.PAYPAL_CURRENCY ||
   "USD";
+const sepayBankId = String(runtimeConfig.public.sepayBankId || "").trim();
+const sepayAccountNo = String(runtimeConfig.public.sepayAccountNo || "").trim();
+const sepayOwnerName = String(runtimeConfig.public.sepayOwnerName || "").trim();
+const paymentOwnerName = computed(() => sepayOwnerName || sepayBankId || "-");
+const paymentBankDisplay = computed(() => {
+  if (sepayBankId && sepayAccountNo) return `${sepayBankId} - ${sepayAccountNo}`;
+  if (sepayBankId) return sepayBankId;
+  if (sepayAccountNo) return sepayAccountNo;
+  return "-";
+});
 
 const vndPerCredit = ref(
   Number(runtimeConfig.public.depositVndPerCredit || 1000) || 1000,
