@@ -4,12 +4,18 @@
 
     <main class="profile-main">
       <section class="profile-card" v-if="!loading && user">
+        <NuxtLink to="/" class="profile-close-btn" aria-label="Về trang chủ">
+          <span class="profile-close-btn-icon" aria-hidden="true">←</span>
+          <span class="profile-close-btn-text">Trang chủ</span>
+        </NuxtLink>
         <div class="profile-hero">
           <div class="profile-hero-grid">
             <div class="profile-identity">
               <div class="profile-avatar-wrap">
                 <div class="profile-avatar">
-                  <span>{{ profileDisplayName?.charAt(0)?.toUpperCase() }}</span>
+                  <span>{{
+                    profileDisplayName?.charAt(0)?.toUpperCase()
+                  }}</span>
                 </div>
               </div>
               <h1 class="profile-name">{{ profileDisplayName }}</h1>
@@ -38,35 +44,39 @@
               </div>
             </div>
           </div>
-
         </div>
 
         <div class="profile-content-grid">
           <div class="profile-left-col">
             <div class="profile-customer-edit">
-              <h3 class="profile-customer-title">Thông tin khách hàng</h3>
+              <h3 class="profile-customer-title">
+                {{ $t("profile.customerInfoTitle") }}
+              </h3>
               <p class="profile-customer-subtitle">
-                Để việc mua/bán diễn ra trơn tru và chúng tôi có thể liên hệ hỗ
-                trợ kịp thời, vui lòng cập nhật 2 thông tin bên dưới.
+                {{ $t("profile.customerInfoSubtitle") }}
               </p>
               <div class="profile-info">
                 <div class="profile-field">
-                  <span class="profile-label">Tên người dùng</span>
+                  <span class="profile-label">{{
+                    $t("profile.fullNameLabel")
+                  }}</span>
                   <input
                     v-model="profileInfoForm.display_name"
                     class="profile-input"
                     type="text"
-                    placeholder="Nhập tên người dùng"
+                    :placeholder="$t('profile.fullNamePlaceholder')"
                   />
                 </div>
                 <div class="profile-field">
-                  <span class="profile-label">Số điện thoại</span>
+                  <span class="profile-label">{{
+                    $t("profile.phoneLabel")
+                  }}</span>
                   <input
                     v-model="profileInfoForm.phone"
                     class="profile-input"
                     type="tel"
                     inputmode="tel"
-                    placeholder="Nhập số điện thoại"
+                    :placeholder="$t('profile.phonePlaceholder')"
                   />
                 </div>
               </div>
@@ -80,7 +90,7 @@
                   :disabled="profileInfoSaving"
                   @click="resetProfileInfo"
                 >
-                  Hủy
+                  {{ $t("admin.cancel") }}
                 </button>
                 <button
                   type="button"
@@ -88,7 +98,11 @@
                   :disabled="profileInfoSaving"
                   @click="saveProfileInfo"
                 >
-                  {{ profileInfoSaving ? "Đang lưu..." : "Lưu thông tin" }}
+                  {{
+                    profileInfoSaving
+                      ? $t("profile.saving")
+                      : $t("profile.saveInfoButton")
+                  }}
                 </button>
               </div>
             </div>
@@ -109,7 +123,9 @@
                 }}</span>
               </div>
               <div class="profile-stat-card">
-                <span class="profile-stat-value">{{ quickStats.orderCount }}</span>
+                <span class="profile-stat-value">{{
+                  quickStats.orderCount
+                }}</span>
                 <span class="profile-stat-label">{{
                   $t("profile.statsOrders")
                 }}</span>
@@ -140,7 +156,7 @@
                   class="btn-secondary"
                   @click="showCreditLedgerModal = true"
                 >
-                  {{ $t("admin.creditLedger") || "Sổ sao kê tín chỉ" }}
+                  {{ $t("admin.creditLedger") }}
                 </button>
                 <button
                   type="button"
@@ -156,7 +172,7 @@
       </section>
 
       <section v-else-if="loading" class="profile-card profile-card--plain">
-        <p>{{ $t("auth.loading") || "Đang tải..." }}</p>
+        <p>{{ $t("auth.loading") }}</p>
       </section>
 
       <section
@@ -164,9 +180,7 @@
         class="profile-card profile-card--plain profile-card--error"
       >
         <p>
-          {{
-            errorMessage || $t("auth.unauthorized") || "Vui lòng đăng nhập lại"
-          }}
+          {{ errorMessage || $t("auth.unauthorized") }}
         </p>
         <NuxtLink to="/login" class="btn-primary btn-full">
           {{ $t("auth.login") }}
@@ -242,19 +256,17 @@
       >
         <div class="profile-modal">
           <h3 class="profile-modal-title">
-            Thông tin để hỗ trợ mua bán tốt hơn
+            {{ $t("profile.completeInfoTitle") }}
           </h3>
           <p class="profile-modal-desc">
-            Để việc mua/bán của bạn diễn ra trơn tru và chúng tôi có thể liên hệ
-            hỗ trợ kịp thời, phục vụ tốt hơn cho bạn, vui lòng cho biết các
-            thông tin sau trước khi thực hiện nạp tiền:
+            {{ $t("profile.completeInfoDesc") }}
           </p>
           <form
             class="profile-modal-form"
             @submit.prevent="saveProfileInfo({ continueDeposit: true })"
           >
             <div class="profile-form-row">
-              <label>Tên người dùng</label>
+              <label>{{ $t("profile.fullNameLabel") }}</label>
               <input
                 v-model="profileInfoForm.display_name"
                 type="text"
@@ -263,7 +275,7 @@
               />
             </div>
             <div class="profile-form-row">
-              <label>Số điện thoại</label>
+              <label>{{ $t("profile.phoneLabel") }}</label>
               <input
                 v-model="profileInfoForm.phone"
                 type="tel"
@@ -282,14 +294,18 @@
                 :disabled="profileInfoSaving"
                 @click="showProfileInfoModal = false"
               >
-                Để sau
+                {{ $t("profile.laterButton") }}
               </button>
               <button
                 type="submit"
                 class="btn-primary"
                 :disabled="profileInfoSaving"
               >
-                {{ profileInfoSaving ? "Đang lưu..." : "Lưu & Nạp tiền" }}
+                {{
+                  profileInfoSaving
+                    ? $t("profile.saving")
+                    : $t("profile.saveAndDepositButton")
+                }}
               </button>
             </div>
           </form>
@@ -398,11 +414,11 @@ async function saveProfileInfo(opts) {
   const display_name = String(profileInfoForm.display_name ?? "").trim();
   const phone = String(profileInfoForm.phone ?? "").trim();
   if (!display_name) {
-    profileInfoError.value = "Vui lòng nhập tên người dùng.";
+    profileInfoError.value = t("profile.validateFullNameRequired");
     return;
   }
   if (!phone) {
-    profileInfoError.value = "Vui lòng nhập số điện thoại.";
+    profileInfoError.value = t("profile.validatePhoneRequired");
     return;
   }
 
@@ -414,7 +430,7 @@ async function saveProfileInfo(opts) {
     });
 
     await loadProfile({ silent: true });
-    showToast("Đã lưu thông tin thành công!", "success");
+    showToast(t("profile.saveInfoSuccess"), "success");
 
     if (continueDeposit) {
       showProfileInfoModal.value = false;
@@ -422,9 +438,7 @@ async function saveProfileInfo(opts) {
     }
   } catch (e) {
     profileInfoError.value =
-      e?.data?.statusMessage ||
-      e?.data?.message ||
-      "Lưu thất bại, vui lòng thử lại.";
+      e?.data?.statusMessage || e?.data?.message || t("profile.saveInfoFailed");
   } finally {
     profileInfoSaving.value = false;
   }
@@ -448,15 +462,11 @@ async function loadProfile(opts) {
       user.value = data.user;
       syncProfileInfoFormFromUser();
     } else {
-      if (!silent)
-        errorMessage.value = t("auth.unauthorized") || "Vui lòng đăng nhập lại";
+      if (!silent) errorMessage.value = t("auth.unauthorized");
     }
   } catch (e) {
     if (!silent) {
-      errorMessage.value =
-        e?.data?.statusMessage ||
-        t("auth.unauthorized") ||
-        "Vui lòng đăng nhập lại";
+      errorMessage.value = e?.data?.statusMessage || t("auth.unauthorized");
     }
   } finally {
     if (!silent) loading.value = false;
@@ -514,10 +524,7 @@ async function submitChangePassword() {
     return;
   }
   if (pwForm.newPassword.length < 6) {
-    pwError.value =
-      locale.value === "vi"
-        ? "Mật khẩu mới tối thiểu 6 ký tự"
-        : "New password must be at least 6 characters";
+    pwError.value = t("profile.newPasswordMinLength");
     return;
   }
 
@@ -534,14 +541,9 @@ async function submitChangePassword() {
     pwForm.oldPassword = "";
     pwForm.newPassword = "";
     pwForm.confirmPassword = "";
-    showToast(
-      locale.value === "vi"
-        ? "Đổi mật khẩu thành công!"
-        : "Password changed successfully!",
-      "success",
-    );
+    showToast(t("profile.passwordChangedSuccess"), "success");
   } catch (e) {
-    pwError.value = e?.data?.statusMessage || "Lỗi đổi mật khẩu";
+    pwError.value = e?.data?.statusMessage || t("profile.passwordChangeFailed");
   } finally {
     pwSaving.value = false;
   }
@@ -749,6 +751,7 @@ async function submitChangePassword() {
 .profile-card {
   width: 100%;
   max-width: 980px;
+  position: relative;
   color: var(--text-primary);
   border-radius: 1.25rem;
   padding: 0;
@@ -756,6 +759,92 @@ async function submitChangePassword() {
   box-shadow: var(--neon-shadow);
   border: 1px solid rgb(var(--accent-rgb) / 0.2);
   overflow: hidden;
+}
+
+.profile-close-btn {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  right: auto;
+  z-index: 4;
+  height: 34px;
+  padding: 0 10px 0 8px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  color: rgb(226 232 240 / 0.95);
+  border: 1px solid rgb(148 163 184 / 0.35);
+  background:
+    linear-gradient(180deg, rgb(255 255 255 / 0.05), transparent),
+    rgb(15 23 42 / 0.55);
+  backdrop-filter: blur(6px);
+  box-shadow: 0 6px 16px rgb(2 6 23 / 0.35);
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.profile-close-btn-icon {
+  display: inline-flex;
+  width: 18px;
+  height: 18px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: rgb(var(--accent-rgb) / 0.22);
+  color: #eaf2ff;
+  font-size: 12px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.profile-close-btn-text {
+  white-space: nowrap;
+}
+
+.profile-close-btn:hover {
+  color: #fff;
+  border-color: rgb(var(--accent-rgb) / 0.6);
+  background:
+    linear-gradient(180deg, rgb(var(--accent-rgb) / 0.2), rgb(var(--accent-rgb) / 0.08)),
+    rgb(15 23 42 / 0.6);
+  transform: translateY(-1px);
+}
+
+.profile-close-btn:focus-visible {
+  outline: 2px solid var(--blue-bright);
+  outline-offset: 2px;
+}
+
+@media (max-width: 640px) {
+  .profile-close-btn {
+    top: 14px;
+    left: 14px;
+    right: auto;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    justify-content: center;
+    border-radius: 10px;
+  }
+
+  .profile-close-btn-text {
+    display: none;
+  }
+
+  .profile-close-btn-icon {
+    width: 20px;
+    height: 20px;
+    font-size: 13px;
+  }
 }
 
 .profile-hero {

@@ -246,6 +246,18 @@ CREATE TABLE IF NOT EXISTS product_keys (
     CONSTRAINT fk_product_keys_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE SET NULL
 );
 
+-- Giới thiệu trang About (Canva embed), quản lý bởi admin_0
+CREATE TABLE IF NOT EXISTS about_introductions (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    topic VARCHAR(255) NOT NULL,
+    description TEXT NULL,
+    canvas_embed_url VARCHAR(2048) NOT NULL,
+    sort_order INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+    KEY idx_about_intro_sort (sort_order, id)
+);
+
 -- Dev only: superadmin / 123456. Production: tạo admin qua tool, không hardcode mật khẩu trong SQL.
 INSERT INTO admins (username, password_hash, role, ref_code)
 VALUES ('superadmin', '$2b$10$hMSE6SHtfvgS1YrqwMXmIOdgTv7mp3yhIBpfLOOmiMaDnBvkhC0Cq', 'admin_0', 'ADMIN0_ROOT');

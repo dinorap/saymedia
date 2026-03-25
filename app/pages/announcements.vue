@@ -3,12 +3,27 @@
     <SiteHeader />
     <main class="announcements-main">
       <section class="announcements-hero">
-        <h1 class="announcements-title">
-          {{ $t("announcements.pageTitle") }}
-        </h1>
-        <p class="announcements-subtitle">
-          {{ $t("announcements.pageSubtitle") }}
-        </p>
+        <div class="announcements-hero-inner">
+          <div>
+            <h1 class="announcements-title">
+              {{ $t("announcements.pageTitle") }}
+            </h1>
+            <p class="announcements-subtitle">
+              {{ $t("announcements.pageSubtitle") }}
+            </p>
+          </div>
+          <div class="announcements-hero-tags">
+            <span class="hero-tag"
+              >📣 {{ $t("announcements.heroTagUpdates") }}</span
+            >
+            <span class="hero-tag"
+              >⚠️ {{ $t("announcements.heroTagImportant") }}</span
+            >
+            <span class="hero-tag"
+              >🕒 {{ $t("announcements.heroTagRealtime") }}</span
+            >
+          </div>
+        </div>
       </section>
 
       <section class="announcements-list" aria-live="polite">
@@ -85,7 +100,10 @@ let autoRefreshTimer = null;
 
 onMounted(async () => {
   await loadAnnouncements({});
-  autoRefreshTimer = setInterval(() => loadAnnouncements({ silent: true }), 5000);
+  autoRefreshTimer = setInterval(
+    () => loadAnnouncements({ silent: true }),
+    5000,
+  );
 });
 
 onUnmounted(() => {
@@ -101,32 +119,66 @@ onUnmounted(() => {
 }
 
 .announcements-main {
-  /* Đẩy nội dung xuống dưới để không bị header fixed che mất */
-  padding: 85px 150px 80px;
+  padding: 96px 150px 80px;
 }
 
 .announcements-hero {
-  max-width: 720px;
-  margin: 16px auto 32px;
-  text-align: center;
+  margin-top: 8px;
+}
+
+.announcements-hero-inner {
+  border-radius: 20px;
+  padding: 20px 22px 18px;
+  background:
+    radial-gradient(
+      circle at 0 0,
+      rgb(var(--accent-rgb) / 0.28),
+      transparent 55%
+    ),
+    rgba(5, 15, 35, 0.96);
+  border: 1px solid rgb(var(--accent-rgb) / 0.55);
+  box-shadow:
+    0 0 36px rgb(var(--accent-rgb) / 0.35),
+    0 20px 60px rgba(15, 23, 42, 0.95);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
 }
 
 .announcements-title {
-  margin: 0 0 8px;
-  font-size: 2rem;
+  margin: 0 0 6px;
+  font-size: 1.8rem;
   font-weight: 700;
 }
 
 .announcements-subtitle {
   margin: 0;
-  font-size: 1rem;
-  line-height: 1.6;
+  font-size: 0.95rem;
+  line-height: 1.55;
   color: var(--text-secondary);
-  opacity: 0.9;
+}
+
+.announcements-hero-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  max-width: 500px;
+}
+
+.hero-tag {
+  padding: 0.36rem 0.8rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  background: rgb(var(--accent-rgb) / 0.12);
+  border: 1px solid rgb(var(--accent-rgb) / 0.25);
+  white-space: nowrap;
 }
 
 .announcements-list {
-  margin-top: 12px;
+  margin-top: 24px;
 }
 
 .announcements-state {
@@ -202,6 +254,9 @@ onUnmounted(() => {
   .announcements-main {
     padding: 92px 24px 60px;
   }
+  .announcements-hero-inner {
+    align-items: flex-start;
+  }
   .announcements-list-inner {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -211,8 +266,14 @@ onUnmounted(() => {
   .announcements-main {
     padding: 92px 16px 48px;
   }
-  .announcements-hero {
-    margin-bottom: 20px;
+  .announcements-hero-inner {
+    padding: 16px;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .announcements-hero-tags {
+    justify-content: flex-start;
+    max-width: none;
   }
   .announcements-title {
     font-size: 1.5rem;

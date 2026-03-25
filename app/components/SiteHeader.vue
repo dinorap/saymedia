@@ -1,20 +1,19 @@
 <template>
   <header class="site-header">
-    <div class="site-header-left">
+    <div class="site-header-brand">
       <NuxtLink to="/" class="site-logo">
         <img src="/logo.png" alt="SayMedia AI" class="site-logo-img" />
       </NuxtLink>
-      <nav class="site-nav-links">
-        <NuxtLink to="/">{{ $t("nav.home") }}</NuxtLink>
-
-        <NuxtLink to="/products">{{ $t("nav.services") }}</NuxtLink>
-        <NuxtLink to="/announcements">{{ $t("admin.announcements") }}</NuxtLink>
-        <NuxtLink to="/about">{{ $t("nav.about") }}</NuxtLink>
-        <NuxtLink to="/contact">{{ $t("nav.contact") }}</NuxtLink>
-        <NuxtLink to="/pricing">{{ $t("nav.pricing") }}</NuxtLink>
-      </nav>
     </div>
-    <div class="site-auth-buttons">
+    <nav class="site-header-nav site-nav-links" aria-label="Main">
+      <NuxtLink to="/">{{ $t("nav.home") }}</NuxtLink>
+      <NuxtLink to="/products">{{ $t("nav.services") }}</NuxtLink>
+      <NuxtLink to="/announcements">{{ $t("admin.announcements") }}</NuxtLink>
+      <NuxtLink to="/about">{{ $t("nav.about") }}</NuxtLink>
+      <NuxtLink to="/contact">{{ $t("nav.contact") }}</NuxtLink>
+      <NuxtLink to="/pricing">{{ $t("nav.pricing") }}</NuxtLink>
+    </nav>
+    <div class="site-header-actions">
       <div class="site-lang-switcher">
         <button
           type="button"
@@ -58,6 +57,21 @@
         <span class="site-cart-text">{{ $t("cart.title") }}</span>
         <span v-if="cartCount" class="site-cart-badge">{{ cartCount }}</span>
       </NuxtLink>
+      <div
+        v-if="currentUser && currentUser.role === 'user'"
+        class="site-header-credit"
+        :title="`${$t('product.balance')}: ${formatCredit(currentUser.credit)}`"
+      >
+        <span class="site-header-credit-icon" aria-hidden="true">◎</span>
+        <span class="site-header-credit-text">
+          <span class="site-header-credit-label">{{
+            $t("product.balance")
+          }}</span>
+          <span class="site-header-credit-value">{{
+            formatCredit(currentUser.credit)
+          }}</span>
+        </span>
+      </div>
       <template v-if="currentUser">
         <div
           class="site-user-dropdown"
@@ -122,6 +136,16 @@
         </span>
         <span v-if="cartCount" class="site-cart-badge">{{ cartCount }}</span>
       </NuxtLink>
+      <div
+        v-if="currentUser && currentUser.role === 'user'"
+        class="site-mobile-credit"
+        :title="`${$t('product.balance')}: ${formatCredit(currentUser.credit)}`"
+      >
+        <span class="site-mobile-credit-icon" aria-hidden="true">◎</span>
+        <span class="site-mobile-credit-value">{{
+          formatCredit(currentUser.credit)
+        }}</span>
+      </div>
       <NuxtLink
         v-if="currentUser"
         to="/profile"
@@ -132,7 +156,13 @@
       >
         <span class="site-mobile-login-icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none">
-            <circle cx="12" cy="8" r="3.5" stroke="currentColor" stroke-width="1.8" />
+            <circle
+              cx="12"
+              cy="8"
+              r="3.5"
+              stroke="currentColor"
+              stroke-width="1.8"
+            />
             <path
               d="M5 19.5c1.2-3.2 3.9-4.8 7-4.8s5.8 1.6 7 4.8"
               stroke="currentColor"
@@ -430,17 +460,12 @@ function cancelClose() {
 
 const route = useRoute();
 
-function toggleMobileMenu() {
-  isMobileMenuOpen.value = !isMobileMenuOpen.value;
+function formatCredit(v) {
+  return (Number(v) || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 }
 
-function closeMobileMenu() {
-  isMobileMenuOpen.value = false;
-}
-
-onMounted(async () => {
+async function refreshCurrentUser() {
   const role = roleCookie.value;
-  // Hiển thị tên + menu tài khoản cho mọi role không phải admin dashboard
   if (role && role !== "admin_0" && role !== "admin_1") {
     try {
       const data = await $fetch("/api/auth/me");
@@ -451,25 +476,29 @@ onMounted(async () => {
   } else {
     currentUser.value = null;
   }
+}
+
+function toggleMobileMenu() {
+  isMobileMenuOpen.value = !isMobileMenuOpen.value;
+}
+
+function closeMobileMenu() {
+  isMobileMenuOpen.value = false;
+}
+
+onMounted(async () => {
+  await refreshCurrentUser();
   // Chạy kiểm tra popup ngay sau khi mount (chỉ chạy trên client, sau hydration)
   await maybeShowAnnouncementPopup();
 });
 
-// Chạy lại khi chuyển trang (client-side navigation) để bắt thêm/sửa thông báo, qua ngày mới
 watch(
   () => route.path,
-  () => {
-    maybeShowAnnouncementPopup();
-  },
-  { immediate: false },
-);
-
-watch(
-  () => route.path,
-  () => {
+  async () => {
     closeMobileMenu();
+    await refreshCurrentUser();
+    await maybeShowAnnouncementPopup();
   },
-  { immediate: false },
 );
 
 watch(isMobileMenuOpen, (open) => {
@@ -658,25 +687,34 @@ onUnmounted(() => {
 
 <style scoped>
 .site-header {
+  --site-header-ctrl-h: 42px;
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   z-index: 999;
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
+  column-gap: 20px;
   padding: 16px 150px;
   border-bottom: 1px solid var(--blue-border);
   background: linear-gradient(
     180deg,
-    rgba(4, 15, 39, 0.72),
-    rgba(4, 15, 39, 0.4)
+    rgba(4, 15, 39, 0.58),
+    rgba(4, 15, 39, 0.26)
   );
-  backdrop-filter: blur(18px);
+  backdrop-filter: blur(14px);
   box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.45),
+    0 8px 28px rgba(0, 0, 0, 0.35),
     0 0 30px var(--blue-glow);
+}
+
+.site-header-brand {
+  justify-self: start;
+  display: flex;
+  align-items: center;
+  min-width: 0;
 }
 
 .site-logo {
@@ -685,38 +723,37 @@ onUnmounted(() => {
   text-decoration: none;
 }
 
-.site-header-left {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  min-width: 0;
-}
-
 .site-logo-img {
-  height: 56px;
+  height: 48px;
   width: auto;
   display: block;
   object-fit: contain;
 }
 
+.site-header-nav {
+  justify-self: center;
+  max-width: 100%;
+}
+
 .site-nav-links {
   display: flex;
   align-items: center;
-  gap: 8px;
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-width: 0;
 }
 
 .site-nav-links a {
   color: var(--text-primary);
   text-decoration: none;
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 500;
-  padding: 10px 16px;
+  padding: 8px 12px;
   border-radius: 8px;
   transition: var(--transition-fast);
   letter-spacing: 0.01em;
+  line-height: 1.2;
 }
 
 .site-nav-links a:hover {
@@ -727,10 +764,14 @@ onUnmounted(() => {
     0 0 30px var(--blue-glow);
 }
 
-.site-auth-buttons {
+.site-header-actions {
+  justify-self: end;
   display: flex;
   align-items: center;
-  gap: 16px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+  min-width: 0;
 }
 
 .site-mobile-controls {
@@ -876,8 +917,12 @@ onUnmounted(() => {
   position: relative;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
-  padding: 10px 14px;
+  height: var(--site-header-ctrl-h);
+  min-height: var(--site-header-ctrl-h);
+  padding: 0 14px;
+  box-sizing: border-box;
   border-radius: 10px;
   text-decoration: none;
   border: 1px solid var(--blue-border);
@@ -919,22 +964,143 @@ onUnmounted(() => {
   box-shadow: 0 0 14px var(--blue-glow);
 }
 
-.site-lang-switcher {
-  display: flex;
+.site-header-credit {
+  display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 8px;
+  height: var(--site-header-ctrl-h);
+  min-height: var(--site-header-ctrl-h);
+  padding: 0 12px 0 10px;
+  border-radius: 10px;
+  border: 1px solid rgb(var(--accent-rgb) / 0.4);
+  background:
+    linear-gradient(
+      180deg,
+      rgb(var(--accent-rgb) / 0.12),
+      rgb(var(--accent-rgb) / 0.06)
+    ),
+    rgba(15, 23, 42, 0.75);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.05),
+    0 0 16px rgb(var(--accent-rgb) / 0.18);
+  min-width: 112px;
+  max-width: min(240px, 30vw);
+  box-sizing: border-box;
+}
+
+.site-header-credit-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  font-size: 12px;
+  line-height: 1;
+  color: #dbeafe;
+  border-radius: 999px;
+  background: rgb(var(--accent-rgb) / 0.35);
+  box-shadow: 0 0 10px rgb(var(--accent-rgb) / 0.4);
+  flex-shrink: 0;
+}
+
+.site-header-credit-text {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0;
+  min-width: 0;
+}
+
+.site-header-credit-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  line-height: 1.1;
+}
+
+.site-header-credit-value {
+  font-size: 14px;
+  font-weight: 800;
+  color: #eaf2ff;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+  white-space: nowrap;
+  letter-spacing: 0.01em;
+}
+
+.site-mobile-credit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
+  min-width: 70px;
+  max-width: 108px;
+  padding: 0 8px;
+  height: 38px;
+  border-radius: 10px;
+  border: 1px solid rgb(var(--accent-rgb) / 0.45);
+  background:
+    linear-gradient(
+      180deg,
+      rgb(var(--accent-rgb) / 0.16),
+      rgb(var(--accent-rgb) / 0.08)
+    ),
+    rgba(15, 23, 42, 0.8);
+}
+
+.site-mobile-credit-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: rgb(var(--accent-rgb) / 0.4);
+  color: #eaf2ff;
+  font-size: 11px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.site-mobile-credit-value {
+  font-size: 12px;
+  font-weight: 800;
+  color: #eaf2ff;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  letter-spacing: 0.01em;
+}
+
+.site-lang-switcher {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  height: var(--site-header-ctrl-h);
+  min-height: var(--site-header-ctrl-h);
+  padding: 0 8px;
+  box-sizing: border-box;
+  border-radius: 10px;
 }
 
 .site-lang-btn {
   background: none;
   border: none;
   color: var(--text-secondary);
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  padding: 6px 10px;
+  padding: 0 8px;
+  height: 100%;
   border-radius: 6px;
   transition: var(--transition-fast);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .site-lang-btn:hover {
@@ -956,12 +1122,23 @@ onUnmounted(() => {
 
 .site-btn-login,
 .site-btn-user-name {
-  padding: 10px 24px;
+  height: var(--site-header-ctrl-h);
+  min-height: var(--site-header-ctrl-h);
+  padding: 0 20px;
+  box-sizing: border-box;
   border-radius: 10px;
   cursor: pointer;
   font-weight: 600;
-  font-size: 15px;
+  font-size: 14px;
+  line-height: 1;
   transition: var(--transition-fast);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  max-width: min(200px, 22vw);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .site-btn-login {
@@ -982,6 +1159,8 @@ onUnmounted(() => {
 
 .site-user-dropdown {
   position: relative;
+  min-width: 0;
+  flex-shrink: 1;
 }
 
 .site-btn-user-name {
@@ -1277,13 +1456,16 @@ onUnmounted(() => {
 
 @media (max-width: 1024px) {
   .site-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     padding: 12px 16px;
   }
   .site-logo-img {
     height: 42px;
   }
-  .site-nav-links,
-  .site-auth-buttons {
+  .site-header-nav,
+  .site-header-actions {
     display: none;
   }
   .site-mobile-controls {

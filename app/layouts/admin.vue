@@ -84,6 +84,16 @@
             {{ $t("admin.announcements") }}
           </span>
         </NuxtLink>
+        <NuxtLink
+          v-if="currentUser?.role === 'admin_0'"
+          to="/admin/about-intro"
+          class="sidebar-item"
+        >
+          <span class="sidebar-item-icon" aria-hidden="true">📘</span>
+          <span class="sidebar-item-label">
+            {{ $t("admin.aboutIntro") }}
+          </span>
+        </NuxtLink>
       </nav>
       <div class="sidebar-footer">
         <button
@@ -423,6 +433,7 @@ const pageTitle = computed(() => {
   if (name.includes("logs")) return t("admin.logs");
   if (name.includes("support")) return t("admin.supportChat") || "Chat hỗ trợ";
   if (name.includes("announcements")) return t("admin.announcements");
+  if (name.includes("about-intro")) return t("admin.aboutIntro");
   return t("admin.profileName");
 });
 
