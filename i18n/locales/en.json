@@ -65,6 +65,12 @@
     "title": "Tool pricing",
     "subtitle": "Pick a category to view details (Affiliate / Long-form YouTube).",
     "note": "Pricing may change over time. Contact us if you need help choosing the right plan.",
+    "empty": "No pricing data available yet.",
+    "subPackagesLabel": "Sub packages",
+    "contactPrice": "Contact us",
+    "videoLabel": "Video",
+    "devicePerMonthLabel": "Device / month",
+    "noBenefits": "Benefits are not configured yet.",
     "popular": "Most popular",
     "starter": {
       "name": "Starter",

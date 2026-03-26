@@ -65,6 +65,12 @@
     "title": "Bảng giá tool",
     "subtitle": "Chọn nhóm bảng giá để xem chi tiết (Affiliate / Video dài YouTube).",
     "note": "Giá có thể thay đổi theo thời điểm. Vui lòng liên hệ nếu cần tư vấn gói phù hợp.",
+    "empty": "Chưa có dữ liệu bảng giá.",
+    "subPackagesLabel": "Gói con",
+    "contactPrice": "Liên hệ",
+    "videoLabel": "Video",
+    "devicePerMonthLabel": "Thiết bị/ tháng",
+    "noBenefits": "Chưa cấu hình quyền lợi.",
     "popular": "Phổ biến",
     "starter": {
       "name": "Gói Starter",

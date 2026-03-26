@@ -38,7 +38,7 @@
         </div>
 
         <div v-else-if="!activePackages.length" class="pricing-empty">
-          Chưa có dữ liệu bảng giá.
+          {{ $t("pricing.empty") }}
         </div>
 
         <template v-else>
@@ -59,7 +59,11 @@
               v-if="pkg.subPackages && pkg.subPackages.length"
               class="group-block"
             >
-              <div class="youtube-subtabs" role="tablist" aria-label="Gói con">
+              <div
+                class="youtube-subtabs"
+                role="tablist"
+                :aria-label="$t('pricing.subPackagesLabel')"
+              >
                 <button
                   v-for="(op, oi) in pkg.subPackages"
                   :key="oi"
@@ -100,7 +104,7 @@
 
               <p class="plan-price">
                 <span class="plan-amount">
-                  {{ selectedSubFor(idx, pkg)?.price || "Liên hệ" }}
+                  {{ selectedSubFor(idx, pkg)?.price || $t("pricing.contactPrice") }}
                 </span>
               </p>
 
@@ -112,7 +116,7 @@
                 class="plan-side"
               >
                 <div v-if="selectedSubFor(idx, pkg)?.video" class="plan-side-row">
-                  <span class="plan-side-label">Video:</span>
+                  <span class="plan-side-label">{{ $t("pricing.videoLabel") }}:</span>
                   <span class="plan-side-value">
                     {{ selectedSubFor(idx, pkg)?.video }}
                   </span>
@@ -121,7 +125,7 @@
                   v-if="selectedSubFor(idx, pkg)?.devicePricePerMonth"
                   class="plan-side-row"
                 >
-                  <span class="plan-side-label">Thiết bị/ tháng:</span>
+                  <span class="plan-side-label">{{ $t("pricing.devicePerMonthLabel") }}:</span>
                   <span class="plan-side-value">
                     {{ selectedSubFor(idx, pkg)?.devicePricePerMonth }}
                   </span>
@@ -139,7 +143,7 @@
                   v-if="!(pkg.benefits || []).length"
                   class="plan-features-empty"
                 >
-                  Chưa cấu hình quyền lợi.
+                  {{ $t("pricing.noBenefits") }}
                 </li>
               </ul>
             </div>
@@ -155,7 +159,9 @@
               </div>
 
               <p class="plan-price">
-                <span class="plan-amount">{{ pkg.price || "Liên hệ" }}</span>
+                <span class="plan-amount">
+                  {{ pkg.price || $t("pricing.contactPrice") }}
+                </span>
               </p>
 
               <div
@@ -163,14 +169,14 @@
                 class="plan-side"
               >
                 <div v-if="pkg.video" class="plan-side-row">
-                  <span class="plan-side-label">Video:</span>
+                  <span class="plan-side-label">{{ $t("pricing.videoLabel") }}:</span>
                   <span class="plan-side-value">{{ pkg.video }}</span>
                 </div>
                 <div
                   v-if="pkg.devicePricePerMonth"
                   class="plan-side-row"
                 >
-                  <span class="plan-side-label">Thiết bị/ tháng:</span>
+                  <span class="plan-side-label">{{ $t("pricing.devicePerMonthLabel") }}:</span>
                   <span class="plan-side-value">
                     {{ pkg.devicePricePerMonth }}
                   </span>
@@ -188,7 +194,7 @@
                   v-if="!(pkg.benefits || []).length"
                   class="plan-features-empty"
                 >
-                  Chưa cấu hình quyền lợi.
+                  {{ $t("pricing.noBenefits") }}
                 </li>
               </ul>
             </div>
