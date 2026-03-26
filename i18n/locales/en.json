@@ -62,9 +62,9 @@
     "contactCtaSecondary": "Email our team"
   },
   "pricing": {
-    "title": "Example pricing for the platform",
-    "subtitle": "These plans are just examples to help you explain the model to clients. Real pricing will depend on your business.",
-    "note": "All numbers are illustrative – feel free to adjust when pitching to your customers.",
+    "title": "Tool pricing",
+    "subtitle": "Pick a category to view details (Affiliate / Long-form YouTube).",
+    "note": "Pricing may change over time. Contact us if you need help choosing the right plan.",
     "popular": "Most popular",
     "starter": {
       "name": "Starter",
@@ -288,6 +288,7 @@
     "annDeleteConfirm": "Are you sure you want to delete?",
     "annSaved": "Announcement saved.",
     "annDeleted": "Announcement deleted.",
+    "pricing": "Pricing",
     "aboutIntro": "About (Canva)",
     "aboutIntroSearchPlaceholder": "Topic, description...",
     "aboutIntroTopic": "Topic",

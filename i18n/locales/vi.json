@@ -62,9 +62,9 @@
     "contactCtaSecondary": "Gửi email cho chúng tôi"
   },
   "pricing": {
-    "title": "Bảng giá tham khảo cho nền tảng",
-    "subtitle": "Các gói dưới đây chỉ là ví dụ để bạn hình dung mô hình triển khai; khi chạy thật sẽ cấu hình lại theo nhu cầu.",
-    "note": "Mọi con số đều mang tính minh họa – bạn có thể thay đổi khi tư vấn cho khách.",
+    "title": "Bảng giá tool",
+    "subtitle": "Chọn nhóm bảng giá để xem chi tiết (Affiliate / Video dài YouTube).",
+    "note": "Giá có thể thay đổi theo thời điểm. Vui lòng liên hệ nếu cần tư vấn gói phù hợp.",
     "popular": "Phổ biến",
     "starter": {
       "name": "Gói Starter",
@@ -288,6 +288,7 @@
     "annDeleteConfirm": "Bạn chắc chắn muốn xóa?",
     "annSaved": "Đã lưu thông báo.",
     "annDeleted": "Đã xóa thông báo.",
+    "pricing": "Bảng giá",
     "aboutIntro": "Giới thiệu (Canva)",
     "aboutIntroSearchPlaceholder": "Chủ đề, mô tả...",
     "aboutIntroTopic": "Chủ đề",

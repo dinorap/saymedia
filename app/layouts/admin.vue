@@ -86,6 +86,14 @@
         </NuxtLink>
         <NuxtLink
           v-if="currentUser?.role === 'admin_0'"
+          to="/admin/pricing"
+          class="sidebar-item"
+        >
+          <span class="sidebar-item-icon" aria-hidden="true">📐</span>
+          <span class="sidebar-item-label">{{ $t("admin.pricing") }}</span>
+        </NuxtLink>
+        <NuxtLink
+          v-if="currentUser?.role === 'admin_0'"
           to="/admin/about-intro"
           class="sidebar-item"
         >
@@ -433,6 +441,7 @@ const pageTitle = computed(() => {
   if (name.includes("logs")) return t("admin.logs");
   if (name.includes("support")) return t("admin.supportChat") || "Chat hỗ trợ";
   if (name.includes("announcements")) return t("admin.announcements");
+  if (name.includes("pricing")) return t("admin.pricing") || "Pricing";
   if (name.includes("about-intro")) return t("admin.aboutIntro");
   return t("admin.profileName");
 });
