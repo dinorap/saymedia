@@ -34,6 +34,23 @@ echo [+] Nitro Server da san sang tren Port 4012.
 
 timeout /t 2 /nobreak >nul
 
+REM Neu Nginx chua chay thi thu khoi dong tu folder nginx-1.29.6
+set "NGINX_DIR=%ROOT%nginx-1.29.6"
+set "NGINX_EXE=%NGINX_DIR%\nginx.exe"
+
+REM Kiem tra nhanh port 80; neu chua mo thi start Nginx
+powershell -NoProfile -Command "if (Test-NetConnection -ComputerName 127.0.0.1 -Port 80 -InformationLevel Quiet) { exit 0 } else { exit 1 }" >nul 2>&1
+if !errorlevel! NEQ 0 (
+  if exist "%NGINX_EXE%" (
+    echo Dang khoi dong Nginx...
+    REM -p de Nginx tim logs/conf theo dung thu muc
+    start "" /B "%NGINX_EXE%" -p "%NGINX_DIR%" -c conf\nginx.conf
+    timeout /t 1 /nobreak >nul
+  ) else (
+    echo Khong tim thay Nginx tai: "%NGINX_EXE%"
+  )
+)
+
 echo Kiem tra Nginx tren 127.0.0.1:80 ...
 for /l %%i in (1,1,20) do (
   REM TCP connect nhanh (timeout ~400ms) de tranh bi treo khi port bi drop/filtered.
