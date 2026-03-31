@@ -13,6 +13,24 @@
 
 Xem hướng dẫn triển khai và chính sách migrate DB trong `DEPLOYMENT.md`.
 
+## Danh sách cổng đang sử dụng
+
+- `4012` - Nuxt/Nitro app (HTTP nội bộ).
+  - Nơi cấu hình: `start_main.bat`, `start-server-and-tunnel.bat`, `nuxt.config.ts`, `nginx-1.29.6/conf/nginx.conf`, `nginx_saymedia.conf`, `.cloudflared/config.yml`.
+- `80` - Nginx reverse proxy.
+  - Nơi cấu hình: `nginx-1.29.6/conf/nginx.conf`, `nginx_saymedia.conf`, `start_main.bat` (đoạn check/start Nginx).
+- `3301` - MySQL host port (map vào container `3306`).
+  - Nơi cấu hình: `docker-compose.yml` (`3301:3306`), `.env` (`DB_PORT=3301`).
+
+## Gợi ý chuẩn hóa về dải 4012+
+
+Nếu muốn đổi toàn bộ sang dải `4012`, `4013`, `4014`:
+
+- Giữ app Nuxt/Nitro ở `4012`.
+- Đổi Nginx từ `80` sang `4013` (sửa cả `listen` và các script check cổng Nginx).
+- Đổi MySQL host port từ `3301` sang `4014` (sửa `docker-compose.yml` và `.env`).
+- Nếu dùng Cloudflare Tunnel với ingress tĩnh, sửa `.cloudflared/config.yml` để trỏ đúng cổng mới của service đích.
+
 ## Chức năng người dùng (role `user`)
 
 - **Đăng ký / Đăng nhập**

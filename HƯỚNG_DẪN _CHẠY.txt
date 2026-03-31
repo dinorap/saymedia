@@ -1,0 +1,1 @@
+Chạy file start_main.bat là được
