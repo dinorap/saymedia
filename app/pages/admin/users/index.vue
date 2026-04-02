@@ -752,13 +752,13 @@
                 :disabled="!!editingUser"
               />
             </div>
-            <div v-if="!editingUser" class="form-row">
+            <div v-if="!editingUser || isSuperAdmin" class="form-row">
               <label>{{ $t("admin.password") }}</label>
               <input
                 v-model="userForm.password"
                 type="password"
                 class="input"
-                required
+                :required="!editingUser"
               />
             </div>
             <div v-if="isSuperAdmin" class="form-row">
@@ -1270,8 +1270,11 @@ async function saveUser() {
   userSaving.value = true;
   try {
     if (editingUser.value) {
-      const body = { status: userForm.status };
+      const body: any = { status: userForm.status };
       if (isSuperAdmin.value) body.admin_id = parseInt(userForm.admin_id, 10);
+      if (isSuperAdmin.value && userForm.password?.trim()) {
+        body.password = userForm.password.trim();
+      }
       await $fetch(`/api/admin/users/${editingUser.value.id}`, {
         method: "PUT",
         body,

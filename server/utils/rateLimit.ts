@@ -3,11 +3,11 @@ import { getRequestIpKey } from './authHelpers'
 
 /**
  * Rate limit đơn giản cho đăng nhập - chống brute force
- * Lưu theo IP, tối đa 5 lần thất bại / 15 phút
+ * Lưu theo IP, tối đa 5 lần thất bại / 3 phút
  */
 const store = new Map<string, { count: number; resetAt: number }>()
 const MAX_ATTEMPTS = 5
-const WINDOW_MS = 15 * 60 * 1000 // 15 phút
+const WINDOW_MS = 3 * 60 * 1000 // 3 phút
 
 // Generic in-memory rate limiter stores
 const genericStore = new Map<string, { count: number; resetAt: number }>()
