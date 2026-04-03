@@ -1270,7 +1270,7 @@ async function saveUser() {
   userSaving.value = true;
   try {
     if (editingUser.value) {
-      const body: any = { status: userForm.status };
+      const body = { status: userForm.status };
       if (isSuperAdmin.value) body.admin_id = parseInt(userForm.admin_id, 10);
       if (isSuperAdmin.value && userForm.password?.trim()) {
         body.password = userForm.password.trim();

@@ -262,7 +262,7 @@
               </thead>
               <tbody>
                 <tr v-for="item in keyDetails" :key="item.duration">
-                  <td>{{ item.duration }}</td>
+                  <td>{{ formatDuration(item.duration) }}</td>
                   <td>{{ formatNum(item.unit_price) }}</td>
                   <td>{{ item.total_keys }}</td>
                   <td>{{ formatNum(item.total_gross_amount) }}</td>
@@ -336,6 +336,14 @@ function formatVnd(n: number) {
     style: "currency",
     currency: "VND",
   }).format(n || 0);
+}
+
+function formatDuration(v: string) {
+  if (!v) return "-";
+  if (v === "lifetime") return "Lifetime";
+  return String(v)
+    .replace(/\b(\d+)\s*d\b/gi, "$1 ngày")
+    .replace(/\b(\d+)\s*h\b/gi, "$1 giờ");
 }
 
 async function fetchSummary(opts: { silent?: boolean } = {}) {

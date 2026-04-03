@@ -6,7 +6,7 @@ const MAX_DESCRIPTION = 2000;
 const MAX_DOWNLOAD_URL = 2000;
 const MAX_THUMBNAIL_URL = 512;
 const MAX_LONG_DESCRIPTION = 8000;
-const MAX_YOUTUBE_URL = 512;
+const MAX_YOUTUBE_URL = 8000;
 
 export default defineEventHandler(async (event) => {
   const currentUser = event.context.user;

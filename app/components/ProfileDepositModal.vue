@@ -34,6 +34,24 @@
 
             <div class="promo-box">
               <label>Mã khuyến mại (nếu có)</label>
+              <div
+                v-if="promoSuggestions.length"
+                class="promo-marquee"
+                aria-label="Danh sách mã khuyến mại"
+              >
+                <div class="promo-marquee-track">
+                  <button
+                    v-for="(promo, idx) in promoLoopItems"
+                    :key="`${promo.code}-${idx}`"
+                    type="button"
+                    class="promo-chip"
+                    @click="pickPromoCode(promo.code)"
+                  >
+                    <strong>{{ promo.code }}</strong>
+                    <span v-if="promo.hint"> - {{ promo.hint }}</span>
+                  </button>
+                </div>
+              </div>
               <input
                 v-model="promoCode"
                 class="promo-input"
@@ -88,9 +106,15 @@ const amountDisplay = ref('100.000')
 const qrData = ref<any>(null)
 const qrRemaining = ref(0)
 const promoCode = ref('')
+const promoSuggestions = ref<any[]>([])
 const loading = ref(false)
 const testing = ref(false)
 const error = ref('')
+const promoLoopItems = computed(() =>
+  promoSuggestions.value.length > 1
+    ? [...promoSuggestions.value, ...promoSuggestions.value]
+    : promoSuggestions.value,
+)
 
 let countdownTimer: ReturnType<typeof setInterval> | null = null
 let pollTimer: ReturnType<typeof setInterval> | null = null
@@ -107,9 +131,23 @@ function resetForm() {
   qrData.value = null
   qrRemaining.value = 0
   promoCode.value = ''
+  promoSuggestions.value = []
   loading.value = false
   testing.value = false
   error.value = ''
+}
+
+async function fetchActivePromotions() {
+  try {
+    const res: any = await $fetch('/api/payment/active-promotions')
+    promoSuggestions.value = res?.success && Array.isArray(res.data) ? res.data : []
+  } catch {
+    promoSuggestions.value = []
+  }
+}
+
+function pickPromoCode(code: string) {
+  promoCode.value = String(code || '').trim().toUpperCase()
 }
 
 function stopAll() {
@@ -242,6 +280,10 @@ async function copyMemo() {
 watch(
   () => props.open,
   (v) => {
+    if (v) {
+      fetchActivePromotions()
+      return
+    }
     if (!v) {
       stopAll()
       resetForm()
@@ -267,6 +309,11 @@ watch(
 .quick button { padding: .45rem; border-radius: 8px; border: 1px solid rgba(255,255,255,.18); background: rgba(255,255,255,.04); color: var(--text-secondary); cursor: pointer; }
 .promo-box { margin-top: .8rem; }
 .promo-input { width: 100%; padding: .5rem .7rem; border-radius: 8px; border: 1px solid var(--input-border); background: var(--input-bg); color: var(--text-primary); font-size: .9rem; }
+.promo-marquee { margin-bottom: .4rem; width: 100%; overflow: hidden; border: 1px dashed rgba(56,189,248,.55); border-radius: 8px; background: rgba(8,47,73,.2); }
+.promo-marquee-track { display: flex; align-items: center; gap: .5rem; width: max-content; padding: .35rem; animation: promo-marquee-slide 24s linear infinite; }
+.promo-chip { border: 1px solid rgba(56,189,248,.6); border-radius: 999px; background: rgba(8,47,73,.85); color: #e0f2fe; font-size: .78rem; white-space: nowrap; padding: .25rem .6rem; cursor: pointer; }
+.promo-chip:hover { border-color: rgba(125,211,252,.95); background: rgba(12,74,110,.95); }
+@keyframes promo-marquee-slide { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
 .memo-box { margin-top: .8rem; padding: .65rem; border: 1px solid rgba(255,255,255,.12); border-radius: 8px; background: rgba(255,255,255,.03); }
 .memo-label { font-size: .85rem; color: var(--text-secondary); margin-bottom: .35rem; }
 .memo-row { display: flex; align-items: center; gap: .5rem; }

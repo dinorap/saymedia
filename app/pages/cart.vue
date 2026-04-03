@@ -365,7 +365,9 @@ function buySingle(item) {
 
 function formatDuration(v) {
   if (v === "lifetime") return "Lifetime";
-  return v;
+  return String(v)
+    .replace(/\b(\d+)\s*d\b/gi, "$1 ngày")
+    .replace(/\b(\d+)\s*h\b/gi, "$1 giờ");
 }
 
 function getItemStock(item) {

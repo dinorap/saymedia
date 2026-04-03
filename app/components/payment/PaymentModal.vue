@@ -160,6 +160,24 @@
 
                 <div class="promo-row">
                   <label class="promo-label">Mã khuyến mại (nếu có)</label>
+                  <div
+                    v-if="promoSuggestions.length"
+                    class="promo-marquee"
+                    aria-label="Danh sách mã khuyến mại"
+                  >
+                    <div class="promo-marquee-track">
+                      <button
+                        v-for="(promo, idx) in promoLoopItems"
+                        :key="`bank-${promo.code}-${idx}`"
+                        type="button"
+                        class="promo-chip"
+                        @click="pickPromoCode(promo.code)"
+                      >
+                        <strong>{{ promo.code }}</strong>
+                        <span v-if="promo.hint"> - {{ promo.hint }}</span>
+                      </button>
+                    </div>
+                  </div>
                   <div class="promo-inline">
                     <input
                       v-model="promoCode"
@@ -324,6 +342,24 @@
 
                 <div class="promo-row">
                   <label class="promo-label">Mã khuyến mại (nếu có)</label>
+                  <div
+                    v-if="promoSuggestions.length"
+                    class="promo-marquee"
+                    aria-label="Danh sách mã khuyến mại"
+                  >
+                    <div class="promo-marquee-track">
+                      <button
+                        v-for="(promo, idx) in promoLoopItems"
+                        :key="`paypal-${promo.code}-${idx}`"
+                        type="button"
+                        class="promo-chip"
+                        @click="pickPromoCode(promo.code)"
+                      >
+                        <strong>{{ promo.code }}</strong>
+                        <span v-if="promo.hint"> - {{ promo.hint }}</span>
+                      </button>
+                    </div>
+                  </div>
                   <div class="promo-inline">
                     <input
                       v-model="promoCode"
@@ -432,6 +468,12 @@ const loading = ref(false);
 const error = ref("");
 const activePaymentTab = ref("bank");
 const promoCode = ref("");
+const promoSuggestions = ref([]);
+const promoLoopItems = computed(() =>
+  promoSuggestions.value.length > 1
+    ? [...promoSuggestions.value, ...promoSuggestions.value]
+    : promoSuggestions.value,
+);
 
 const runtimeConfig = useRuntimeConfig();
 const paypalClientId = runtimeConfig.public.paypalClientId;
@@ -730,6 +772,21 @@ const copyTransferContent = async () => {
 
 let promoPreviewTimer = null;
 
+async function fetchActivePromotions() {
+  try {
+    const res = await $fetch("/api/payment/active-promotions");
+    promoSuggestions.value =
+      res?.success && Array.isArray(res.data) ? res.data : [];
+  } catch {
+    promoSuggestions.value = [];
+  }
+}
+
+function pickPromoCode(code) {
+  promoCode.value = String(code || "").trim().toUpperCase();
+  if (promoCode.value) updatePromoPreview(true);
+}
+
 async function syncVndPerCreditFromServer() {
   try {
     const res = await $fetch("/api/payment/rate");
@@ -865,7 +922,7 @@ watch(
   () => props.modelValue,
   async (open) => {
     if (!open) return;
-    await syncVndPerCreditFromServer();
+    await Promise.all([syncVndPerCreditFromServer(), fetchActivePromotions()]);
   },
   { immediate: true },
 );
@@ -879,6 +936,7 @@ const handleClose = () => {
   depositAmount.value = 100000;
   depositAmountDisplay.value = "100.000";
   promoCode.value = "";
+  promoSuggestions.value = [];
   error.value = "";
   bonusExpectedCredit.value = 0;
   paypalError.value = "";
@@ -1217,6 +1275,39 @@ onBeforeUnmount(() => {
   color: var(--text-secondary);
 }
 
+.promo-marquee {
+  width: 100%;
+  overflow: hidden;
+  border: 1px dashed rgba(56, 189, 248, 0.55);
+  border-radius: 8px;
+  background: rgba(8, 47, 73, 0.2);
+}
+
+.promo-marquee-track {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: max-content;
+  padding: 0.35rem;
+  animation: promo-marquee-slide 24s linear infinite;
+}
+
+.promo-chip {
+  border: 1px solid rgba(56, 189, 248, 0.6);
+  border-radius: 999px;
+  background: rgba(8, 47, 73, 0.85);
+  color: #e0f2fe;
+  font-size: 0.78rem;
+  white-space: nowrap;
+  padding: 0.25rem 0.6rem;
+  cursor: pointer;
+}
+
+.promo-chip:hover {
+  border-color: rgba(125, 211, 252, 0.95);
+  background: rgba(12, 74, 110, 0.95);
+}
+
 .promo-input {
   width: 100%;
   padding: 0.5rem 0.7rem;
@@ -1246,6 +1337,15 @@ onBeforeUnmount(() => {
 
 .promo-apply-btn:hover {
   background: rgba(8, 47, 73, 1);
+}
+
+@keyframes promo-marquee-slide {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
 }
 
 .expected-credit-row {

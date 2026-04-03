@@ -22,7 +22,7 @@ export async function ensureCommerceSchema() {
       admin_id INT NULL,
       name VARCHAR(120) NOT NULL,
       description TEXT NULL,
-      youtube_url VARCHAR(512) NULL,
+      youtube_url TEXT NULL,
       type ENUM('tool', 'account', 'service', 'other') NOT NULL DEFAULT 'other',
       platform_fee_percent INT NULL,
       is_active TINYINT(1) NOT NULL DEFAULT 1,
@@ -51,6 +51,11 @@ export async function ensureCommerceSchema() {
   await addColumnIfMissing(
     "ALTER TABLE products ADD COLUMN youtube_url VARCHAR(512) NULL AFTER description",
   );
+  try {
+    await pool.query("ALTER TABLE products MODIFY COLUMN youtube_url TEXT NULL");
+  } catch {
+    // Ignore if already TEXT or cannot modify in this environment
+  }
   // Và cột admin_id để biết admin nào tạo.
   await addColumnIfMissing(
     "ALTER TABLE products ADD COLUMN admin_id INT NULL AFTER id",

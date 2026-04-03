@@ -74,10 +74,10 @@
               </div>
             </template>
 
-            <template v-else-if="mediaView === 'video' && youtubeVideoId">
+            <template v-else-if="mediaView === 'video' && activeVideoId">
               <div class="detail-video-wrap">
                 <iframe
-                  :src="`https://www.youtube.com/embed/${youtubeVideoId}?autoplay=0`"
+                  :src="`https://www.youtube.com/embed/${activeVideoId}?autoplay=0`"
                   class="detail-video-iframe"
                   title="Video sản phẩm"
                   allow="
@@ -90,6 +90,24 @@
                   "
                   allowfullscreen
                 />
+              </div>
+              <div v-if="videoIds.length > 1" class="thumb-strip video-thumb-strip">
+                <button
+                  v-for="(vid, idx) in videoIds"
+                  :key="vid + idx"
+                  type="button"
+                  class="thumb-btn video-thumb-btn"
+                  :class="{ active: idx === currentVideoIndex }"
+                  @click="setActiveVideo(idx)"
+                  :aria-label="`video-thumb-${idx + 1}`"
+                >
+                  <NuxtImg
+                    :src="`https://img.youtube.com/vi/${vid}/mqdefault.jpg`"
+                    :alt="product.name + ' video ' + (idx + 1)"
+                    loading="lazy"
+                  />
+                  <span class="video-play-icon">▶</span>
+                </button>
               </div>
             </template>
           </div>
@@ -582,6 +600,7 @@ const { cart, add } = useCart();
 
 const product = ref<any | null>(null);
 const currentImageIndex = ref(0);
+const currentVideoIndex = ref(0);
 const mediaView = ref("image");
 const loading = ref(true);
 const error = ref("");
@@ -1044,7 +1063,9 @@ function formatVnd(v) {
 
 function formatDuration(v) {
   if (v === "lifetime") return "Lifetime";
-  return v;
+  return String(v)
+    .replace(/\b(\d+)\s*d\b/gi, "$1 ngày")
+    .replace(/\b(\d+)\s*h\b/gi, "$1 giờ");
 }
 
 function formatDate(d) {
@@ -1174,22 +1195,64 @@ const images = computed(() => {
   return list;
 });
 
-function getYoutubeVideoId(url) {
+function getYoutubeVideoId(url: string) {
   if (!url || typeof url !== "string") return "";
-  const u = url.trim();
+  const u = String(url).trim();
+  const idOnly = u.match(/^[a-zA-Z0-9_-]{11}$/);
+  if (idOnly) return idOnly[0];
   const m = u.match(
-    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/,
   );
   return m ? m[1] : "";
 }
 
-const hasVideo = computed(
-  () => !!getYoutubeVideoId(product.value?.youtube_url),
-);
+function extractYoutubeVideoIds(raw: string) {
+  const text = String(raw || "").trim();
+  if (!text) return [];
 
-const youtubeVideoId = computed(() =>
-  getYoutubeVideoId(product.value?.youtube_url),
-);
+  const ids: string[] = [];
+
+  // Ưu tiên mỗi dòng 1 link; vẫn hỗ trợ trường hợp dán lộn nhiều link cùng dòng.
+  const lines = text
+    .split(/\r?\n/g)
+    .map((s) => s.trim())
+    .filter((s) => !!s);
+
+  for (const line of lines) {
+    const direct = getYoutubeVideoId(line);
+    if (direct) {
+      ids.push(direct);
+      continue;
+    }
+
+    // Quét toàn dòng để bắt nhiều URL/ID YouTube nếu có.
+    const rx =
+      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})|(?:^|\s)([a-zA-Z0-9_-]{11})(?=$|\s)/g;
+    let m: RegExpExecArray | null;
+    while ((m = rx.exec(line)) !== null) {
+      const id = m[1] || m[2];
+      if (id) ids.push(id);
+    }
+  }
+
+  return Array.from(new Set(ids));
+}
+
+const videoIds = computed<string[]>(() => {
+  const raw = String(product.value?.youtube_url || "").trim();
+  if (!raw) return [];
+  return extractYoutubeVideoIds(raw);
+});
+
+const hasVideo = computed(() => videoIds.value.length > 0);
+const activeVideoId = computed(() => {
+  return videoIds.value[currentVideoIndex.value] || videoIds.value[0] || "";
+});
+
+function setActiveVideo(idx: number) {
+  if (idx < 0 || idx >= videoIds.value.length) return;
+  currentVideoIndex.value = idx;
+}
 
 const activeImage = computed(() => {
   return images.value[currentImageIndex.value] || "";
@@ -1229,6 +1292,7 @@ async function fetchProduct(opts?: { silent?: boolean }) {
         error.value = t("admin.noData");
       } else {
         currentImageIndex.value = 0;
+        currentVideoIndex.value = 0;
         mediaView.value = "image";
       }
     }
@@ -1392,6 +1456,7 @@ watch(
     showConfirm.value = false;
     buying.value = false;
     currentImageIndex.value = 0;
+    currentVideoIndex.value = 0;
     mediaView.value = "image";
     showContactPopup.value = false;
     await Promise.all([fetchProduct(), fetchReviews(), fetchSimilar()]);
@@ -1598,6 +1663,28 @@ watch(
 .thumb-btn.active {
   border-color: rgb(var(--accent-rgb) / 0.85);
   box-shadow: 0 0 0 2px rgb(var(--accent-rgb) / 0.18);
+}
+.video-thumb-strip {
+  padding-top: 10px;
+}
+.video-thumb-btn {
+  position: relative;
+}
+.video-play-icon {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: rgba(2, 6, 23, 0.75);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  border: 1px solid rgba(148, 163, 184, 0.45);
 }
 .image-nav {
   position: absolute;

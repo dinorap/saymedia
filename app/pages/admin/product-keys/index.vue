@@ -15,7 +15,7 @@
         <select v-model="duration" class="input input--sm">
           <option value="">{{ $t("admin.all") }}</option>
           <option v-for="opt in durationOptions" :key="opt" :value="opt">
-            {{ opt }}
+            {{ formatDuration(opt) }}
           </option>
         </select>
       </div>
@@ -46,7 +46,7 @@
             <td>{{ idx + 1 + (pagination.page - 1) * pagination.limit }}</td>
             <td>{{ row.product_name }}</td>
             <td>{{ row.total_keys }}</td>
-            <td>{{ row.durations || "-" }}</td>
+            <td>{{ formatDurationList(row.durations) }}</td>
             <td>{{ formatDate(row.first_created_at) }}</td>
             <td>{{ formatDate(row.last_created_at) }}</td>
             <td class="td-actions">
@@ -175,7 +175,7 @@
                   {{ $t("admin.productKeysUi.chooseDuration") }}
                 </option>
                 <option v-for="opt in durationOptions" :key="opt" :value="opt">
-                  {{ opt }}
+                  {{ formatDuration(opt) }}
                 </option>
               </select>
             </div>
@@ -224,7 +224,7 @@
                     :key="opt"
                     :value="opt"
                   >
-                    {{ opt }}
+                    {{ formatDuration(opt) }}
                   </option>
                 </select>
               </div>
@@ -248,7 +248,7 @@
                     :key="opt"
                     :value="opt"
                   >
-                    {{ opt }}
+                    {{ formatDuration(opt) }}
                   </option>
                 </select>
               </div>
@@ -309,7 +309,7 @@
                   <td class="key-cell">
                     <code>{{ row.key }}</code>
                   </td>
-                  <td>{{ row.valid_duration }}</td>
+                  <td>{{ formatDuration(row.valid_duration) }}</td>
                   <td>{{ formatPrice(row.price) }}</td>
                   <td>{{ formatDate(row.created_at) }}</td>
                   <td class="td-actions">
@@ -469,6 +469,22 @@ function formatPrice(val) {
   const n = Number(val || 0);
   if (!Number.isFinite(n) || n <= 0) return "-";
   return n.toLocaleString("vi-VN");
+}
+
+function formatDuration(value) {
+  if (!value) return "-";
+  if (value === "lifetime") return "Lifetime";
+  return String(value)
+    .replace(/\b(\d+)\s*d\b/gi, "$1 ngày")
+    .replace(/\b(\d+)\s*h\b/gi, "$1 giờ");
+}
+
+function formatDurationList(value) {
+  if (!value) return "-";
+  return String(value)
+    .split(",")
+    .map((part) => formatDuration(part.trim()))
+    .join(", ");
 }
 
 async function fetchList(opts = { silent: false }) {

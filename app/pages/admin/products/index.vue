@@ -330,13 +330,13 @@
                 </div>
                 <div class="form-row">
                   <label>{{
-                    $t("admin.youtubeUrl") || "Link YouTube (nếu có)"
+                    $t("admin.youtubeUrl") || "Danh sách link YouTube (nếu có)"
                   }}</label>
-                  <input
+                  <textarea
                     v-model="form.youtube_url"
-                    type="text"
                     class="input"
-                    placeholder="https://www.youtube.com/watch?v=... hoặc https://youtu.be/..."
+                    rows="3"
+                    placeholder="Mỗi dòng 1 link YouTube&#10;https://www.youtube.com/watch?v=...&#10;https://youtu.be/..."
                   />
                 </div>
                 <div class="form-row">
@@ -678,7 +678,7 @@
               </thead>
               <tbody>
                 <tr v-for="row in statsModal.items" :key="row.duration">
-                  <td>{{ row.duration }}</td>
+                  <td>{{ formatDuration(row.duration) }}</td>
                   <td>{{ row.total_keys }}</td>
                   <td>{{ formatVnd(row.unit_price) }}</td>
                   <td>{{ formatVnd(row.total_gross_amount) }}</td>
@@ -810,6 +810,14 @@ function validateForm() {
 
 function formatVnd(v) {
   return (Number(v) || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+}
+
+function formatDuration(v: string) {
+  if (!v) return "-";
+  if (v === "lifetime") return "Lifetime";
+  return String(v)
+    .replace(/\b(\d+)\s*d\b/gi, "$1 ngày")
+    .replace(/\b(\d+)\s*h\b/gi, "$1 giờ");
 }
 
 function formatDate(val) {

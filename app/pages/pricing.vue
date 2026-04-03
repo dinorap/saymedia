@@ -52,7 +52,9 @@
               {{ $t("pricing.popular") || "Popular" }}
             </div>
 
-            <h2 class="plan-name">{{ pkg.planName || `Gói ${idx + 1}` }}</h2>
+            <h2 class="plan-name">
+              {{ formatDurationText(pkg.planName || `Gói ${idx + 1}`) }}
+            </h2>
 
             <!-- YouTube grouped: 1 gói lớn + nhiều gói nhỏ -->
             <div
@@ -75,7 +77,7 @@
                   }"
                   @click="setSelectedSubIdx(idx, oi)"
                 >
-                  {{ op.planName || `Gói nhỏ ${oi + 1}` }}
+                  {{ formatDurationText(op.planName || `Gói nhỏ ${oi + 1}`) }}
                 </button>
               </div>
 
@@ -118,7 +120,7 @@
                 <div v-if="selectedSubFor(idx, pkg)?.video" class="plan-side-row">
                   <span class="plan-side-label">{{ $t("pricing.videoLabel") }}:</span>
                   <span class="plan-side-value">
-                    {{ selectedSubFor(idx, pkg)?.video }}
+                    {{ formatDurationText(selectedSubFor(idx, pkg)?.video) }}
                   </span>
                 </div>
                 <div
@@ -127,7 +129,7 @@
                 >
                   <span class="plan-side-label">{{ $t("pricing.devicePerMonthLabel") }}:</span>
                   <span class="plan-side-value">
-                    {{ selectedSubFor(idx, pkg)?.devicePricePerMonth }}
+                    {{ formatDurationText(selectedSubFor(idx, pkg)?.devicePricePerMonth) }}
                   </span>
                 </div>
               </div>
@@ -137,7 +139,7 @@
                   v-for="(b, bi) in (pkg.benefits || [])"
                   :key="`${idx}-g-${bi}`"
                 >
-                  {{ b }}
+                  {{ formatDurationText(b) }}
                 </li>
                 <li
                   v-if="!(pkg.benefits || []).length"
@@ -170,7 +172,7 @@
               >
                 <div v-if="pkg.video" class="plan-side-row">
                   <span class="plan-side-label">{{ $t("pricing.videoLabel") }}:</span>
-                  <span class="plan-side-value">{{ pkg.video }}</span>
+                  <span class="plan-side-value">{{ formatDurationText(pkg.video) }}</span>
                 </div>
                 <div
                   v-if="pkg.devicePricePerMonth"
@@ -178,7 +180,7 @@
                 >
                   <span class="plan-side-label">{{ $t("pricing.devicePerMonthLabel") }}:</span>
                   <span class="plan-side-value">
-                    {{ pkg.devicePricePerMonth }}
+                    {{ formatDurationText(pkg.devicePricePerMonth) }}
                   </span>
                 </div>
               </div>
@@ -188,7 +190,7 @@
                   v-for="(b, bi) in (pkg.benefits || [])"
                   :key="`${idx}-${bi}`"
                 >
-                  {{ b }}
+                  {{ formatDurationText(b) }}
                 </li>
                 <li
                   v-if="!(pkg.benefits || []).length"
@@ -197,6 +199,12 @@
                   {{ $t("pricing.noBenefits") }}
                 </li>
               </ul>
+            </div>
+
+            <div class="plan-action-wrap">
+              <NuxtLink to="/products" class="plan-buy-now-btn">
+                Mua ngay
+              </NuxtLink>
             </div>
           </article>
         </template>
@@ -256,6 +264,13 @@ function selectedSubFor(pkgIdx: number, pkg: any) {
   const selected = selectedSubIdx.value[pkgIdx];
   const safeIdx = typeof selected === "number" && selected >= 0 ? selected : 0;
   return ops[safeIdx] || ops[0] || null;
+}
+
+function formatDurationText(value?: string | number | null) {
+  if (value === null || value === undefined) return "";
+  return String(value)
+    .replace(/\b(\d+)\s*d\b/gi, "$1 ngày")
+    .replace(/\b(\d+)\s*h\b/gi, "$1 giờ");
 }
 
 async function fetchPricing() {
@@ -347,6 +362,8 @@ watch(activeType, () => {
   background: rgba(5, 15, 35, 0.82);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  flex-direction: column;
 }
 
 .pricing-card--highlight {
@@ -390,7 +407,7 @@ watch(activeType, () => {
 
 .plan-price {
   margin: 0 0 12px;
-  font-size: 1.4rem;
+  font-size: 1.65rem;
   font-weight: 800;
 }
 
@@ -554,6 +571,51 @@ watch(activeType, () => {
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.plan-action-wrap {
+  margin-top: 14px;
+}
+
+.plan-buy-now-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 42px;
+  padding: 0.6rem 1rem;
+  border-radius: 12px;
+  border: 1px solid rgb(var(--accent-rgb) / 0.65);
+  background:
+    linear-gradient(
+      135deg,
+      rgb(var(--accent-rgb) / 0.92),
+      rgba(59, 130, 246, 0.88)
+    );
+  color: #fff;
+  text-decoration: none;
+  font-weight: 800;
+  font-size: 1.05rem;
+  letter-spacing: 0.02em;
+  box-shadow:
+    0 12px 26px rgb(var(--accent-rgb) / 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  transition:
+    transform 140ms ease,
+    box-shadow 140ms ease,
+    filter 140ms ease;
+}
+
+.plan-buy-now-btn:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 16px 30px rgb(var(--accent-rgb) / 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  filter: saturate(1.08);
+}
+
+.plan-buy-now-btn:active {
+  transform: translateY(0);
 }
 
 .group-options {

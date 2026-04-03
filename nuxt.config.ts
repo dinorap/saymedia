@@ -1,5 +1,6 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 const isTunnel = process.env.TUNNEL === '1'
+const isProd = process.env.NODE_ENV === 'production'
 
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
@@ -41,10 +42,12 @@ export default defineNuxtConfig({
     },
   },
 
-  routeRules: {
-    '/products': { swr: 60 },
-    '/products/**': { swr: 60 },
-  },
+  routeRules: isProd
+    ? {
+        '/products': { swr: 60 },
+        '/products/**': { swr: 60 },
+      }
+    : {},
 
   css: [
     '~/assets/css/reset.css',

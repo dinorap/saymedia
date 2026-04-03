@@ -22,7 +22,7 @@
           <label class="cpm-duration-label">Loại key</label>
           <select v-model="selectedDuration" class="cpm-duration-select">
             <option v-for="opt in durationOptions" :key="opt" :value="opt">
-              {{ opt === "lifetime" ? "Lifetime" : opt }}
+              {{ formatDuration(opt) }}
             </option>
           </select>
         </div>
@@ -126,6 +126,13 @@ watch([selectedDuration, maxQuantity], () => clampQuantity());
 
 function formatVnd(v) {
   return (Number(v) || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+}
+
+function formatDuration(v) {
+  if (v === "lifetime") return "Lifetime";
+  return String(v)
+    .replace(/\b(\d+)\s*d\b/gi, "$1 ngày")
+    .replace(/\b(\d+)\s*h\b/gi, "$1 giờ");
 }
 
 const unitPrice = computed(() => {

@@ -311,7 +311,7 @@
               </p>
               <p v-if="parsedNote.duration !== null" class="note-popover-row">
                 <span class="note-popover-label">Loại key:</span>
-                <span class="note-popover-value">{{ parsedNote.duration }}</span>
+                <span class="note-popover-value">{{ formatDuration(parsedNote.duration) }}</span>
               </p>
               <p v-if="parsedNote.qty !== null || parsedNote.keys.length" class="note-popover-row">
                 <span class="note-popover-label">Số lượng:</span>
@@ -542,6 +542,14 @@ function changePageSize() {
 
 function formatVnd(v) {
   return (Number(v) || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+}
+
+function formatDuration(v) {
+  if (!v) return "-";
+  if (v === "lifetime") return "Lifetime";
+  return String(v)
+    .replace(/\b(\d+)\s*d\b/gi, "$1 ngày")
+    .replace(/\b(\d+)\s*h\b/gi, "$1 giờ");
 }
 
 function formatDate(val) {
