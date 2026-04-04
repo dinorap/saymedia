@@ -678,13 +678,17 @@
                 :disabled="!!editingAdmin"
               />
             </div>
-            <div v-if="!editingAdmin" class="form-row">
+            <div class="form-row">
               <label>{{ $t("admin.password") }}</label>
               <input
                 v-model="adminForm.password"
                 type="password"
                 class="input"
+                autocomplete="new-password"
                 :required="!editingAdmin"
+                :placeholder="
+                  editingAdmin ? $t('admin.passwordLeaveBlank') : ''
+                "
               />
             </div>
             <div class="form-row">
@@ -1173,9 +1177,16 @@ async function saveAdmin() {
   adminSaving.value = true;
   try {
     if (editingAdmin.value) {
+      const body = {
+        role: adminForm.role,
+        is_active: adminForm.is_active,
+      };
+      if (adminForm.password?.trim()) {
+        body.password = adminForm.password.trim();
+      }
       await $fetch(`/api/admin/admins/${editingAdmin.value.id}`, {
         method: "PUT",
-        body: { role: adminForm.role, is_active: adminForm.is_active },
+        body,
       });
       adminModalOpen.value = false;
       await fetchAdmins();

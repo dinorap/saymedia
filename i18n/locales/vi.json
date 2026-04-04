@@ -187,6 +187,7 @@
     "addAdmin": "Thêm Admin",
     "addUser": "Thêm người dùng",
     "password": "Mật khẩu",
+    "passwordLeaveBlank": "Để trống nếu không đổi mật khẩu",
     "selectAdmin": "Chọn admin phụ trách",
     "confirmDelete": "Bạn có chắc muốn xóa?",
     "createSuccess": "Tạo thành công",

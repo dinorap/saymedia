@@ -187,6 +187,7 @@
     "addAdmin": "Add Admin",
     "addUser": "Add User",
     "password": "Password",
+    "passwordLeaveBlank": "Leave blank to keep current password",
     "selectAdmin": "Select assigned admin",
     "confirmDelete": "Are you sure you want to delete?",
     "createSuccess": "Created successfully",
