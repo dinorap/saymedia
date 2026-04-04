@@ -34,23 +34,21 @@
 
             <div class="promo-box">
               <label>Mã khuyến mại (nếu có)</label>
-              <div
-                v-if="promoSuggestions.length"
-                class="promo-marquee"
-                aria-label="Danh sách mã khuyến mại"
-              >
-                <div class="promo-marquee-track">
-                  <button
-                    v-for="(promo, idx) in promoLoopItems"
-                    :key="`${promo.code}-${idx}`"
-                    type="button"
-                    class="promo-chip"
-                    @click="pickPromoCode(promo.code)"
+              <div v-if="promoSuggestions.length" class="promo-pick">
+                <select
+                  v-model="promoSelectModel"
+                  class="promo-select"
+                  aria-label="Chọn mã khuyến mãi"
+                >
+                  <option value="">— Chọn mã khuyến mãi —</option>
+                  <option
+                    v-for="promo in promoSuggestions"
+                    :key="promo.code"
+                    :value="promo.code"
                   >
-                    <strong>{{ promo.code }}</strong>
-                    <span v-if="promo.hint"> - {{ promo.hint }}</span>
-                  </button>
-                </div>
+                    {{ promo.code }}{{ promo.hint ? ` — ${promo.hint}` : '' }}
+                  </option>
+                </select>
               </div>
               <input
                 v-model="promoCode"
@@ -110,12 +108,6 @@ const promoSuggestions = ref<any[]>([])
 const loading = ref(false)
 const testing = ref(false)
 const error = ref('')
-const promoLoopItems = computed(() =>
-  promoSuggestions.value.length > 1
-    ? [...promoSuggestions.value, ...promoSuggestions.value]
-    : promoSuggestions.value,
-)
-
 let countdownTimer: ReturnType<typeof setInterval> | null = null
 let pollTimer: ReturnType<typeof setInterval> | null = null
 
@@ -149,6 +141,25 @@ async function fetchActivePromotions() {
 function pickPromoCode(code: string) {
   promoCode.value = String(code || '').trim().toUpperCase()
 }
+
+const promoSelectModel = computed({
+  get() {
+    const c = String(promoCode.value || '').trim().toUpperCase()
+    if (!c) return ''
+    const match = promoSuggestions.value.some(
+      (p) => String(p.code || '').trim().toUpperCase() === c,
+    )
+    return match ? c : ''
+  },
+  set(v: string) {
+    const s = String(v || '').trim()
+    if (!s) {
+      promoCode.value = ''
+      return
+    }
+    pickPromoCode(s)
+  },
+})
 
 function stopAll() {
   if (countdownTimer) clearInterval(countdownTimer)
@@ -308,12 +319,39 @@ watch(
 .quick { margin-top: .6rem; display: grid; grid-template-columns: repeat(4, 1fr); gap: .4rem; }
 .quick button { padding: .45rem; border-radius: 8px; border: 1px solid rgba(255,255,255,.18); background: rgba(255,255,255,.04); color: var(--text-secondary); cursor: pointer; }
 .promo-box { margin-top: .8rem; }
-.promo-input { width: 100%; padding: .5rem .7rem; border-radius: 8px; border: 1px solid var(--input-border); background: var(--input-bg); color: var(--text-primary); font-size: .9rem; }
-.promo-marquee { margin-bottom: .4rem; width: 100%; overflow: hidden; border: 1px dashed rgba(56,189,248,.55); border-radius: 8px; background: rgba(8,47,73,.2); }
-.promo-marquee-track { display: flex; align-items: center; gap: .5rem; width: max-content; padding: .35rem; animation: promo-marquee-slide 24s linear infinite; }
-.promo-chip { border: 1px solid rgba(56,189,248,.6); border-radius: 999px; background: rgba(8,47,73,.85); color: #e0f2fe; font-size: .78rem; white-space: nowrap; padding: .25rem .6rem; cursor: pointer; }
-.promo-chip:hover { border-color: rgba(125,211,252,.95); background: rgba(12,74,110,.95); }
-@keyframes promo-marquee-slide { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+.promo-input { width: 100%; padding: .5rem .75rem; border-radius: 8px; border: 1px solid var(--input-border); background: var(--input-bg); color: var(--text-primary); font-size: .9rem; transition: border-color .25s ease, box-shadow .25s ease; }
+.promo-input:focus { outline: none; border-color: var(--input-focus-border); box-shadow: var(--input-focus-glow); }
+.promo-pick { margin-bottom: .4rem; width: 100%; }
+.promo-select {
+  width: 100%;
+  padding: .5rem .75rem;
+  padding-right: 2rem;
+  border-radius: 8px;
+  border: 1px solid var(--input-border);
+  background-color: var(--input-bg);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right .65rem center;
+  background-size: .95rem;
+  color: var(--text-primary);
+  font-size: .9rem;
+  cursor: pointer;
+  transition: border-color .25s ease, box-shadow .25s ease;
+  accent-color: rgb(var(--accent-rgb));
+  appearance: none;
+  color-scheme: dark;
+}
+.promo-select:hover { border-color: rgb(var(--accent-rgb) / .45); }
+.promo-select:focus { outline: none; border-color: var(--input-focus-border); box-shadow: var(--input-focus-glow); }
+.promo-select option {
+  background-color: var(--bg-deep);
+  color: var(--text-primary);
+}
+.promo-select option:first-of-type { color: var(--text-muted); }
+.promo-select option:checked {
+  background-color: rgb(var(--accent-rgb) / .35);
+  color: #fff;
+}
 .memo-box { margin-top: .8rem; padding: .65rem; border: 1px solid rgba(255,255,255,.12); border-radius: 8px; background: rgba(255,255,255,.03); }
 .memo-label { font-size: .85rem; color: var(--text-secondary); margin-bottom: .35rem; }
 .memo-row { display: flex; align-items: center; gap: .5rem; }

@@ -160,23 +160,22 @@
 
                 <div class="promo-row">
                   <label class="promo-label">Mã khuyến mại (nếu có)</label>
-                  <div
-                    v-if="promoSuggestions.length"
-                    class="promo-marquee"
-                    aria-label="Danh sách mã khuyến mại"
-                  >
-                    <div class="promo-marquee-track">
-                      <button
-                        v-for="(promo, idx) in promoLoopItems"
-                        :key="`bank-${promo.code}-${idx}`"
-                        type="button"
-                        class="promo-chip"
-                        @click="pickPromoCode(promo.code)"
+                  <div v-if="promoSuggestions.length" class="promo-pick">
+                    <select
+                      v-model="promoSelectModel"
+                      class="promo-select"
+                      aria-label="Chọn mã khuyến mãi"
+                    >
+                      <option value="">— Chọn mã khuyến mãi —</option>
+                      <option
+                        v-for="promo in promoSuggestions"
+                        :key="`bank-${promo.code}`"
+                        :value="promo.code"
                       >
-                        <strong>{{ promo.code }}</strong>
-                        <span v-if="promo.hint"> - {{ promo.hint }}</span>
-                      </button>
-                    </div>
+                        {{ promo.code
+                        }}{{ promo.hint ? ` — ${promo.hint}` : "" }}
+                      </option>
+                    </select>
                   </div>
                   <div class="promo-inline">
                     <input
@@ -342,23 +341,22 @@
 
                 <div class="promo-row">
                   <label class="promo-label">Mã khuyến mại (nếu có)</label>
-                  <div
-                    v-if="promoSuggestions.length"
-                    class="promo-marquee"
-                    aria-label="Danh sách mã khuyến mại"
-                  >
-                    <div class="promo-marquee-track">
-                      <button
-                        v-for="(promo, idx) in promoLoopItems"
-                        :key="`paypal-${promo.code}-${idx}`"
-                        type="button"
-                        class="promo-chip"
-                        @click="pickPromoCode(promo.code)"
+                  <div v-if="promoSuggestions.length" class="promo-pick">
+                    <select
+                      v-model="promoSelectModel"
+                      class="promo-select"
+                      aria-label="Chọn mã khuyến mãi"
+                    >
+                      <option value="">— Chọn mã khuyến mãi —</option>
+                      <option
+                        v-for="promo in promoSuggestions"
+                        :key="`paypal-${promo.code}`"
+                        :value="promo.code"
                       >
-                        <strong>{{ promo.code }}</strong>
-                        <span v-if="promo.hint"> - {{ promo.hint }}</span>
-                      </button>
-                    </div>
+                        {{ promo.code
+                        }}{{ promo.hint ? ` — ${promo.hint}` : "" }}
+                      </option>
+                    </select>
                   </div>
                   <div class="promo-inline">
                     <input
@@ -443,7 +441,7 @@
 </template>
 
 <script setup>
-import { ref, onBeforeUnmount, nextTick, watch } from "vue";
+import { ref, computed, onBeforeUnmount, nextTick, watch } from "vue";
 
 const { show: showToast } = useToast();
 
@@ -469,11 +467,27 @@ const error = ref("");
 const activePaymentTab = ref("bank");
 const promoCode = ref("");
 const promoSuggestions = ref([]);
-const promoLoopItems = computed(() =>
-  promoSuggestions.value.length > 1
-    ? [...promoSuggestions.value, ...promoSuggestions.value]
-    : promoSuggestions.value,
-);
+
+/** Select đồng bộ với mã trong list; mã tự nhập không có trong list → hiển thị mục trống */
+const promoSelectModel = computed({
+  get() {
+    const c = String(promoCode.value || "").trim().toUpperCase();
+    if (!c) return "";
+    const match = promoSuggestions.value.some(
+      (p) => String(p.code || "").trim().toUpperCase() === c,
+    );
+    return match ? c : "";
+  },
+  set(v) {
+    const s = String(v || "").trim();
+    if (!s) {
+      promoCode.value = "";
+      bonusExpectedCredit.value = 0;
+      return;
+    }
+    pickPromoCode(s);
+  },
+});
 
 const runtimeConfig = useRuntimeConfig();
 const paypalClientId = runtimeConfig.public.paypalClientId;
@@ -1024,11 +1038,9 @@ onBeforeUnmount(() => {
 
 .modal-body {
   padding: 1.25rem 1.5rem 1.5rem;
-  height: calc(100% - 72px);
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  overflow: hidden;
 }
 
 /* Payment Tabs */
@@ -1124,8 +1136,6 @@ onBeforeUnmount(() => {
   grid-template-columns: 1.02fr 1fr;
   gap: 1rem;
   align-items: start;
-  flex: 1;
-  min-height: 0;
 }
 
 .payment-content-grid > * {
@@ -1137,7 +1147,6 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   gap: 0.9rem;
-  min-height: 0;
 }
 
 .qr-container {
@@ -1213,7 +1222,6 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   gap: 0.9rem;
-  min-height: 0;
 }
 
 .payment-form-section .form-group {
@@ -1275,47 +1283,71 @@ onBeforeUnmount(() => {
   color: var(--text-secondary);
 }
 
-.promo-marquee {
+.promo-pick {
   width: 100%;
-  overflow: hidden;
-  border: 1px dashed rgba(56, 189, 248, 0.55);
+}
+
+.promo-select {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  padding-right: 2rem;
   border-radius: 8px;
-  background: rgba(8, 47, 73, 0.2);
-}
-
-.promo-marquee-track {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  width: max-content;
-  padding: 0.35rem;
-  animation: promo-marquee-slide 24s linear infinite;
-}
-
-.promo-chip {
-  border: 1px solid rgba(56, 189, 248, 0.6);
-  border-radius: 999px;
-  background: rgba(8, 47, 73, 0.85);
-  color: #e0f2fe;
-  font-size: 0.78rem;
-  white-space: nowrap;
-  padding: 0.25rem 0.6rem;
+  border: 1px solid var(--input-border);
+  color: var(--text-primary);
+  font-size: 0.9rem;
   cursor: pointer;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  accent-color: rgb(var(--accent-rgb));
+  appearance: none;
+  /* Dropdown native: bớt nền xám / chữ mờ (Chrome, Edge, Firefox) */
+  color-scheme: dark;
+  background-color: var(--input-bg);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.65rem center;
+  background-size: 0.95rem;
 }
 
-.promo-chip:hover {
-  border-color: rgba(125, 211, 252, 0.95);
-  background: rgba(12, 74, 110, 0.95);
+.promo-select:hover {
+  border-color: rgb(var(--accent-rgb) / 0.45);
+}
+
+.promo-select:focus {
+  outline: none;
+  border-color: var(--input-focus-border);
+  box-shadow: var(--input-focus-glow);
+}
+
+.promo-select option {
+  /* Nền đặc (không alpha) để list mở ra không bị xám loãng */
+  background-color: var(--bg-deep);
+  color: var(--text-primary);
+}
+
+.promo-select option:first-of-type {
+  color: var(--text-muted);
+}
+
+.promo-select option:checked {
+  background-color: rgb(var(--accent-rgb) / 0.35);
+  color: #fff;
 }
 
 .promo-input {
   width: 100%;
-  padding: 0.5rem 0.7rem;
+  padding: 0.5rem 0.75rem;
   border-radius: 8px;
-  border: 1px solid rgba(148, 163, 184, 0.5);
-  background: rgba(15, 23, 42, 0.98);
+  border: 1px solid var(--input-border);
+  background: var(--input-bg);
   color: var(--text-primary);
   font-size: 0.9rem;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.promo-input:focus {
+  outline: none;
+  border-color: var(--input-focus-border);
+  box-shadow: var(--input-focus-glow);
 }
 
 .promo-inline {
@@ -1337,15 +1369,6 @@ onBeforeUnmount(() => {
 
 .promo-apply-btn:hover {
   background: rgba(8, 47, 73, 1);
-}
-
-@keyframes promo-marquee-slide {
-  0% {
-    transform: translateX(0);
-  }
-  100% {
-    transform: translateX(-50%);
-  }
 }
 
 .expected-credit-row {
@@ -1435,8 +1458,9 @@ onBeforeUnmount(() => {
 
 .transfer-content-box {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
+  gap: 0.65rem;
   background: rgb(var(--accent-rgb) / 0.1);
   border: 1px solid rgb(var(--accent-rgb) / 0.35);
   border-radius: 8px;
@@ -1447,6 +1471,13 @@ onBeforeUnmount(() => {
   min-height: 46px;
 }
 
+.transfer-content-box #transfer-content-text {
+  flex: 1;
+  min-width: 0;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
 .transfer-placeholder {
   color: #9ca3af;
   font-weight: normal;
@@ -1454,6 +1485,8 @@ onBeforeUnmount(() => {
 }
 
 .btn-copy-content {
+  flex-shrink: 0;
+  align-self: flex-start;
   background: #667eea;
   border: none;
   border-radius: 6px;
@@ -1578,16 +1611,21 @@ onBeforeUnmount(() => {
   background: var(--bg-card);
   border: 1px solid rgb(var(--accent-rgb) / 0.35);
   box-shadow: var(--neon-shadow);
+  /* Co theo nội dung (CK ngân hàng + form); chỉ cuộn cả khối modal khi vượt viewport */
+  height: auto;
+  max-height: min(920px, 92vh);
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .modal-content.payment-modal-content--paypal {
   width: min(560px, 92vw);
-  height: auto;
   max-height: 85vh;
 }
 
-.modal-content.payment-modal-content--paypal .modal-body {
+.modal-content.payment-modal-content .modal-body.payment-modal-body {
   height: auto;
+  overflow: visible;
 }
 
 .payment-tab:hover {
@@ -1643,10 +1681,14 @@ onBeforeUnmount(() => {
     height: 95vh;
   }
 
+  .modal-content.payment-modal-content {
+    height: auto;
+    max-height: 95vh;
+  }
+
   .payment-content-grid {
     grid-template-columns: 1fr;
     gap: 1rem;
-    overflow: auto;
     padding-bottom: 0.25rem;
   }
 }
@@ -1660,6 +1702,12 @@ onBeforeUnmount(() => {
     height: 96vh;
     border-radius: 14px;
   }
+
+  .modal-content.payment-modal-content {
+    height: auto;
+    max-height: 96vh;
+  }
+
   .modal-header {
     padding: 0.7rem 0.85rem;
   }
@@ -1720,6 +1768,12 @@ onBeforeUnmount(() => {
     border-radius: 14px 14px 0 0;
     border-bottom: none;
   }
+
+  .modal-content.payment-modal-content {
+    height: auto;
+    max-height: 94vh;
+  }
+
   .modal-body {
     padding: 0.7rem;
   }
