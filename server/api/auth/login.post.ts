@@ -50,8 +50,9 @@ export default defineEventHandler(async (event) => {
       clearLoginFailure(event)
       await ensureUserStatsSchema()
       await pool.query('UPDATE users SET last_login = NOW() WHERE id = ?', [user.id])
+      const customerRole = user.partner_role === 'admin_3' ? 'admin_3' : 'user'
       const token = jwt.sign(
-        { id: user.id, username: user.username, role: 'user', admin_id: user.admin_id },
+        { id: user.id, username: user.username, role: customerRole, admin_id: user.admin_id },
         jwtSecret,
         { expiresIn: '30d' }
       )
@@ -62,8 +63,8 @@ export default defineEventHandler(async (event) => {
         sameSite: 'strict',
         secure: process.env.NODE_ENV === 'production',
       })
-      setCookie(event, 'user_role', 'user', { path: '/', sameSite: 'strict', secure: process.env.NODE_ENV === 'production' })
-      return { success: true, role: 'user', message: 'Đăng nhập bằng OTP thành công!' }
+      setCookie(event, 'user_role', customerRole, { path: '/', sameSite: 'strict', secure: process.env.NODE_ENV === 'production' })
+      return { success: true, role: customerRole, message: 'Đăng nhập bằng OTP thành công!' }
     }
 
     if (!username || !password) {
@@ -118,8 +119,9 @@ export default defineEventHandler(async (event) => {
         clearLoginFailure(event)
         await ensureUserStatsSchema()
         await pool.query('UPDATE users SET last_login = NOW() WHERE id = ?', [user.id])
+        const customerRole = user.partner_role === 'admin_3' ? 'admin_3' : 'user'
         const token = jwt.sign(
-          { id: user.id, username: user.username, role: 'user', admin_id: user.admin_id },
+          { id: user.id, username: user.username, role: customerRole, admin_id: user.admin_id },
           jwtSecret,
           { expiresIn: '30d' }
         );
@@ -131,8 +133,8 @@ export default defineEventHandler(async (event) => {
           sameSite: 'strict',
           secure: process.env.NODE_ENV === 'production',
         });
-        setCookie(event, 'user_role', 'user', { path: '/', sameSite: 'strict', secure: process.env.NODE_ENV === 'production' })
-        return { success: true, role: 'user', message: 'Khách login thành công!' };
+        setCookie(event, 'user_role', customerRole, { path: '/', sameSite: 'strict', secure: process.env.NODE_ENV === 'production' })
+        return { success: true, role: customerRole, message: 'Khách login thành công!' };
       }
     }
 

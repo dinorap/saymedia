@@ -108,6 +108,35 @@
       </template>
     </div>
 
+    <div class="card summary-card partner-user-card">
+      <h2 class="card-title">{{ $t("admin.partnersUi.userPartnerTitle") }}</h2>
+      <p class="partner-user-hint">{{ $t("admin.partnersUi.userPartnerHint") }}</p>
+      <div v-if="userPartnersLoading" class="table-loading">{{ $t("admin.loading") }}</div>
+      <div v-else-if="!userPartners.length" class="table-empty">
+        {{ $t("admin.noData") }}
+      </div>
+      <table v-else class="data-table">
+        <thead>
+          <tr>
+            <th>{{ $t("admin.partnersUi.userPartnerUsername") }}</th>
+            <th>{{ $t("admin.partnersUi.userPartnerEmail") }}</th>
+            <th>{{ $t("admin.partnersUi.userPartnerOrders") }}</th>
+            <th>{{ $t("admin.partnersUi.userPartnerVolume") }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="p in userPartners" :key="p.user_id">
+            <td>
+              <strong>{{ p.username || "—" }}</strong>
+            </td>
+            <td>{{ p.email || "—" }}</td>
+            <td>{{ formatNum(p.order_count || 0) }}</td>
+            <td>{{ formatNum(p.volume_credit || 0) }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
     <Teleport to="body">
       <div
         v-if="showByProductModal"
@@ -317,6 +346,8 @@ let autoRefreshTimer: any = null;
 
 const ownerLoading = ref(false);
 const ownerProducts = ref<any[]>([]);
+const userPartners = ref<any[]>([]);
+const userPartnersLoading = ref(false);
 const selfByProduct = computed(() =>
   (byProduct.value || []).filter(
     (r: any) => r.owner_admin_id && r.owner_admin_id === selectedPartnerId.value,
@@ -344,6 +375,19 @@ function formatDuration(v: string) {
   return String(v)
     .replace(/\b(\d+)\s*d\b/gi, "$1 ngày")
     .replace(/\b(\d+)\s*h\b/gi, "$1 giờ");
+}
+
+async function fetchUserPartners(opts: { silent?: boolean } = {}) {
+  const silent = !!opts.silent;
+  if (!silent) userPartnersLoading.value = true;
+  try {
+    const res = await $fetch<{ data: any[] }>("/api/admin/partner-affiliates");
+    userPartners.value = res.data || [];
+  } catch {
+    userPartners.value = [];
+  } finally {
+    if (!silent) userPartnersLoading.value = false;
+  }
 }
 
 async function fetchSummary(opts: { silent?: boolean } = {}) {
@@ -502,11 +546,13 @@ onMounted(async () => {
     currentUser.value = null;
   }
   await fetchSummary();
+  await fetchUserPartners();
   if (isSuperAdmin.value) {
     await fetchOwnerProducts();
   }
   autoRefreshTimer = setInterval(() => {
     fetchSummary({ silent: true });
+    fetchUserPartners({ silent: true });
   }, 5000);
 });
 

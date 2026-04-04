@@ -2,6 +2,7 @@ import jwt from "jsonwebtoken";
 import pool from "../../utils/db";
 import { ensureSupportChatSchema } from "../../utils/supportChat";
 import { getJwtSecret } from "../../utils/jwt";
+import { isCustomerRole } from "../../utils/authHelpers";
 
 const JWT_SECRET = getJwtSecret();
 
@@ -21,7 +22,7 @@ export default defineEventHandler(async (event) => {
     });
   }
 
-  if (decoded.role !== "user") {
+  if (!isCustomerRole(decoded.role)) {
     throw createError({
       statusCode: 403,
       statusMessage: "Chỉ người dùng mới mở phiên chat hỗ trợ.",

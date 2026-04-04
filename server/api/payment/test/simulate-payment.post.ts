@@ -5,6 +5,7 @@ import { addAuditLog } from '../../../utils/audit'
 import { applyDepositCredit, ensureCreditLedgerSchema } from '../../../utils/creditLedger'
 import { addDepositSocialProofItem } from '../../../utils/socialProof'
 import { getJwtSecret } from '../../../utils/jwt'
+import { isCustomerRole } from '../../../utils/authHelpers'
 
 const JWT_SECRET = getJwtSecret()
 
@@ -24,7 +25,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 401, statusMessage: 'Phiên đăng nhập hết hạn' })
   }
 
-  if (decoded.role !== 'user') {
+  if (!isCustomerRole(decoded.role)) {
     throw createError({ statusCode: 403, statusMessage: 'Không có quyền' })
   }
 

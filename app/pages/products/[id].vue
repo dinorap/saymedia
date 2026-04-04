@@ -589,6 +589,7 @@ import { nextTick, watch } from "vue";
 import { defineAsyncComponent } from "vue";
 import SiteHeader from "~/components/SiteHeader.vue";
 import { setProductRef, getProductRef } from "~/composables/useProductRef";
+import { isCustomerRole } from "~/composables/useCustomerRole";
 const ConfirmPurchaseModal = defineAsyncComponent(
   () => import("~/components/product/ConfirmPurchaseModal.vue"),
 );
@@ -1399,7 +1400,7 @@ function nextImage() {
 
 async function initUser() {
   const role = useCookie("user_role", { path: "/" }).value;
-  if (role === "user") {
+  if (isCustomerRole(role)) {
     try {
       const data = await $fetch("/api/auth/me");
       if (data?.user) currentUser.value = data.user;

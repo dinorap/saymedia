@@ -31,11 +31,11 @@ export default defineEventHandler(async (event) => {
       role: decoded.role,
       admin_id: decoded.admin_id
     }
-    if (decoded.role === 'user') {
+    if (decoded.role === 'user' || decoded.role === 'admin_3') {
       try {
         await ensureUserProfileSchema()
         const [rows]: any = await pool.query(
-          'SELECT email, credit, display_name, phone FROM users WHERE id = ?',
+          'SELECT email, credit, display_name, phone, partner_role FROM users WHERE id = ?',
           [decoded.id],
         )
         if (rows.length > 0) {
@@ -43,6 +43,9 @@ export default defineEventHandler(async (event) => {
           user.credit = Number(rows[0].credit || 0)
           user.display_name = rows[0].display_name ?? null
           user.phone = rows[0].phone ?? null
+          if (rows[0].partner_role === 'admin_3') {
+            ;(user as any).partner_role = 'admin_3'
+          }
         }
       } catch {
         const [rows]: any = await pool.query('SELECT email FROM users WHERE id = ?', [decoded.id])

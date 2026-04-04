@@ -6,7 +6,8 @@ export default defineNuxtRouteMiddleware(() => {
   // Trường hợp role chưa được hydrate xong trên client: không redirect ngay để tránh nháy trang.
   if (typeof role === 'undefined' && import.meta.client) return
 
-  if (!role || !String(role).startsWith('admin')) {
+  const r = String(role || '')
+  if (!r || !['admin_0', 'admin_1', 'admin_2'].includes(r)) {
     return navigateTo('/login')
   }
 })

@@ -5,8 +5,13 @@ import {
   applyPurchaseCreditDeduction,
   ensureCreditLedgerSchema,
 } from "../../utils/creditLedger";
-import { ensureAdminWalletSchema, recordOrderEarnings } from "../../utils/adminWallet";
+import {
+  ensureAdminWalletSchema,
+  recordOrderEarningsWithPartnerAffiliate,
+} from "../../utils/adminWallet";
 import { ensureCommerceSchema } from "../../utils/commerce";
+import { ensurePartnerSchema } from "../../utils/partner";
+import { isCustomerRole } from "../../utils/authHelpers";
 import { addSocialProofItem } from "../../utils/socialProof";
 import { orderCreateSchema, parseBodyOrThrow } from "../../utils/schemas";
 import { VALID_KEY_DURATIONS, ensureProductKeySchema } from "../../utils/productKeys";
@@ -30,7 +35,7 @@ export default defineEventHandler(async (event) => {
     });
   }
 
-  if (decoded.role !== "user") {
+  if (!isCustomerRole(decoded.role)) {
     throw createError({
       statusCode: 403,
       statusMessage: "Chỉ người dùng mới được mua sản phẩm",
@@ -41,6 +46,7 @@ export default defineEventHandler(async (event) => {
   await ensureCreditLedgerSchema();
   await ensureProductKeySchema();
   await ensureCommerceSchema();
+  await ensurePartnerSchema();
 
   const body = parseBodyOrThrow(await readBody(event), orderCreateSchema);
   const productId = body.product_id;
@@ -96,6 +102,8 @@ export default defineEventHandler(async (event) => {
     // Seller chỉ được set khi có ref hợp lệ (bán hộ). Không có ref => coi là tự bán của owner.
     let sellerAdminId: number | null = null;
     let sellerRefUsed: string | null = null;
+    let partnerUserId: number | null = null;
+    let partnerCommissionPercent: number | null = null;
     if (sellerRef) {
       const [[ps]]: any = await conn.query(
         `
@@ -111,6 +119,30 @@ export default defineEventHandler(async (event) => {
         if (Number.isFinite(sid) && sid > 0 && sid !== productOwnerAdminId) {
           sellerAdminId = sid;
           sellerRefUsed = sellerRef;
+        }
+      }
+      if (!sellerAdminId) {
+        const [[pRef]]: any = await conn.query(
+          `
+            SELECT ppr.user_id, ppr.commission_percent
+            FROM partner_product_refs ppr
+            INNER JOIN users u ON u.id = ppr.user_id
+            WHERE ppr.product_id = ?
+              AND ppr.ref_code = ?
+              AND ppr.is_active = 1
+              AND u.partner_role = 'admin_3'
+            LIMIT 1
+          `,
+          [productId, sellerRef],
+        );
+        if (pRef?.user_id) {
+          const pid = Number(pRef.user_id);
+          if (Number.isFinite(pid) && pid > 0 && pid !== decoded.id) {
+            partnerUserId = pid;
+            partnerCommissionPercent =
+              pRef.commission_percent != null ? Number(pRef.commission_percent) : 15;
+            sellerRefUsed = sellerRef;
+          }
         }
       }
     }
@@ -217,8 +249,8 @@ export default defineEventHandler(async (event) => {
 
     const [result]: any = await conn.query(
       `
-        INSERT INTO orders (user_id, product_id, admin_id, seller_admin_id, product_owner_admin_id, amount, amount_credit, paid_part, bonus_part, seller_ref, status, note)
-        VALUES (?, ?, ?, ?, ?, ?, ?, NULL, NULL, ?, ?, ?)
+        INSERT INTO orders (user_id, product_id, admin_id, seller_admin_id, product_owner_admin_id, amount, amount_credit, paid_part, bonus_part, seller_ref, partner_user_id, status, note)
+        VALUES (?, ?, ?, ?, ?, ?, ?, NULL, NULL, ?, ?, ?, ?)
       `,
       [
         user.id,
@@ -229,6 +261,7 @@ export default defineEventHandler(async (event) => {
         amountCredit,
         amountCredit,
         sellerRefUsed,
+        partnerUserId,
         initialStatus,
         note,
       ],
@@ -263,13 +296,15 @@ export default defineEventHandler(async (event) => {
         );
         commissionPercent = ps?.commission_percent != null ? Number(ps.commission_percent) : 20;
       }
-      await recordOrderEarnings(conn, {
+      await recordOrderEarningsWithPartnerAffiliate(conn, {
         orderId,
-        sellerAdminId: sellerAdminId ?? productOwnerAdminId,
+        sellerAdminId,
         productOwnerAdminId,
         paidPartCredit,
         commissionPercent,
         productName: product.name,
+        partnerUserId,
+        partnerCommissionPercent,
       });
     }
 

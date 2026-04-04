@@ -2,6 +2,7 @@ import jwt from 'jsonwebtoken'
 import { createPaypalDepositOrder } from '../../../utils/paypal'
 import { parseBodyOrThrow, paymentPaypalSchema } from '../../../utils/schemas'
 import { getJwtSecret } from '../../../utils/jwt'
+import { isCustomerRole } from '../../../utils/authHelpers'
 
 const JWT_SECRET = getJwtSecret()
 
@@ -21,7 +22,7 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  if (decoded.role !== 'user') {
+  if (!isCustomerRole(decoded.role)) {
     throw createError({
       statusCode: 403,
       statusMessage: 'Chỉ người dùng mới nạp tiền được',

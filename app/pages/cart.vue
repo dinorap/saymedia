@@ -223,6 +223,7 @@ import { defineAsyncComponent } from "vue";
 import SiteHeader from "~/components/SiteHeader.vue";
 import { useCartStore } from "~/stores/cart";
 import { setProductRef, getProductRef } from "~/composables/useProductRef";
+import { isCustomerRole } from "~/composables/useCustomerRole";
 const ConfirmPurchaseModal = defineAsyncComponent(
   () => import("~/components/product/ConfirmPurchaseModal.vue"),
 );
@@ -289,7 +290,7 @@ function formatVnd(v) {
 
 async function initUser() {
   const role = useCookie("user_role", { path: "/" }).value;
-  if (role === "user") {
+  if (isCustomerRole(role)) {
     try {
       const data = await $fetch("/api/auth/me");
       if (data?.user) currentUser.value = data.user;
@@ -421,7 +422,7 @@ async function onChangeQty(item) {
 
   if (process.client) {
     const role = useCookie("user_role", { path: "/" }).value;
-    if (role === "user" && safeQty >= 1) {
+    if (isCustomerRole(role) && safeQty >= 1) {
       try {
         await $fetch("/api/cart/add", {
           method: "POST",
@@ -588,7 +589,7 @@ let autoRefreshTimer = null;
 
 async function refreshCartFromServer() {
   const role = useCookie("user_role", { path: "/" }).value;
-  if (role !== "user") return;
+  if (!isCustomerRole(role)) return;
   try {
     const res = await $fetch("/api/cart/my");
     if (res?.success && Array.isArray(res.items)) {

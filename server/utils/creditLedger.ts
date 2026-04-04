@@ -13,6 +13,7 @@ export type CreditLedgerType =
   | 'admin_adjust'
   | 'system_adjust'
   | 'promotion'
+  | 'partner_commission'
 
 /** Đảm bảo bảng credit_ledger có cột paid_delta, bonus_delta (tách paid/bonus cho commission) */
 export async function ensureCreditLedgerSchema() {

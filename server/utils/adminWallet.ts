@@ -1,5 +1,6 @@
 import type { PoolConnection } from "mysql2/promise";
 import pool from "./db";
+import { applyDepositCredit } from "./creditLedger";
 
 let schemaReady = false
 
@@ -83,5 +84,70 @@ export async function recordOrderEarnings(
        VALUES (?, ?, 'product_revenue', ?, 'order', ?, ?)`,
       [productOwnerAdminId, ownerCredit, orderId, String(orderId), note]
     )
+  }
+}
+
+/**
+ * Ghi doanh thu admin + hoa hồng đối tác giới thiệu (user).
+ * Hoa hồng đối tác chỉ trừ vào phần chia cho chủ/seller khi không có bán hộ (seller_admin_id null).
+ */
+export async function recordOrderEarningsWithPartnerAffiliate(
+  conn: PoolConnection,
+  payload: {
+    orderId: number
+    sellerAdminId: number | null
+    productOwnerAdminId: number
+    paidPartCredit: number
+    commissionPercent: number | null
+    productName?: string
+    partnerUserId: number | null
+    partnerCommissionPercent: number | null
+  },
+) {
+  const {
+    orderId,
+    sellerAdminId,
+    productOwnerAdminId,
+    paidPartCredit,
+    commissionPercent,
+    productName,
+    partnerUserId,
+    partnerCommissionPercent,
+  } = payload
+  if (paidPartCredit <= 0 || !productOwnerAdminId) return
+
+  let poolForAdmins = paidPartCredit
+  let partnerCut = 0
+
+  if (!sellerAdminId && partnerUserId && partnerCommissionPercent != null) {
+    const pct = Math.min(100, Math.max(0, Number(partnerCommissionPercent)))
+    if (pct > 0) {
+      partnerCut = Math.floor((paidPartCredit * pct) / 100)
+      poolForAdmins = paidPartCredit - partnerCut
+    }
+  }
+
+  const effectiveSeller = sellerAdminId ?? productOwnerAdminId
+  await recordOrderEarnings(conn, {
+    orderId,
+    sellerAdminId: effectiveSeller,
+    productOwnerAdminId,
+    paidPartCredit: poolForAdmins,
+    commissionPercent: sellerAdminId ? commissionPercent : null,
+    productName,
+  })
+
+  if (partnerCut > 0 && partnerUserId) {
+    await applyDepositCredit(conn, {
+      userId: partnerUserId,
+      paidCredit: 0,
+      bonusCredit: partnerCut,
+      transactionType: "partner_commission",
+      referenceType: "order",
+      referenceId: orderId,
+      note: `Hoa hồng giới thiệu đơn #${orderId}`,
+      actorType: "system",
+      actorId: null,
+    })
   }
 }

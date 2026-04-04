@@ -2,6 +2,7 @@ import jwt from "jsonwebtoken";
 import pool from "../../utils/db";
 import { ensureAdminContactSchema } from "../../utils/adminContact";
 import { getJwtSecret } from "../../utils/jwt";
+import { isCustomerRole } from "../../utils/authHelpers";
 
 const JWT_SECRET = getJwtSecret();
 
@@ -21,7 +22,7 @@ export default defineEventHandler(async (event) => {
     });
   }
 
-  if (decoded.role !== "user") {
+  if (!isCustomerRole(decoded.role)) {
     throw createError({
       statusCode: 403,
       statusMessage: "Chỉ người dùng mới xem thông tin liên hệ quản trị",

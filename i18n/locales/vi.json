@@ -466,7 +466,13 @@
       "noAffiliateOrders": "Chưa có đơn bán hộ",
       "keyDetailsByTypeTitle": "Chi tiết key theo loại",
       "noKeyOrders": "Chưa có đơn key nào",
-      "ownerLabel": "Chủ"
+      "ownerLabel": "Chủ",
+      "userPartnerTitle": "Đối tác giới thiệu (khách hàng)",
+      "userPartnerHint": "Tài khoản kích hoạt mã đối tác: doanh số đơn ghi nhận qua mã giới thiệu từng sản phẩm.",
+      "userPartnerUsername": "Tài khoản",
+      "userPartnerEmail": "Email",
+      "userPartnerOrders": "Đơn giới thiệu",
+      "userPartnerVolume": "Doanh số (credit)"
     },
     "productKeysUi": {
       "totalKeys": "Tổng số key",
@@ -656,7 +662,19 @@
     "saveInfoFailed": "Lưu thất bại, vui lòng thử lại.",
     "newPasswordMinLength": "Mật khẩu mới tối thiểu 6 ký tự",
     "passwordChangedSuccess": "Đổi mật khẩu thành công!",
-    "passwordChangeFailed": "Lỗi đổi mật khẩu"
+    "passwordChangeFailed": "Lỗi đổi mật khẩu",
+    "partnerProgram": "Đối tác giới thiệu",
+    "partnerSummary": "Đơn giới thiệu: {orders} — Hoa hồng tích lũy: {commission} điểm — Doanh số: {volume} điểm",
+    "partnerRefsButton": "Mã giới thiệu & hoa hồng",
+    "partnerRefsTitle": "Mã giới thiệu theo sản phẩm",
+    "partnerColProduct": "Sản phẩm",
+    "partnerColRef": "Mã",
+    "partnerColPct": "% HH",
+    "partnerColOrders": "Đơn",
+    "partnerColVol": "Doanh số",
+    "partnerCopy": "Sao chép",
+    "partnerCopied": "Đã sao chép",
+    "partnerRefHint": "Bấm \"Sao chép\" để copy link đầy đủ tới trang sản phẩm (có ?ref=). Khách mở link rồi mua — hoa hồng được ghi nhận."
   },
   "product": {
     "viewDetail": "Xem chi tiết",

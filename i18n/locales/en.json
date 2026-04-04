@@ -466,7 +466,13 @@
       "noAffiliateOrders": "No affiliate orders",
       "keyDetailsByTypeTitle": "Key details by type",
       "noKeyOrders": "No key orders yet",
-      "ownerLabel": "Owner"
+      "ownerLabel": "Owner",
+      "userPartnerTitle": "Referral partners (customers)",
+      "userPartnerHint": "Accounts that activated the partner code: order volume tracked per product referral.",
+      "userPartnerUsername": "Account",
+      "userPartnerEmail": "Email",
+      "userPartnerOrders": "Referral orders",
+      "userPartnerVolume": "Volume (credit)"
     },
     "productKeysUi": {
       "totalKeys": "Total keys",
@@ -656,7 +662,19 @@
     "saveInfoFailed": "Save failed, please try again.",
     "newPasswordMinLength": "New password must be at least 6 characters",
     "passwordChangedSuccess": "Password changed successfully!",
-    "passwordChangeFailed": "Failed to change password"
+    "passwordChangeFailed": "Failed to change password",
+    "partnerProgram": "Referral partner",
+    "partnerSummary": "Referral orders: {orders} — Commission earned: {commission} credits — Volume: {volume} credits",
+    "partnerRefsButton": "Referral codes & commission",
+    "partnerRefsTitle": "Per-product referral codes",
+    "partnerColProduct": "Product",
+    "partnerColRef": "Code",
+    "partnerColPct": "Comm. %",
+    "partnerColOrders": "Orders",
+    "partnerColVol": "Volume",
+    "partnerCopy": "Copy",
+    "partnerCopied": "Copied",
+    "partnerRefHint": "Use \"Copy\" to copy the full product URL (?ref=). Customers open the link, then purchase — commission is tracked."
   },
   "product": {
     "viewDetail": "View detail",

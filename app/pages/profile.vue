@@ -132,6 +132,31 @@
               </div>
             </div>
 
+            <div
+              v-if="user?.role === 'admin_3'"
+              class="profile-section profile-partner-section"
+            >
+              <h3 class="profile-section-title">
+                {{ $t("profile.partnerProgram") }}
+              </h3>
+              <p class="profile-partner-summary">
+                {{
+                  $t("profile.partnerSummary", {
+                    orders: partnerSummary.total_orders,
+                    commission: formatVnd(partnerSummary.total_commission_credit),
+                    volume: formatVnd(partnerSummary.total_volume_credit),
+                  })
+                }}
+              </p>
+              <button
+                type="button"
+                class="btn-secondary"
+                @click="openPartnerRefsModal"
+              >
+                {{ $t("profile.partnerRefsButton") }}
+              </button>
+            </div>
+
             <div class="profile-section profile-actions-section">
               <h3 class="profile-section-title">
                 {{ $t("profile.sectionActions") }}
@@ -333,6 +358,67 @@
       :model-value="showCreditLedgerModal"
       @update:model-value="showCreditLedgerModal = $event"
     />
+
+    <Teleport to="body">
+      <div
+        v-if="showPartnerRefsModal"
+        class="profile-modal-overlay"
+        @click.self="showPartnerRefsModal = false"
+      >
+        <div class="profile-modal profile-modal--wide">
+          <h3 class="profile-modal-title">{{ $t("profile.partnerRefsTitle") }}</h3>
+          <p class="profile-partner-ref-hint">{{ $t("profile.partnerRefHint") }}</p>
+          <div v-if="partnerRefsLoading" class="profile-muted">
+            {{ $t("auth.loading") }}
+          </div>
+          <div v-else class="profile-partner-table-wrap">
+            <table class="profile-partner-table">
+              <thead>
+                <tr>
+                  <th>{{ $t("profile.partnerColProduct") }}</th>
+                  <th>{{ $t("profile.partnerColRef") }}</th>
+                  <th>{{ $t("profile.partnerColPct") }}</th>
+                  <th>{{ $t("profile.partnerColOrders") }}</th>
+                  <th>{{ $t("profile.partnerColVol") }}</th>
+                  <th />
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="r in partnerRefsList" :key="r.product_id">
+                  <td>{{ r.product_name }}</td>
+                  <td><code class="profile-ref-code">{{ r.ref_code }}</code></td>
+                  <td>{{ r.commission_percent }}%</td>
+                  <td>{{ r.order_count }}</td>
+                  <td>{{ formatVnd(r.volume_credit) }}</td>
+                  <td class="profile-partner-table__actions">
+                    <button
+                      type="button"
+                      class="profile-partner-copy-btn"
+                      @click="copyPartnerRef(r)"
+                    >
+                      {{
+                        copiedProductId === r.product_id
+                          ? $t("profile.partnerCopied")
+                          : $t("profile.partnerCopy")
+                      }}
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="profile-modal-actions">
+            <button
+              type="button"
+              class="btn-primary"
+              @click="showPartnerRefsModal = false"
+            >
+              {{ $t("admin.closeShort") }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -354,6 +440,7 @@ const CreditLedgerModal = defineAsyncComponent(
 );
 const { t, locale, setLocale } = useI18n();
 const { show: showToast } = useToast();
+const route = useRoute();
 
 const user = ref(null);
 const loading = ref(true);
@@ -363,6 +450,16 @@ const showProfileInfoModal = ref(false);
 const showHistoryModal = ref(false);
 const showOrderHistoryModal = ref(false);
 const showCreditLedgerModal = ref(false);
+const showPartnerRefsModal = ref(false);
+const partnerRefsLoading = ref(false);
+const partnerRefsList = ref([]);
+const partnerSummary = reactive({
+  total_orders: 0,
+  total_volume_credit: 0,
+  total_commission_credit: 0,
+});
+/** product_id vừa sao chép link (để đổi nhãn nút) */
+const copiedProductId = ref(null);
 const quickStats = reactive({
   depositCount: 0,
   orderCount: 0,
@@ -453,6 +550,14 @@ function onDepositClick() {
   showProfileInfoModal.value = true;
 }
 
+async function openDepositFromUrlQuery() {
+  const q = route.query.deposit;
+  if (q !== "1" && q !== "true") return;
+  if (!user.value) return;
+  onDepositClick();
+  await navigateTo({ path: "/profile", query: {}, replace: true });
+}
+
 async function loadProfile(opts) {
   const silent = !!opts?.silent;
   if (!silent) loading.value = true;
@@ -461,6 +566,14 @@ async function loadProfile(opts) {
     if (data?.success && data.user) {
       user.value = data.user;
       syncProfileInfoFormFromUser();
+      if (data.user.role === "admin_3") {
+        await loadPartnerRefsData({ silent: true });
+      } else {
+        partnerRefsList.value = [];
+        partnerSummary.total_orders = 0;
+        partnerSummary.total_volume_credit = 0;
+        partnerSummary.total_commission_credit = 0;
+      }
     } else {
       if (!silent) errorMessage.value = t("auth.unauthorized");
     }
@@ -470,6 +583,58 @@ async function loadProfile(opts) {
     }
   } finally {
     if (!silent) loading.value = false;
+  }
+}
+
+async function loadPartnerRefsData(opts) {
+  const silent = !!opts?.silent;
+  if (!silent) partnerRefsLoading.value = true;
+  try {
+    const res = await $fetch("/api/partner/my");
+    if (res?.success) {
+      partnerRefsList.value = Array.isArray(res.refs) ? res.refs : [];
+      const s = res.summary || {};
+      partnerSummary.total_orders = Number(s.total_orders || 0);
+      partnerSummary.total_volume_credit = Number(s.total_volume_credit || 0);
+      partnerSummary.total_commission_credit = Number(
+        s.total_commission_credit || 0,
+      );
+    }
+  } catch {
+    partnerRefsList.value = [];
+  } finally {
+    if (!silent) partnerRefsLoading.value = false;
+  }
+}
+
+async function openPartnerRefsModal() {
+  showPartnerRefsModal.value = true;
+  await loadPartnerRefsData({});
+}
+
+function partnerReferralProductUrl(productId, refCode) {
+  if (!import.meta.client) return "";
+  const id = Number(productId);
+  const refParam = String(refCode || "").trim();
+  if (!Number.isFinite(id) || id <= 0 || !refParam) return "";
+  const origin = window.location.origin;
+  const path = `/products/${id}`;
+  const q = new URLSearchParams({ ref: refParam });
+  return `${origin}${path}?${q.toString()}`;
+}
+
+async function copyPartnerRef(row) {
+  if (!row || !import.meta.client) return;
+  const url = partnerReferralProductUrl(row.product_id, row.ref_code);
+  if (!url) return;
+  try {
+    await navigator.clipboard.writeText(url);
+    copiedProductId.value = row.product_id;
+    setTimeout(() => {
+      copiedProductId.value = null;
+    }, 2200);
+  } catch {
+    showToast(t("profile.saveInfoFailed"), "error");
   }
 }
 
@@ -494,6 +659,7 @@ async function loadQuickStats() {
 onMounted(async () => {
   await loadProfile({});
   await loadQuickStats();
+  await openDepositFromUrlQuery();
   useAutoRefresh(
     async () => {
       if (!user.value) return;
@@ -503,6 +669,17 @@ onMounted(async () => {
     { intervalMs: 20000, pauseWhenHidden: true },
   );
 });
+
+watch(
+  () => route.query.deposit,
+  async (val) => {
+    if (val !== "1" && val !== "true") return;
+    if (!user.value) {
+      await loadProfile({});
+    }
+    await openDepositFromUrlQuery();
+  },
+);
 
 function formatVnd(v) {
   return (Number(v) || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
@@ -1330,5 +1507,82 @@ async function submitChangePassword() {
   justify-content: flex-end;
   gap: 0.75rem;
   margin-top: 0.5rem;
+}
+
+.profile-modal--wide {
+  max-width: min(720px, 96vw);
+}
+
+.profile-partner-section .profile-partner-summary {
+  font-size: 0.92rem;
+  color: var(--text-secondary);
+  margin: 0 0 0.75rem;
+  line-height: 1.45;
+}
+
+.profile-partner-ref-hint {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin: 0 0 0.75rem;
+}
+
+.profile-partner-table-wrap {
+  overflow-x: auto;
+  margin-bottom: 0.75rem;
+}
+
+.profile-partner-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.profile-partner-table th,
+.profile-partner-table td {
+  padding: 0.45rem 0.5rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+  text-align: left;
+}
+
+.profile-ref-code {
+  font-size: 0.82rem;
+  word-break: break-all;
+}
+
+.profile-partner-table__actions {
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.profile-partner-copy-btn {
+  padding: 0.4rem 0.85rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  border-radius: 999px;
+  border: 1px solid var(--blue-bright);
+  background: var(--btn-primary-bg);
+  color: var(--text-primary);
+  box-shadow: var(--btn-primary-glow);
+  cursor: pointer;
+  transition:
+    transform var(--transition-fast),
+    box-shadow var(--transition-glow),
+    filter var(--transition-fast);
+}
+
+.profile-partner-copy-btn:hover {
+  box-shadow: 0 0 26px var(--blue-glow);
+  transform: translateY(-1px);
+  filter: brightness(1.05);
+}
+
+.profile-partner-copy-btn:active {
+  transform: translateY(0);
+}
+
+.profile-muted {
+  color: var(--text-muted);
+  font-size: 0.9rem;
 }
 </style>

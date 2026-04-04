@@ -1,5 +1,6 @@
 import { storeToRefs } from "pinia";
 import { useCartStore } from "~/stores/cart";
+import { isCustomerRole } from "~/composables/useCustomerRole";
 
 /**
  * Composable giỏ hàng: chỉ lưu DB (user đã đăng nhập). Khách không đăng nhập: giỏ in-memory, mất khi tải lại trang.
@@ -12,7 +13,7 @@ export function useCart() {
   // Chỉ lưu giỏ trên DB khi đã đăng nhập (user). Khách: giỏ in-memory, mất khi reload.
   if (process.client) {
     const role = roleCookie?.value;
-    if (role !== "user") {
+    if (!isCustomerRole(role)) {
       if (store.loadedFromServer) store.reset();
       else store.loadedFromServer = true;
     } else if (!store.loadedFromServer) {
@@ -57,7 +58,7 @@ export function useCart() {
     store.add(payload);
     if (process.client) {
       const role = useCookie("user_role", { path: "/" }).value;
-      if (role === "user") {
+      if (isCustomerRole(role)) {
         try {
           const qty =
             options?.qty != null && Number.isFinite(options.qty)
@@ -86,7 +87,7 @@ export function useCart() {
     store.remove(id, duration);
     if (process.client) {
       const role = useCookie("user_role", { path: "/" }).value;
-      if (role === "user") {
+      if (isCustomerRole(role)) {
         try {
           await $fetch("/api/cart/remove", {
             method: "POST",
@@ -103,7 +104,7 @@ export function useCart() {
     store.clear();
     if (process.client) {
       const role = useCookie("user_role", { path: "/" }).value;
-      if (role === "user") {
+      if (isCustomerRole(role)) {
         try {
           await $fetch("/api/cart/clear", { method: "POST" });
         } catch {

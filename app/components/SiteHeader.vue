@@ -1,5 +1,19 @@
 <template>
   <header class="site-header">
+    <button
+      v-if="showPartnerInviteBtn"
+      type="button"
+      class="site-partner-invite"
+      :aria-label="locale === 'vi' ? 'Trở thành đối tác' : 'Become a partner'"
+      @click="openPartnerModal"
+    >
+      <span class="site-partner-invite__full">{{
+        locale === "vi" ? "Trở thành đối tác" : "Become a partner"
+      }}</span>
+      <span class="site-partner-invite__short" aria-hidden="true">{{
+        locale === "vi" ? "Đối tác" : "Partner"
+      }}</span>
+    </button>
     <div class="site-header-brand">
       <NuxtLink to="/" class="site-logo">
         <img src="/logo.png" alt="SayMedia AI" class="site-logo-img" />
@@ -57,10 +71,16 @@
         <span class="site-cart-text">{{ $t("cart.title") }}</span>
         <span v-if="cartCount" class="site-cart-badge">{{ cartCount }}</span>
       </NuxtLink>
-      <div
-        v-if="currentUser && currentUser.role === 'user'"
+      <button
+        v-if="currentUser && isCustomerRole(currentUser.role)"
+        type="button"
         class="site-header-credit"
-        :title="`${$t('product.balance')}: ${formatCredit(currentUser.credit)}`"
+        :title="
+          locale === 'vi'
+            ? `Nạp tiền — ${$t('product.balance')}: ${formatCredit(currentUser.credit)}`
+            : `Deposit — ${$t('product.balance')}: ${formatCredit(currentUser.credit)}`
+        "
+        @click="goDeposit"
       >
         <span class="site-header-credit-icon" aria-hidden="true">◎</span>
         <span class="site-header-credit-text">
@@ -71,7 +91,7 @@
             formatCredit(currentUser.credit)
           }}</span>
         </span>
-      </div>
+      </button>
       <template v-if="currentUser">
         <div
           class="site-user-dropdown"
@@ -136,16 +156,22 @@
         </span>
         <span v-if="cartCount" class="site-cart-badge">{{ cartCount }}</span>
       </NuxtLink>
-      <div
-        v-if="currentUser && currentUser.role === 'user'"
+      <button
+        v-if="currentUser && isCustomerRole(currentUser.role)"
+        type="button"
         class="site-mobile-credit"
-        :title="`${$t('product.balance')}: ${formatCredit(currentUser.credit)}`"
+        :title="
+          locale === 'vi'
+            ? `Nạp tiền — ${$t('product.balance')}: ${formatCredit(currentUser.credit)}`
+            : `Deposit — ${$t('product.balance')}: ${formatCredit(currentUser.credit)}`
+        "
+        @click="goDeposit"
       >
         <span class="site-mobile-credit-icon" aria-hidden="true">◎</span>
         <span class="site-mobile-credit-value">{{
           formatCredit(currentUser.credit)
         }}</span>
-      </div>
+      </button>
       <NuxtLink
         v-if="currentUser"
         to="/profile"
@@ -395,10 +421,71 @@
       </div>
     </div>
   </Teleport>
+  <Teleport to="body">
+    <div
+      v-if="showPartnerModal"
+      class="announcement-popup-overlay"
+      @click.self="showPartnerModal = false"
+    >
+      <div class="announcement-popup partner-invite-modal">
+        <h3 class="announcement-popup-title">
+          {{
+            locale === "vi"
+              ? "Trở thành đối tác giới thiệu"
+              : "Become a referral partner"
+          }}
+        </h3>
+        <p class="partner-invite-hint">
+          {{
+            locale === "vi"
+              ? "Nhập mã kích hoạt. Sau khi thành công, bạn nhận mã giới thiệu từng sản phẩm và hoa hồng trong trang cá nhân."
+              : "Enter your invite code. You will get per-product referral codes and commissions in your profile."
+          }}
+        </p>
+        <input
+          v-model="partnerKeyInput"
+          type="password"
+          autocomplete="off"
+          class="partner-invite-input"
+          :placeholder="locale === 'vi' ? 'Mã kích hoạt' : 'Invite code'"
+          @keyup.enter="submitPartnerActivate"
+        />
+        <p v-if="partnerActivateError" class="profile-error-msg">
+          {{ partnerActivateError }}
+        </p>
+        <div class="partner-invite-actions">
+          <button
+            type="button"
+            class="btn-secondary"
+            @click="showPartnerModal = false"
+          >
+            {{ locale === "vi" ? "Đóng" : "Close" }}
+          </button>
+          <button
+            type="button"
+            class="btn-primary"
+            :disabled="partnerActivateLoading"
+            @click="submitPartnerActivate"
+          >
+            {{
+              partnerActivateLoading
+                ? locale === "vi"
+                  ? "Đang xử lý…"
+                  : "…"
+                : locale === "vi"
+                  ? "Kích hoạt"
+                  : "Activate"
+            }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </Teleport>
 </template>
 
 <script setup>
 import { useI18n } from "vue-i18n";
+import { isCustomerRole } from "~/composables/useCustomerRole";
 
 const { locale, setLocale } = useI18n();
 const { count, clear: clearCart } = useCart();
@@ -412,6 +499,16 @@ const popupAnnouncements = ref([]);
 const showAnnouncementPopup = ref(false);
 const activeAnnouncementIndex = ref(0);
 const activeImageIndex = ref(0);
+
+const showPartnerModal = ref(false);
+const partnerKeyInput = ref("");
+const partnerActivateError = ref("");
+const partnerActivateLoading = ref(false);
+
+const showPartnerInviteBtn = computed(() => {
+  const u = currentUser.value;
+  return !u || u.role === "user";
+});
 
 // Dùng chung cookie role cho menu; popup thông báo dùng /api/auth/me (vì auth_token là httpOnly, client không đọc được)
 const roleCookie = useCookie("user_role", { path: "/" });
@@ -466,7 +563,8 @@ function formatCredit(v) {
 
 async function refreshCurrentUser() {
   const role = roleCookie.value;
-  if (role && role !== "admin_0" && role !== "admin_1") {
+  const staff = ["admin_0", "admin_1", "admin_2"];
+  if (role && !staff.includes(role)) {
     try {
       const data = await $fetch("/api/auth/me");
       if (data?.user) currentUser.value = data.user;
@@ -475,6 +573,41 @@ async function refreshCurrentUser() {
     }
   } else {
     currentUser.value = null;
+  }
+}
+
+function openPartnerModal() {
+  partnerActivateError.value = "";
+  partnerKeyInput.value = "";
+  showPartnerModal.value = true;
+}
+
+async function submitPartnerActivate() {
+  partnerActivateError.value = "";
+  const key = String(partnerKeyInput.value || "").trim();
+  if (!key) {
+    partnerActivateError.value =
+      locale.value === "vi" ? "Vui lòng nhập mã" : "Please enter a code";
+    return;
+  }
+  partnerActivateLoading.value = true;
+  try {
+    const res = await $fetch("/api/partner/activate", {
+      method: "POST",
+      body: { key },
+    });
+    if (res?.success) {
+      roleCookie.value = "admin_3";
+      showPartnerModal.value = false;
+      await refreshCurrentUser();
+    }
+  } catch (e) {
+    partnerActivateError.value =
+      e?.data?.statusMessage ||
+      e?.data?.message ||
+      (locale.value === "vi" ? "Không kích hoạt được" : "Activation failed");
+  } finally {
+    partnerActivateLoading.value = false;
   }
 }
 
@@ -543,6 +676,13 @@ function goProfile() {
   navigateTo("/profile");
 }
 
+function goDeposit() {
+  if (!currentUser.value || !isCustomerRole(currentUser.value.role)) return;
+  showDropdown.value = false;
+  closeMobileMenu();
+  navigateTo("/profile?deposit=1");
+}
+
 function formatPopupDate(val) {
   if (!val) return "-";
   const d = new Date(val);
@@ -563,7 +703,7 @@ async function maybeShowAnnouncementPopup() {
     const me = await $fetch("/api/auth/me").catch(() => null);
     const user = me?.user;
     // Chỉ hiển thị popup cho khách hàng (role user), không hiện cho admin
-    if (!user || user.role !== "user") return;
+    if (!user || !isCustomerRole(user.role)) return;
 
     const res = await $fetch("/api/announcements?popup=1");
     const list = Array.isArray(res?.data) ? res.data : [];
@@ -710,11 +850,136 @@ onUnmounted(() => {
     0 0 30px var(--blue-glow);
 }
 
+/* Nút đối tác: nằm trong vùng padding trái của header, không tăng padding → logo giữ đúng chỗ cũ */
 .site-header-brand {
   justify-self: start;
   display: flex;
   align-items: center;
   min-width: 0;
+}
+
+.site-partner-invite {
+  position: absolute;
+  left: max(10px, env(safe-area-inset-left, 0px));
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+  box-sizing: border-box;
+  max-width: min(138px, calc(150px - 12px - env(safe-area-inset-left, 0px)));
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.3;
+  padding: 8px 10px;
+  border-radius: 12px;
+  border: 2px solid rgb(var(--accent-rgb) / 0.55);
+  background: linear-gradient(
+    160deg,
+    rgb(var(--accent-rgb) / 0.14) 0%,
+    var(--bg-card) 100%
+  );
+  backdrop-filter: blur(10px);
+  color: var(--text-primary);
+  text-shadow: 0 0 14px var(--blue-glow);
+  cursor: pointer;
+  letter-spacing: 0.03em;
+  text-align: center;
+  white-space: normal;
+  animation: site-partner-blink 1.05s ease-in-out infinite;
+  box-shadow:
+    0 4px 18px rgba(0, 0, 0, 0.35),
+    0 0 18px rgb(var(--accent-rgb) / 0.22);
+  will-change: transform, box-shadow, opacity;
+}
+
+.site-partner-invite__short {
+  display: none;
+}
+
+.site-partner-invite:hover {
+  border-color: var(--blue-bright);
+  background: var(--blue-soft);
+  color: var(--blue-bright);
+  animation-play-state: paused;
+}
+
+@keyframes site-partner-blink {
+  0%,
+  100% {
+    opacity: 1;
+    transform: translateY(-50%) scale(1);
+    border-color: rgb(var(--accent-rgb) / 0.5);
+    box-shadow:
+      0 4px 18px rgba(0, 0, 0, 0.35),
+      0 0 14px rgb(var(--accent-rgb) / 0.3),
+      0 0 28px rgb(var(--accent-rgb) / 0.12);
+  }
+  50% {
+    opacity: 0.9;
+    transform: translateY(-50%) scale(1.06);
+    border-color: var(--blue-bright);
+    box-shadow:
+      0 6px 22px rgba(0, 0, 0, 0.4),
+      0 0 22px rgb(var(--accent-rgb) / 0.5),
+      0 0 44px rgb(var(--accent-rgb) / 0.28);
+  }
+}
+
+.partner-invite-modal .partner-invite-hint {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  margin: 0 0 12px;
+  line-height: 1.45;
+}
+
+.partner-invite-modal .partner-invite-input {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0 0 8px;
+  padding: 12px 14px;
+  font-size: 0.95rem;
+  line-height: 1.4;
+  color: var(--text-primary);
+  caret-color: var(--blue-bright);
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: 12px;
+  outline: none;
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast),
+    background var(--transition-fast);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.partner-invite-modal .partner-invite-input::placeholder {
+  color: var(--text-muted);
+  opacity: 1;
+}
+
+.partner-invite-modal .partner-invite-input:hover {
+  border-color: rgb(var(--accent-rgb) / 0.45);
+  background: rgb(var(--accent-rgb) / 0.08);
+}
+
+.partner-invite-modal .partner-invite-input:focus {
+  border-color: var(--input-focus-border);
+  box-shadow: var(--input-focus-glow), inset 0 1px 2px rgba(0, 0, 0, 0.15);
+  background: rgb(var(--accent-rgb) / 0.06);
+}
+
+.partner-invite-modal .profile-error-msg {
+  margin: 0 0 8px;
+  font-size: 0.85rem;
+  color: #fca5a5;
+}
+
+.partner-invite-modal .partner-invite-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 12px;
+  flex-wrap: wrap;
 }
 
 .site-logo {
@@ -973,6 +1238,10 @@ onUnmounted(() => {
   padding: 0 12px 0 10px;
   border-radius: 10px;
   border: 1px solid rgb(var(--accent-rgb) / 0.4);
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  text-align: left;
   background:
     linear-gradient(
       180deg,
@@ -986,6 +1255,13 @@ onUnmounted(() => {
   min-width: 112px;
   max-width: min(240px, 30vw);
   box-sizing: border-box;
+}
+
+.site-header-credit:hover {
+  border-color: rgb(var(--accent-rgb) / 0.65);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.08),
+    0 0 20px rgb(var(--accent-rgb) / 0.28);
 }
 
 .site-header-credit-icon {
@@ -1041,6 +1317,9 @@ onUnmounted(() => {
   height: 38px;
   border-radius: 10px;
   border: 1px solid rgb(var(--accent-rgb) / 0.45);
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
   background:
     linear-gradient(
       180deg,
@@ -1048,6 +1327,10 @@ onUnmounted(() => {
       rgb(var(--accent-rgb) / 0.08)
     ),
     rgba(15, 23, 42, 0.8);
+}
+
+.site-mobile-credit:hover {
+  border-color: rgb(var(--accent-rgb) / 0.7);
 }
 
 .site-mobile-credit-icon {
@@ -1460,6 +1743,23 @@ onUnmounted(() => {
     justify-content: space-between;
     align-items: center;
     padding: 12px 16px;
+  }
+  .site-partner-invite {
+    max-width: 86px;
+    font-size: 11px;
+    font-weight: 800;
+    padding: 7px 9px;
+    border-radius: 999px;
+  }
+  .site-partner-invite__full {
+    display: none;
+  }
+  .site-partner-invite__short {
+    display: block;
+  }
+  /* Tránh đè logo khi padding ngắn; chừa ~bằng khối nút */
+  .site-header:has(.site-partner-invite) .site-header-brand {
+    margin-left: 92px;
   }
   .site-logo-img {
     height: 42px;
