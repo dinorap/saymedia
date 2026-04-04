@@ -62,9 +62,19 @@ export default defineEventHandler(async (event) => {
 
   const [[ledgerSum]]: any = await pool.query(
     `
-      SELECT COALESCE(SUM(bonus_delta), 0) AS total_commission_credit
+      SELECT COALESCE(SUM(delta), 0) AS total_commission_received
       FROM credit_ledger
-      WHERE user_id = ? AND transaction_type = 'partner_commission'
+      WHERE user_id = ?
+        AND transaction_type IN ('partner_commission', 'partner_commission_reversal')
+    `,
+    [userId],
+  );
+
+  const [[pendingSum]]: any = await pool.query(
+    `
+      SELECT COALESCE(SUM(amount_credit), 0) AS total_commission_pending
+      FROM partner_commission_payouts
+      WHERE partner_user_id = ? AND status = 'pending'
     `,
     [userId],
   );
@@ -87,7 +97,9 @@ export default defineEventHandler(async (event) => {
     summary: {
       total_orders: Number(sumOrders?.total_orders || 0),
       total_volume_credit: Number(sumOrders?.total_volume_credit || 0),
-      total_commission_credit: Number(ledgerSum?.total_commission_credit || 0),
+      total_commission_received: Number(ledgerSum?.total_commission_received || 0),
+      total_commission_pending: Number(pendingSum?.total_commission_pending || 0),
+      total_commission_credit: Number(ledgerSum?.total_commission_received || 0),
     },
     refs: list,
   };

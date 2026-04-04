@@ -14,6 +14,7 @@ export type CreditLedgerType =
   | 'system_adjust'
   | 'promotion'
   | 'partner_commission'
+  | 'partner_commission_reversal'
 
 /** Đảm bảo bảng credit_ledger có cột paid_delta, bonus_delta (tách paid/bonus cho commission) */
 export async function ensureCreditLedgerSchema() {
@@ -331,6 +332,82 @@ export async function applyRefundCredit(
   )
 
   return { beforeBalance, afterBalance }
+}
+
+/**
+ * Thu hồi hoa hồng đối tác khi hoàn tiền đơn (đối ứng với partner_commission ban đầu).
+ * Idempotent: nếu đã có bút toán reversal cho đơn này thì bỏ qua.
+ */
+export async function reversePartnerCommissionForOrder(
+  conn: PoolConnection,
+  payload: {
+    orderId: number
+    partnerUserId: number
+    note?: string | null
+    actorType?: CreditActorType
+    actorId?: number | null
+  },
+): Promise<{ reversed: boolean; amount: number }> {
+  const orderIdStr = String(payload.orderId)
+  const uid = Math.trunc(Number(payload.partnerUserId))
+  if (!Number.isFinite(uid) || uid <= 0) {
+    return { reversed: false, amount: 0 }
+  }
+
+  const [[existingReversal]]: any = await conn.query(
+    `
+      SELECT id FROM credit_ledger
+      WHERE user_id = ?
+        AND transaction_type = 'partner_commission_reversal'
+        AND reference_type = 'order'
+        AND reference_id = ?
+      LIMIT 1
+    `,
+    [uid, orderIdStr],
+  )
+  if (existingReversal?.id) {
+    return { reversed: false, amount: 0 }
+  }
+
+  const [[agg]]: any = await conn.query(
+    `
+      SELECT COALESCE(
+        COALESCE(
+          NULLIF(
+            SUM(COALESCE(bonus_delta, 0) + COALESCE(paid_delta, 0)),
+            0
+          ),
+          SUM(\`delta\`)
+        ),
+        0
+      ) AS total
+      FROM credit_ledger
+      WHERE user_id = ?
+        AND transaction_type = 'partner_commission'
+        AND reference_type = 'order'
+        AND reference_id = ?
+    `,
+    [uid, orderIdStr],
+  )
+  const amount = Math.trunc(Number(agg?.total ?? 0))
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return { reversed: false, amount: 0 }
+  }
+
+  await applyCreditChange(conn, {
+    userId: uid,
+    delta: -amount,
+    transactionType: 'partner_commission_reversal',
+    referenceType: 'order',
+    referenceId: payload.orderId,
+    note:
+      payload.note ??
+      `Thu hồi hoa hồng giới thiệu đơn #${payload.orderId}`,
+    actorType: payload.actorType ?? 'admin',
+    actorId: payload.actorId ?? null,
+  })
+
+  return { reversed: true, amount }
 }
 
 export async function applyCreditChange(

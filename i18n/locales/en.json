@@ -665,7 +665,7 @@
     "passwordChangedSuccess": "Password changed successfully!",
     "passwordChangeFailed": "Failed to change password",
     "partnerProgram": "Referral partner",
-    "partnerSummary": "Referral orders: {orders} — Commission earned: {commission} credits — Volume: {volume} credits",
+    "partnerSummary": "Referral orders: {orders} — Volume: {volume} credits — Pending approval: {pending} credits — In wallet: {received} credits",
     "partnerRefsButton": "Referral codes & commission",
     "partnerRefsTitle": "Per-product referral codes",
     "partnerColProduct": "Product",
@@ -675,7 +675,7 @@
     "partnerColVol": "Volume",
     "partnerCopy": "Copy",
     "partnerCopied": "Copied",
-    "partnerRefHint": "Use \"Copy\" to copy the full product URL (?ref=). Customers open the link, then purchase — commission is tracked."
+    "partnerRefHint": "Use \"Copy\" for the full product URL (?ref=). After purchase, commission stays pending until an admin approves it to your wallet."
   },
   "product": {
     "viewDetail": "View detail",

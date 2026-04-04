@@ -1,6 +1,6 @@
 import type { PoolConnection } from "mysql2/promise";
 import pool from "./db";
-import { applyDepositCredit } from "./creditLedger";
+import { insertPendingPartnerCommission } from "./partnerCommissionPayout";
 
 let schemaReady = false
 
@@ -138,16 +138,10 @@ export async function recordOrderEarningsWithPartnerAffiliate(
   })
 
   if (partnerCut > 0 && partnerUserId) {
-    await applyDepositCredit(conn, {
-      userId: partnerUserId,
-      paidCredit: 0,
-      bonusCredit: partnerCut,
-      transactionType: "partner_commission",
-      referenceType: "order",
-      referenceId: orderId,
-      note: `Hoa hồng giới thiệu đơn #${orderId}`,
-      actorType: "system",
-      actorId: null,
-    })
+    await insertPendingPartnerCommission(conn, {
+      orderId,
+      partnerUserId,
+      amountCredit: partnerCut,
+    });
   }
 }

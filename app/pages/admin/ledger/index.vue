@@ -218,6 +218,8 @@ function typeLabel(type) {
   if (type === "purchase") return "Mua sản phẩm";
   if (type === "refund") return "Hoàn tiền";
   if (type === "admin_adjust") return "Admin điều chỉnh";
+  if (type === "partner_commission") return "Hoa hồng giới thiệu";
+  if (type === "partner_commission_reversal") return "Thu hồi hoa hồng giới thiệu";
   return type || "-";
 }
 

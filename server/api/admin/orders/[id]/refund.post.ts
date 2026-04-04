@@ -3,10 +3,12 @@ import { addAuditLog } from "../../../../utils/audit";
 import {
   applyRefundCredit,
   ensureCreditLedgerSchema,
+  reversePartnerCommissionForOrder,
 } from "../../../../utils/creditLedger";
 import { ensureOrderRefundSchema } from "../../../../utils/orderRefund";
 import { ensureAdminWalletSchema } from "../../../../utils/adminWallet";
 import { ensureCommerceSchema } from "../../../../utils/commerce";
+import { ensurePartnerSchema } from "../../../../utils/partner";
 
 export default defineEventHandler(async (event) => {
   const currentUser = event.context.user;
@@ -29,6 +31,7 @@ export default defineEventHandler(async (event) => {
   await ensureOrderRefundSchema();
   await ensureAdminWalletSchema();
   await ensureCommerceSchema();
+  await ensurePartnerSchema();
 
   const conn = await pool.getConnection();
   let resultCredit = 0;
@@ -38,7 +41,8 @@ export default defineEventHandler(async (event) => {
 
     const [[order]]: any = await conn.query(
       `
-        SELECT id, user_id, admin_id, amount, amount_credit, paid_part, bonus_part, status, refunded_at
+        SELECT id, user_id, admin_id, amount, amount_credit, paid_part, bonus_part, status, refunded_at,
+               partner_user_id
         FROM orders
         WHERE id = ?
         LIMIT 1
@@ -76,6 +80,70 @@ export default defineEventHandler(async (event) => {
     );
     if (!Number.isFinite(amount) || amount <= 0) {
       throw createError({ statusCode: 400, statusMessage: "Số tiền đơn hàng không hợp lệ" });
+    }
+
+    const partnerUid = order.partner_user_id != null ? Number(order.partner_user_id) : null;
+
+    const [[payout]]: any = await conn.query(
+      `
+        SELECT id, status
+        FROM partner_commission_payouts
+        WHERE order_id = ?
+        FOR UPDATE
+      `,
+      [id],
+    );
+
+    if (payout && String(payout.status) === "pending") {
+      await conn.query(
+        `UPDATE partner_commission_payouts SET status = 'cancelled' WHERE id = ?`,
+        [payout.id],
+      );
+    } else if (payout && String(payout.status) === "approved") {
+      try {
+        await reversePartnerCommissionForOrder(conn, {
+          orderId: id,
+          partnerUserId: partnerUid!,
+          note: `Thu hồi hoa hồng giới thiệu (hoàn đơn #${id}): ${reason}`,
+          actorType: "admin",
+          actorId: currentUser.id,
+        });
+      } catch (e: any) {
+        const msg = String(e?.statusMessage || e?.message || "");
+        if (msg.includes("Số dư không đủ")) {
+          throw createError({
+            statusCode: 400,
+            statusMessage:
+              "Đối tác giới thiệu không đủ số dư để thu hồi hoa hồng (đã dùng hết credit). Xử lý thủ công rồi thử lại.",
+          });
+        }
+        throw e;
+      }
+    } else if (
+      !payout &&
+      partnerUid &&
+      Number.isFinite(partnerUid) &&
+      partnerUid > 0
+    ) {
+      try {
+        await reversePartnerCommissionForOrder(conn, {
+          orderId: id,
+          partnerUserId: partnerUid,
+          note: `Thu hồi hoa hồng giới thiệu (hoàn đơn #${id}): ${reason}`,
+          actorType: "admin",
+          actorId: currentUser.id,
+        });
+      } catch (e: any) {
+        const msg = String(e?.statusMessage || e?.message || "");
+        if (msg.includes("Số dư không đủ")) {
+          throw createError({
+            statusCode: 400,
+            statusMessage:
+              "Đối tác giới thiệu không đủ số dư để thu hồi hoa hồng (đã dùng hết credit). Xử lý thủ công rồi thử lại.",
+          });
+        }
+        throw e;
+      }
     }
 
     const creditResult = await applyRefundCredit(conn, {

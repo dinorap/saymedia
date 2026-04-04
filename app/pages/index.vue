@@ -134,7 +134,9 @@
           <div
             class="landing-section-head landing-section-head--left landing-section-head--chat"
           >
-            <h2 class="landing-section-title">{{ $t("communityChat.title") }}</h2>
+            <h2 class="landing-section-title">
+              {{ $t("communityChat.title") }}
+            </h2>
             <p class="landing-section-subtitle landing-section-subtitle--chat">
               {{ $t("communityChat.subtitle") }}
             </p>
@@ -394,7 +396,11 @@ const isLoggedIn = computed(() => roleCookie.value === "user");
   border-radius: 18px;
   border: 1px solid rgb(var(--accent-rgb) / 0.45);
   background:
-    radial-gradient(circle at 0 0, rgb(var(--accent-rgb) / 0.25), transparent 55%),
+    radial-gradient(
+      circle at 0 0,
+      rgb(var(--accent-rgb) / 0.25),
+      transparent 55%
+    ),
     rgba(5, 15, 35, 0.96);
   box-shadow:
     0 0 30px rgb(var(--accent-rgb) / 0.35),

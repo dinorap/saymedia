@@ -39,6 +39,24 @@ export async function ensurePartnerSchema() {
   }
 
   await pool.query(`
+    CREATE TABLE IF NOT EXISTS partner_commission_payouts (
+      id BIGINT AUTO_INCREMENT PRIMARY KEY,
+      order_id INT NOT NULL,
+      partner_user_id INT NOT NULL,
+      amount_credit BIGINT NOT NULL,
+      status VARCHAR(20) NOT NULL DEFAULT 'pending',
+      approved_by_admin_id INT NULL,
+      approved_at TIMESTAMP NULL,
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE KEY uniq_pcp_order (order_id),
+      INDEX idx_pcp_partner_status (partner_user_id, status),
+      INDEX idx_pcp_created (created_at),
+      CONSTRAINT fk_pcp_order FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
+      CONSTRAINT fk_pcp_user FOREIGN KEY (partner_user_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `);
+
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS partner_product_refs (
       id BIGINT AUTO_INCREMENT PRIMARY KEY,
       user_id INT NOT NULL,

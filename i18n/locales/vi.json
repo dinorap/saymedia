@@ -665,7 +665,7 @@
     "passwordChangedSuccess": "Đổi mật khẩu thành công!",
     "passwordChangeFailed": "Lỗi đổi mật khẩu",
     "partnerProgram": "Đối tác giới thiệu",
-    "partnerSummary": "Đơn giới thiệu: {orders} — Hoa hồng tích lũy: {commission} điểm — Doanh số: {volume} điểm",
+    "partnerSummary": "Đơn giới thiệu: {orders} — Doanh số: {volume} điểm — Chờ duyệt: {pending} điểm — Đã vào ví: {received} điểm",
     "partnerRefsButton": "Mã giới thiệu & hoa hồng",
     "partnerRefsTitle": "Mã giới thiệu theo sản phẩm",
     "partnerColProduct": "Sản phẩm",
@@ -675,7 +675,7 @@
     "partnerColVol": "Doanh số",
     "partnerCopy": "Sao chép",
     "partnerCopied": "Đã sao chép",
-    "partnerRefHint": "Bấm \"Sao chép\" để copy link đầy đủ tới trang sản phẩm (có ?ref=). Khách mở link rồi mua — hoa hồng được ghi nhận."
+    "partnerRefHint": "Bấm \"Sao chép\" để copy link đầy đủ tới trang sản phẩm (có ?ref=). Khách mở link rồi mua — hoa hồng chờ admin duyệt mới vào ví."
   },
   "product": {
     "viewDetail": "Xem chi tiết",

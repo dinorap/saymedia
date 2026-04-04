@@ -143,8 +143,9 @@
                 {{
                   $t("profile.partnerSummary", {
                     orders: partnerSummary.total_orders,
-                    commission: formatVnd(partnerSummary.total_commission_credit),
                     volume: formatVnd(partnerSummary.total_volume_credit),
+                    pending: formatVnd(partnerSummary.total_commission_pending),
+                    received: formatVnd(partnerSummary.total_commission_received),
                   })
                 }}
               </p>
@@ -456,7 +457,8 @@ const partnerRefsList = ref([]);
 const partnerSummary = reactive({
   total_orders: 0,
   total_volume_credit: 0,
-  total_commission_credit: 0,
+  total_commission_pending: 0,
+  total_commission_received: 0,
 });
 /** product_id vừa sao chép link (để đổi nhãn nút) */
 const copiedProductId = ref(null);
@@ -572,7 +574,8 @@ async function loadProfile(opts) {
         partnerRefsList.value = [];
         partnerSummary.total_orders = 0;
         partnerSummary.total_volume_credit = 0;
-        partnerSummary.total_commission_credit = 0;
+        partnerSummary.total_commission_pending = 0;
+        partnerSummary.total_commission_received = 0;
       }
     } else {
       if (!silent) errorMessage.value = t("auth.unauthorized");
@@ -596,8 +599,11 @@ async function loadPartnerRefsData(opts) {
       const s = res.summary || {};
       partnerSummary.total_orders = Number(s.total_orders || 0);
       partnerSummary.total_volume_credit = Number(s.total_volume_credit || 0);
-      partnerSummary.total_commission_credit = Number(
-        s.total_commission_credit || 0,
+      partnerSummary.total_commission_pending = Number(
+        s.total_commission_pending || 0,
+      );
+      partnerSummary.total_commission_received = Number(
+        s.total_commission_received ?? s.total_commission_credit ?? 0,
       );
     }
   } catch {

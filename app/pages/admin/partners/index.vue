@@ -1,5 +1,55 @@
 <template>
   <div class="partners-page">
+    <div v-if="isSuperAdmin" class="card summary-card partner-payouts-card">
+      <h2 class="card-title">Hoa hồng đối tác chờ duyệt</h2>
+      <p class="partner-payouts-hint">
+        Sau khi duyệt, số credit mới được cộng vào ví đối tác (bonus).
+      </p>
+      <div v-if="payoutsLoading" class="table-loading">{{ $t("admin.loading") }}</div>
+      <div v-else-if="!pendingPayouts.length" class="table-empty">
+        Không có bản ghi chờ duyệt.
+      </div>
+      <table v-else class="data-table">
+        <thead>
+          <tr>
+            <th>Đơn</th>
+            <th>Đối tác</th>
+            <th>Khách mua</th>
+            <th>Sản phẩm</th>
+            <th>Hoa hồng</th>
+            <th>Giá đơn</th>
+            <th>Ngày</th>
+            <th>{{ $t("admin.actions") }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="row in pendingPayouts" :key="row.id">
+            <td>#{{ row.order_id }}</td>
+            <td>{{ row.partner_username || "—" }}</td>
+            <td>{{ row.buyer_username || "—" }}</td>
+            <td>{{ row.product_name || "—" }}</td>
+            <td>{{ formatNum(row.amount_credit || 0) }}</td>
+            <td>{{ formatNum(row.order_amount_credit || 0) }}</td>
+            <td>{{ formatPayoutDate(row.created_at) }}</td>
+            <td>
+              <button
+                type="button"
+                class="btn-primary btn-small"
+                :disabled="approvingPayoutId === row.id"
+                @click="approvePartnerPayout(row.id)"
+              >
+                {{
+                  approvingPayoutId === row.id
+                    ? "..."
+                    : "Duyệt"
+                }}
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
     <div v-if="isSuperAdmin" class="subtabs">
       <button
         type="button"
@@ -319,6 +369,7 @@
 <script setup lang="ts">
 definePageMeta({ layout: "admin", middleware: ["admin"] });
 const { t } = useI18n();
+const { show: showToast } = useToast();
 
 const loading = ref(true);
 const byProductLoading = ref(false);
@@ -348,6 +399,9 @@ const ownerLoading = ref(false);
 const ownerProducts = ref<any[]>([]);
 const userPartners = ref<any[]>([]);
 const userPartnersLoading = ref(false);
+const pendingPayouts = ref<any[]>([]);
+const payoutsLoading = ref(false);
+const approvingPayoutId = ref<number | null>(null);
 const selfByProduct = computed(() =>
   (byProduct.value || []).filter(
     (r: any) => r.owner_admin_id && r.owner_admin_id === selectedPartnerId.value,
@@ -375,6 +429,49 @@ function formatDuration(v: string) {
   return String(v)
     .replace(/\b(\d+)\s*d\b/gi, "$1 ngày")
     .replace(/\b(\d+)\s*h\b/gi, "$1 giờ");
+}
+
+function formatPayoutDate(d: string | null | undefined) {
+  if (!d) return "—";
+  try {
+    return new Date(d).toLocaleString("vi-VN");
+  } catch {
+    return String(d);
+  }
+}
+
+async function fetchPendingPayouts(opts: { silent?: boolean } = {}) {
+  if (!isSuperAdmin.value) return;
+  const silent = !!opts.silent;
+  if (!silent) payoutsLoading.value = true;
+  try {
+    const res = await $fetch<{ data: any[] }>(
+      "/api/admin/partner-commission-payouts",
+      { query: { status: "pending" } },
+    );
+    pendingPayouts.value = res?.data || [];
+  } catch {
+    pendingPayouts.value = [];
+  } finally {
+    if (!silent) payoutsLoading.value = false;
+  }
+}
+
+async function approvePartnerPayout(id: number) {
+  if (!id || approvingPayoutId.value != null) return;
+  approvingPayoutId.value = id;
+  try {
+    await $fetch(`/api/admin/partner-commission-payouts/${id}/approve`, {
+      method: "POST",
+    });
+    showToast("Đã duyệt và cộng credit cho đối tác.", "success");
+    await fetchPendingPayouts({ silent: true });
+    await fetchUserPartners({ silent: true });
+  } catch (e: any) {
+    showToast(e?.data?.statusMessage || "Không duyệt được.", "error");
+  } finally {
+    approvingPayoutId.value = null;
+  }
 }
 
 async function fetchUserPartners(opts: { silent?: boolean } = {}) {
@@ -549,10 +646,14 @@ onMounted(async () => {
   await fetchUserPartners();
   if (isSuperAdmin.value) {
     await fetchOwnerProducts();
+    await fetchPendingPayouts();
   }
   autoRefreshTimer = setInterval(() => {
     fetchSummary({ silent: true });
     fetchUserPartners({ silent: true });
+    if (isSuperAdmin.value) {
+      fetchPendingPayouts({ silent: true });
+    }
   }, 5000);
 });
 
@@ -613,6 +714,11 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+}
+.partner-payouts-hint {
+  margin: 0 0 0.75rem;
+  font-size: 0.9rem;
+  color: var(--text-muted, #94a3b8);
 }
 .toolbar {
   display: flex;
