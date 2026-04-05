@@ -9,7 +9,7 @@ import { ensureOrderRefundSchema } from "../../../../utils/orderRefund";
 import { ensureAdminWalletSchema } from "../../../../utils/adminWallet";
 import { ensureCommerceSchema } from "../../../../utils/commerce";
 import { ensurePartnerSchema } from "../../../../utils/partner";
-import { resolveShopAdminId } from "../../../../utils/adminHierarchy";
+import { assertOrderVisibleToShopAdmin } from "../../../../utils/adminHierarchy";
 import { assertShopManagementRole } from "../../../../utils/authHelpers";
 
 export default defineEventHandler(async (event) => {
@@ -57,36 +57,9 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 404, statusMessage: "Không tìm thấy đơn hàng" });
     }
 
-    if (currentUser.role === "admin_1" && Number(order.admin_id) !== Number(currentUser.id)) {
-      throw createError({
-        statusCode: 403,
-        statusMessage: "Bạn chỉ được hoàn tiền đơn hàng do mình phụ trách",
-      });
-    }
-    if (currentUser.role === "admin_2") {
-      const shopId = await resolveShopAdminId(currentUser.id, currentUser.role);
-      const [[vis]]: any = await conn.query(
-        `
-          SELECT o.id
-          FROM orders o
-          INNER JOIN users u ON u.id = o.user_id
-          WHERE o.id = ?
-            AND (
-              u.admin_id = ?
-              OR o.seller_admin_id = ?
-              OR o.product_owner_admin_id = ?
-            )
-          LIMIT 1
-        `,
-        [id, shopId, currentUser.id, shopId],
-      );
-      if (!vis) {
-        throw createError({
-          statusCode: 403,
-          statusMessage: "Bạn không có quyền hoàn tiền đơn hàng này",
-        });
-      }
-    }
+    await assertOrderVisibleToShopAdmin(id, currentUser.role, currentUser.id, conn, {
+      statusMessage: "Bạn không có quyền hoàn tiền đơn hàng này",
+    });
 
     if (order.refunded_at) {
       throw createError({ statusCode: 400, statusMessage: "Đơn hàng này đã được hoàn tiền" });

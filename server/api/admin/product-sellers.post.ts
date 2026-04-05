@@ -1,6 +1,7 @@
 import pool from "../../utils/db";
 import { ensureAdminHierarchySchema } from "../../utils/adminHierarchy";
 import { assertShopManagementRole } from "../../utils/authHelpers";
+import { ensurePartnerSchema, refCodeExists } from "../../utils/partner";
 
 function generateRefCode() {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -25,6 +26,7 @@ export default defineEventHandler(async (event) => {
   }
 
   await ensureAdminHierarchySchema();
+  await ensurePartnerSchema();
 
   const body = await readBody(event);
   const productId = Number(body?.product_id);
@@ -137,11 +139,7 @@ export default defineEventHandler(async (event) => {
     // eslint-disable-next-line no-constant-condition
     while (true) {
       const candidate = generateRefCode();
-      const [[dup]]: any = await conn.query(
-        "SELECT id FROM product_sellers WHERE ref_code = ? LIMIT 1",
-        [candidate],
-      );
-      if (!dup) {
+      if (!(await refCodeExists(conn, candidate))) {
         refCode = candidate;
         break;
       }

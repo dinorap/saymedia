@@ -1,19 +1,14 @@
 import pool from "../../utils/db";
 import { ensureUserStatsSchema } from "../../utils/userStats";
 import { resolveShopAdminId } from "../../utils/adminHierarchy";
+import { assertShopManagementRole } from "../../utils/authHelpers";
 
 export default defineEventHandler(async (event) => {
   const currentUser = event.context.user;
   if (!currentUser) {
     throw createError({ statusCode: 401, statusMessage: "Chưa đăng nhập" });
   }
-  if (
-    currentUser.role !== "admin_0" &&
-    currentUser.role !== "admin_1" &&
-    currentUser.role !== "admin_2"
-  ) {
-    throw createError({ statusCode: 403, statusMessage: "Không có quyền truy cập" });
-  }
+  assertShopManagementRole(currentUser.role);
 
   await ensureUserStatsSchema();
 

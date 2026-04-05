@@ -1,6 +1,6 @@
 import pool from '../../../utils/db'
 import { addAuditLog } from '../../../utils/audit'
-import { resolveShopAdminId } from '../../../utils/adminHierarchy'
+import { assertOrderVisibleToShopAdmin } from '../../../utils/adminHierarchy'
 import { assertShopManagementRole } from '../../../utils/authHelpers'
 
 export default defineEventHandler(async (event) => {
@@ -16,42 +16,15 @@ export default defineEventHandler(async (event) => {
   }
 
   const [[order]]: any = await pool.query(
-    'SELECT id, admin_id FROM orders WHERE id = ? LIMIT 1',
+    'SELECT id FROM orders WHERE id = ? LIMIT 1',
     [id],
   )
   if (!order) {
     throw createError({ statusCode: 404, statusMessage: 'Không tìm thấy đơn hàng' })
   }
-  if (currentUser.role === 'admin_1' && order.admin_id !== currentUser.id) {
-    throw createError({
-      statusCode: 403,
-      statusMessage: 'Bạn chỉ được sửa đơn hàng do mình phụ trách',
-    })
-  }
-  if (currentUser.role === 'admin_2') {
-    const shopId = await resolveShopAdminId(currentUser.id, currentUser.role)
-    const [[vis]]: any = await pool.query(
-      `
-        SELECT o.id
-        FROM orders o
-        INNER JOIN users u ON u.id = o.user_id
-        WHERE o.id = ?
-          AND (
-            u.admin_id = ?
-            OR o.seller_admin_id = ?
-            OR o.product_owner_admin_id = ?
-          )
-        LIMIT 1
-      `,
-      [id, shopId, currentUser.id, shopId],
-    )
-    if (!vis) {
-      throw createError({
-        statusCode: 403,
-        statusMessage: 'Bạn không có quyền sửa đơn hàng này',
-      })
-    }
-  }
+  await assertOrderVisibleToShopAdmin(id, currentUser.role, currentUser.id, undefined, {
+    statusMessage: 'Bạn không có quyền sửa đơn hàng này',
+  })
 
   const body = await readBody(event).catch(() => ({}))
   const rawNote = body?.note != null ? String(body.note) : undefined

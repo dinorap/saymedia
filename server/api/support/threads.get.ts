@@ -35,14 +35,23 @@ export default defineEventHandler(async (event) => {
 
   const q = getQuery(event);
   const status = q.status === "closed" ? "closed" : "open";
+  /** admin_0: luôn xem mọi phiên (khớp canAdminAccessSupportThread); không lọc theo st.admin_id = id super admin. */
   const scopeAll = q.scope === "all" && current.role === "admin_0";
 
+  // Khớp canAdminAccessSupportThread: admin_1 = mình + cấp dưới; admin_2 = shop hoặc mình.
   let listFilter = "st.admin_id = ?";
   const listParams: any[] = [status];
   if (!scopeAll) {
-    if (current.role === "admin_2") {
+    if (current.role === "admin_0") {
+      listFilter = "1=1";
+    } else if (current.role === "admin_2") {
       const shopId = await resolveShopAdminId(current.id, current.role);
-      listParams.unshift(shopId);
+      listFilter = "(st.admin_id = ? OR st.admin_id = ?)";
+      listParams.unshift(shopId, current.id);
+    } else if (current.role === "admin_1") {
+      listFilter =
+        "(st.admin_id = ? OR st.admin_id IN (SELECT id FROM admins WHERE parent_admin_id = ?))";
+      listParams.unshift(current.id, current.id);
     } else {
       listParams.unshift(current.id);
     }

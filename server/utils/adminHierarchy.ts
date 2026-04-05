@@ -95,7 +95,10 @@ export async function resolveShopAdminId(
 }
 
 /**
- * Quyền staff với phiên chat: thread gán cho đúng admin hoặc (với admin_2) cho shop cấp trên.
+ * Quyền staff với phiên chat:
+ * - admin_1: thread gán cho mình hoặc cho cấp dưới (admin_2) của shop.
+ * - admin_support: chỉ thread gán đúng tài khoản support.
+ * - admin_2: thread gán cho shop (cấp trên) hoặc cho chính mình.
  */
 export async function canAdminAccessSupportThread(
   adminId: number,
@@ -106,8 +109,16 @@ export async function canAdminAccessSupportThread(
   const tid =
     threadAssignedAdminId != null ? Number(threadAssignedAdminId) : NaN;
   if (!Number.isFinite(tid) || tid <= 0) return false;
-  if (role === "admin_1" || role === "admin_support") {
+  if (role === "admin_support") {
     return tid === adminId;
+  }
+  if (role === "admin_1") {
+    if (tid === adminId) return true;
+    const [[sub]]: any = await pool.query(
+      "SELECT id FROM admins WHERE id = ? AND parent_admin_id = ? LIMIT 1",
+      [tid, adminId],
+    );
+    return !!sub?.id;
   }
   if (role === "admin_2") {
     try {
@@ -118,4 +129,50 @@ export async function canAdminAccessSupportThread(
     }
   }
   return false;
+}
+
+/** Khớp orders.get: KH của shop / người bán hộ / chủ SP (không chỉ `orders.admin_id`). */
+const ORDER_SHOP_SCOPE_SQL = `
+  SELECT o.id
+  FROM orders o
+  INNER JOIN users u ON u.id = o.user_id
+  WHERE o.id = ?
+    AND (
+      u.admin_id = ?
+      OR o.seller_admin_id = ?
+      OR o.product_owner_admin_id = ?
+    )
+  LIMIT 1
+`;
+
+/**
+ * admin_1 / admin_2: chỉ thao tác đơn thuộc phạm vi shop (khớp danh sách đơn).
+ * admin_0: bỏ qua. Role khác: bỏ qua — route phải đã giới hạn (vd. assertShopManagementRole).
+ */
+export async function assertOrderVisibleToShopAdmin(
+  orderId: number,
+  role: string,
+  adminUserId: number,
+  conn?: PoolConnection,
+  options?: { statusMessage?: string },
+): Promise<void> {
+  if (role === "admin_0") return;
+  if (role !== "admin_1" && role !== "admin_2") return;
+
+  const q = conn ?? pool;
+  let params: [number, number, number, number];
+  if (role === "admin_1") {
+    params = [orderId, adminUserId, adminUserId, adminUserId];
+  } else {
+    const shopId = await resolveShopAdminId(adminUserId, role, conn);
+    params = [orderId, shopId, adminUserId, shopId];
+  }
+  const [[row]]: any = await q.query(ORDER_SHOP_SCOPE_SQL, params);
+  if (!row) {
+    throw createError({
+      statusCode: 403,
+      statusMessage:
+        options?.statusMessage ?? "Bạn không có quyền thao tác đơn hàng này",
+    });
+  }
 }

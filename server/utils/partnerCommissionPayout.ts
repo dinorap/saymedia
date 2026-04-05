@@ -11,10 +11,12 @@ export async function insertPendingPartnerCommission(
 ) {
   const amt = Math.trunc(Number(payload.amountCredit || 0));
   if (!Number.isFinite(amt) || amt <= 0) return;
+  // uniq_pcp_order: tránh lỗi trùng nếu gọi lặp trong cùng giao dịch / retry — giữ bản ghi đầu.
   await conn.query(
     `
       INSERT INTO partner_commission_payouts (order_id, partner_user_id, amount_credit, status)
       VALUES (?, ?, ?, 'pending')
+      ON DUPLICATE KEY UPDATE order_id = order_id
     `,
     [payload.orderId, payload.partnerUserId, amt],
   );

@@ -22,7 +22,6 @@ export default defineEventHandler(async (event) => {
     deleteCookie(event, COOKIE_NAME, { path: '/' })
     return { success: true, message: 'Đã xóa ref' }
   }
-  if (!refTrim) return { success: false, message: 'Mã ref không hợp lệ' }
 
   const [admins]: any = await pool.query('SELECT id FROM admins WHERE ref_code = ? AND is_active = 1', [refTrim])
   if (admins.length === 0) {

@@ -20,12 +20,32 @@ export default defineEventHandler(async (event) => {
   const id = getRouterParam(event, "id");
   if (!id) throw createError({ statusCode: 400, statusMessage: "Thiếu id" });
 
+  const numId = parseInt(id, 10);
+  if (!Number.isFinite(numId) || numId <= 0) {
+    throw createError({ statusCode: 400, statusMessage: "ID không hợp lệ" });
+  }
+
   const body = await readBody(event);
   const { role, is_active, password } = body;
 
+  if (is_active !== undefined && !is_active) {
+    if (numId === 1) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: "Không thể khóa tài khoản Super Admin gốc.",
+      });
+    }
+    if (numId === Number(currentUser.id)) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: "Không thể tự khóa tài khoản đang đăng nhập.",
+      });
+    }
+  }
+
   const [[target]]: any = await pool.query(
     "SELECT id, parent_admin_id, role FROM admins WHERE id = ? LIMIT 1",
-    [id],
+    [numId],
   );
   if (!target) {
     throw createError({ statusCode: 404, statusMessage: "Không tìm thấy admin" });
@@ -89,7 +109,7 @@ export default defineEventHandler(async (event) => {
     return { success: true, message: "Không có thay đổi" };
   }
 
-  params.push(id);
+  params.push(numId);
   await pool.query(`UPDATE admins SET ${updates.join(", ")} WHERE id = ?`, params);
 
   if (didChangePassword) {
@@ -98,7 +118,7 @@ export default defineEventHandler(async (event) => {
       actorId: currentUser.id,
       action: "admin_change_admin_password",
       targetType: "admin",
-      targetId: String(id),
+      targetId: String(numId),
     });
   }
 

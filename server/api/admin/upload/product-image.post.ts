@@ -1,6 +1,7 @@
 import { promises as fs } from "node:fs";
 import { join, extname } from "node:path";
 import crypto from "node:crypto";
+import { assertShopManagementRole } from "../../../utils/authHelpers";
 
 // Admin-only upload nên cho phép lớn hơn một chút để thoải mái.
 // Nếu cần hơn nữa thì chỉnh giá trị này.
@@ -13,16 +14,7 @@ export default defineEventHandler(async (event) => {
   if (!currentUser) {
     throw createError({ statusCode: 401, statusMessage: "Chưa đăng nhập" });
   }
-  if (
-    currentUser.role !== "admin_0" &&
-    currentUser.role !== "admin_1" &&
-    currentUser.role !== "admin_2"
-  ) {
-    throw createError({
-      statusCode: 403,
-      statusMessage: "Chỉ admin mới được upload ảnh sản phẩm",
-    });
-  }
+  assertShopManagementRole(currentUser.role);
 
   const form = await readMultipartFormData(event);
   if (!form || !form.length) {
@@ -49,7 +41,7 @@ export default defineEventHandler(async (event) => {
     if (part.data.length > MAX_SIZE) {
       throw createError({
         statusCode: 400,
-        statusMessage: "Ảnh quá lớn, tối đa 5MB",
+        statusMessage: `Ảnh quá lớn, tối đa ${Math.round(MAX_SIZE / (1024 * 1024))}MB`,
       });
     }
 

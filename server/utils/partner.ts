@@ -85,7 +85,8 @@ function randomSuffix(len = 4): string {
   return s;
 }
 
-async function refCodeExists(conn: PoolConnection | null, code: string): Promise<boolean> {
+/** Trùng mã ref ở `product_sellers` hoặc `partner_product_refs` — giữ ref toàn cục duy nhất. */
+export async function refCodeExists(conn: PoolConnection | null, code: string): Promise<boolean> {
   const run = async (c: PoolConnection | typeof pool) => {
     const [[a]]: any = await c.query(
       "SELECT 1 FROM product_sellers WHERE ref_code = ? LIMIT 1",

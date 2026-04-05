@@ -19,6 +19,15 @@ export default defineEventHandler(async (event) => {
   if (!id) throw createError({ statusCode: 400, statusMessage: "Thiếu id" });
 
   const numId = parseInt(id, 10);
+  if (!Number.isFinite(numId) || numId <= 0) {
+    throw createError({ statusCode: 400, statusMessage: "ID không hợp lệ" });
+  }
+  if (numId === Number(currentUser.id)) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: "Không thể xóa chính tài khoản đang đăng nhập.",
+    });
+  }
   if (numId === 1) {
     throw createError({
       statusCode: 400,
@@ -45,7 +54,7 @@ export default defineEventHandler(async (event) => {
 
   const [users]: any = await pool.query(
     "SELECT id FROM users WHERE admin_id = ?",
-    [id],
+    [numId],
   );
   if (users.length > 0) {
     throw createError({
@@ -67,6 +76,6 @@ export default defineEventHandler(async (event) => {
     });
   }
 
-  await pool.query("DELETE FROM admins WHERE id = ?", [id]);
+  await pool.query("DELETE FROM admins WHERE id = ?", [numId]);
   return { success: true, message: "Đã xóa admin" };
 });

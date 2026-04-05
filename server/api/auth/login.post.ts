@@ -33,6 +33,7 @@ export default defineEventHandler(async (event) => {
       }
       const [users]: any = await pool.query('SELECT * FROM users WHERE email = ?', [email])
       if (users.length === 0) {
+        recordLoginFailure(event)
         await addAuditLog({
           actorType: 'system',
           action: 'login_failed_otp',
@@ -40,7 +41,10 @@ export default defineEventHandler(async (event) => {
           targetId: email,
           metadata: { reason: 'email_not_found' },
         })
-        throw createError({ statusCode: 401, statusMessage: 'Email chưa đăng ký!' })
+        throw createError({
+          statusCode: 401,
+          statusMessage: 'Mã OTP không đúng hoặc đã hết hạn!',
+        })
       }
       const user = users[0]
       if (user.status === 'blocked') {

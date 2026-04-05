@@ -114,6 +114,8 @@ export default defineEventHandler(async (event) => {
         `,
         [productId, sellerRef],
       );
+      // Đã có dòng product_sellers cho ref này → không fallback sang partner (tránh gán nhầm khi seller trùng chủ SP hoặc hai bảng trùng mã ref).
+      const matchedProductSellerRow = !!ps;
       if (ps?.seller_admin_id) {
         const sid = Number(ps.seller_admin_id);
         if (Number.isFinite(sid) && sid > 0 && sid !== productOwnerAdminId) {
@@ -121,7 +123,7 @@ export default defineEventHandler(async (event) => {
           sellerRefUsed = sellerRef;
         }
       }
-      if (!sellerAdminId) {
+      if (!sellerAdminId && !matchedProductSellerRow) {
         const [[pRef]]: any = await conn.query(
           `
             SELECT ppr.user_id, ppr.commission_percent

@@ -47,8 +47,13 @@ async function submit() {
   success.value = ''
   error.value = ''
   try {
-    await $fetch('/api/auth/forgot-password', { method: 'POST', body: { email: email.value.trim() } })
-    success.value = 'Đã gửi mật khẩu mới vào email. Vui lòng kiểm tra hộp thư.'
+    const data = await $fetch('/api/auth/forgot-password', {
+      method: 'POST',
+      body: { email: email.value.trim() }
+    })
+    success.value =
+      data?.message ||
+      'Nếu email đã đăng ký, bạn sẽ nhận email chứa mật khẩu mới.'
     email.value = ''
     setTimeout(() => {
       emit('update:open', false)
