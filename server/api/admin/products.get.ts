@@ -1,12 +1,15 @@
 import pool from "../../utils/db";
 import { ensureCommerceSchema } from "../../utils/commerce";
 import { ensureProductKeySchema } from "../../utils/productKeys";
+import { resolveShopAdminId } from "../../utils/adminHierarchy";
+import { assertShopManagementRole } from "../../utils/authHelpers";
 
 export default defineEventHandler(async (event) => {
   const currentUser = event.context.user;
   if (!currentUser) {
     throw createError({ statusCode: 401, statusMessage: "Chưa đăng nhập" });
   }
+  assertShopManagementRole(currentUser.role);
   await ensureCommerceSchema();
   await ensureProductKeySchema();
 
@@ -31,6 +34,10 @@ export default defineEventHandler(async (event) => {
   if (currentUser.role === "admin_1") {
     where.push("p.admin_id = ?");
     params.push(currentUser.id);
+  } else if (currentUser.role === "admin_2") {
+    const shopId = await resolveShopAdminId(currentUser.id, currentUser.role);
+    where.push("p.admin_id = ?");
+    params.push(shopId);
   } else if (
     currentUser.role === "admin_0" &&
     adminIdFilterRaw &&

@@ -1,4 +1,6 @@
 import pool from "../../utils/db";
+import { ensureAdminHierarchySchema } from "../../utils/adminHierarchy";
+import { assertShopManagementRole } from "../../utils/authHelpers";
 
 function generateRefCode() {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -14,17 +16,23 @@ export default defineEventHandler(async (event) => {
   if (!currentUser) {
     throw createError({ statusCode: 401, statusMessage: "Chưa đăng nhập" });
   }
-  if (currentUser.role !== "admin_0") {
+  assertShopManagementRole(currentUser.role);
+  if (currentUser.role !== "admin_0" && currentUser.role !== "admin_1") {
     throw createError({
       statusCode: 403,
-      statusMessage: "Chỉ admin chủ mới được thêm đối tác bán sản phẩm",
+      statusMessage: "Chỉ admin chủ hoặc đại lý mới thêm đối tác bán sản phẩm",
     });
   }
+
+  await ensureAdminHierarchySchema();
 
   const body = await readBody(event);
   const productId = Number(body?.product_id);
   const sellerAdminId = Number(body?.seller_admin_id);
-  const commissionPercent = body?.commission_percent != null ? Math.min(100, Math.max(0, parseInt(String(body.commission_percent), 10) || 20)) : 20;
+  const commissionPercent =
+    body?.commission_percent != null
+      ? Math.min(100, Math.max(0, parseInt(String(body.commission_percent), 10) || 20))
+      : 20;
 
   if (!Number.isFinite(productId) || productId <= 0) {
     throw createError({
@@ -44,12 +52,7 @@ export default defineEventHandler(async (event) => {
     await conn.beginTransaction();
 
     const [[product]]: any = await conn.query(
-      `
-        SELECT id, admin_id, name
-        FROM products
-        WHERE id = ?
-        LIMIT 1
-      `,
+      `SELECT id, admin_id, name FROM products WHERE id = ? LIMIT 1`,
       [productId],
     );
     if (!product) {
@@ -59,9 +62,18 @@ export default defineEventHandler(async (event) => {
       });
     }
 
+    if (currentUser.role === "admin_1") {
+      if (Number(product.admin_id) !== Number(currentUser.id)) {
+        throw createError({
+          statusCode: 403,
+          statusMessage: "Chỉ gán bán hộ cho sản phẩm của chính bạn",
+        });
+      }
+    }
+
     const [[seller]]: any = await conn.query(
       `
-        SELECT id, username, role, is_active
+        SELECT id, username, role, is_active, parent_admin_id
         FROM admins
         WHERE id = ?
         LIMIT 1
@@ -77,11 +89,25 @@ export default defineEventHandler(async (event) => {
     if (!seller.is_active) {
       throw createError({
         statusCode: 400,
-        statusMessage: "Shop này đang bị khóa, không thể thêm làm đối tác",
+        statusMessage: "Tài khoản này đang bị khóa, không thể thêm làm đối tác",
       });
     }
 
-    // Nếu đã tồn tại quan hệ, trả về luôn (id + ref_code cũ)
+    if (currentUser.role === "admin_1") {
+      if (String(seller.role) !== "admin_2") {
+        throw createError({
+          statusCode: 400,
+          statusMessage: "Chỉ được gán cấp dưới (admin_2) làm đối tác bán hộ",
+        });
+      }
+      if (Number(seller.parent_admin_id) !== Number(currentUser.id)) {
+        throw createError({
+          statusCode: 403,
+          statusMessage: "Người bán phải là tài khoản cấp dưới do bạn tạo",
+        });
+      }
+    }
+
     const [[existing]]: any = await conn.query(
       `
         SELECT id, ref_code, is_active
@@ -94,7 +120,7 @@ export default defineEventHandler(async (event) => {
     if (existing) {
       await conn.query(
         "UPDATE product_sellers SET commission_percent = ? WHERE id = ?",
-        [commissionPercent, existing.id]
+        [commissionPercent, existing.id],
       );
       await conn.commit();
       return {
@@ -107,7 +133,6 @@ export default defineEventHandler(async (event) => {
       };
     }
 
-    // Sinh ref_code unique
     let refCode = "";
     // eslint-disable-next-line no-constant-condition
     while (true) {
@@ -147,4 +172,3 @@ export default defineEventHandler(async (event) => {
     conn.release();
   }
 });
-

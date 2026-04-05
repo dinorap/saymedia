@@ -946,9 +946,13 @@ async function openSellerModal(product: any) {
         : [];
     }
     if (adminsRes?.success && Array.isArray(adminsRes.data)) {
-      sellerModal.shops = adminsRes.data.filter(
-        (x: any) => x.role === "admin_1" && x.is_active,
-      );
+      sellerModal.shops = adminsRes.data.filter((x: any) => {
+        if (!x.is_active) return false;
+        if (isSuperAdmin.value) {
+          return x.role === "admin_1" || x.role === "admin_2";
+        }
+        return x.role === "admin_2";
+      });
     }
   } catch (e) {
     showToast(

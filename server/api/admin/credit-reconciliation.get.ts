@@ -71,7 +71,7 @@ export default defineEventHandler(async (event) => {
         (
           COALESCE(SUM(
             CASE
-              WHEN w.wallet_type IN ('sale_commission','product_revenue')
+              WHEN w.wallet_type IN ('sale_commission','subordinate_commission','product_revenue')
                 THEN CASE WHEN o.id IS NULL OR o.status = 'completed' THEN w.amount_credit ELSE 0 END
               WHEN w.wallet_type = 'payout' THEN -w.amount_credit
               ELSE 0

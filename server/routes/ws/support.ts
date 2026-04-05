@@ -10,6 +10,7 @@ import {
   subscribePeerToThread,
   unsubscribePeer,
 } from "../../utils/supportWsHub";
+import { canAdminAccessSupportThread } from "../../utils/adminHierarchy";
 
 type SupportPeer = any;
 
@@ -115,11 +116,15 @@ export default defineWebSocketHandler({
         const role = String(current.role || "");
         const uid = Number(current.id);
 
-        const allowed =
-          role === "admin_0" ||
-          (role === "user" && Number(thread.user_id) === uid) ||
-          ((role === "admin_1" || role === "admin_2") &&
-            Number(thread.admin_id) === uid);
+        let allowed =
+          role === "user" && Number(thread.user_id) === uid;
+        if (!allowed && role !== "user") {
+          allowed = await canAdminAccessSupportThread(
+            uid,
+            role,
+            thread.admin_id,
+          );
+        }
 
         if (!allowed) return;
 
@@ -162,8 +167,11 @@ export default defineWebSocketHandler({
         if (current.role === "user" && Number(thread.user_id) === Number(current.id)) {
           senderType = "user";
         } else if (
-          (current.role === "admin_0" || current.role === "admin_1" || current.role === "admin_2") &&
-          (current.role === "admin_0" || Number(thread.admin_id) === Number(current.id))
+          await canAdminAccessSupportThread(
+            Number(current.id),
+            String(current.role || ""),
+            thread.admin_id,
+          )
         ) {
           senderType = "admin";
         }

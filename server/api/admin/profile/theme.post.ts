@@ -1,5 +1,6 @@
 import { ensureAdminContactSchema } from "../../../utils/adminContact";
 import pool from "../../../utils/db";
+import { isAdminStaffRole } from "../../../utils/authHelpers";
 
 export default defineEventHandler(async (event) => {
   const currentUser = event.context.user;
@@ -7,11 +8,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 401, statusMessage: "Chưa đăng nhập" });
   }
 
-  if (
-    currentUser.role !== "admin_0" &&
-    currentUser.role !== "admin_1" &&
-    currentUser.role !== "admin_2"
-  ) {
+  if (!isAdminStaffRole(currentUser.role)) {
     throw createError({
       statusCode: 403,
       statusMessage: "Chỉ tài khoản quản trị mới được cập nhật chủ đề giao diện",

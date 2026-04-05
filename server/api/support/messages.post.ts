@@ -1,7 +1,8 @@
 import pool from "../../utils/db";
 import { ensureSupportChatSchema } from "../../utils/supportChat";
 import { broadcastSupportMessage } from "../../utils/supportWsHub";
-import { requireAuth } from "../../utils/authHelpers";
+import { isAdminStaffRole, requireAuth } from "../../utils/authHelpers";
+import { canAdminAccessSupportThread } from "../../utils/adminHierarchy";
 import { checkRateLimit, rateLimitKey } from "../../utils/rateLimit";
 
 export default defineEventHandler(async (event) => {
@@ -54,16 +55,13 @@ export default defineEventHandler(async (event) => {
       });
     }
     senderType = "user";
-  } else if (
-    decoded.role === "admin_0" ||
-    decoded.role === "admin_1" ||
-    decoded.role === "admin_2"
-  ) {
-    // admin_0 có thể gửi vào mọi phiên chat; admin_1/2 chỉ gửi vào thread của mình
-    if (
-      decoded.role !== "admin_0" &&
-      thread.admin_id !== decoded.id
-    ) {
+  } else if (isAdminStaffRole(decoded.role)) {
+    const ok = await canAdminAccessSupportThread(
+      decoded.id,
+      decoded.role,
+      thread.admin_id,
+    );
+    if (!ok) {
       throw createError({
         statusCode: 403,
         statusMessage: "Không có quyền gửi tin vào phiên chat này",

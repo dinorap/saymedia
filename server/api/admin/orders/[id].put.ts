@@ -1,11 +1,14 @@
 import pool from '../../../utils/db'
 import { addAuditLog } from '../../../utils/audit'
+import { resolveShopAdminId } from '../../../utils/adminHierarchy'
+import { assertShopManagementRole } from '../../../utils/authHelpers'
 
 export default defineEventHandler(async (event) => {
   const currentUser = event.context.user
   if (!currentUser) {
     throw createError({ statusCode: 401, statusMessage: 'Chưa đăng nhập' })
   }
+  assertShopManagementRole(currentUser.role)
 
   const id = Number(getRouterParam(event, 'id'))
   if (!Number.isFinite(id) || id <= 0) {
@@ -24,6 +27,30 @@ export default defineEventHandler(async (event) => {
       statusCode: 403,
       statusMessage: 'Bạn chỉ được sửa đơn hàng do mình phụ trách',
     })
+  }
+  if (currentUser.role === 'admin_2') {
+    const shopId = await resolveShopAdminId(currentUser.id, currentUser.role)
+    const [[vis]]: any = await pool.query(
+      `
+        SELECT o.id
+        FROM orders o
+        INNER JOIN users u ON u.id = o.user_id
+        WHERE o.id = ?
+          AND (
+            u.admin_id = ?
+            OR o.seller_admin_id = ?
+            OR o.product_owner_admin_id = ?
+          )
+        LIMIT 1
+      `,
+      [id, shopId, currentUser.id, shopId],
+    )
+    if (!vis) {
+      throw createError({
+        statusCode: 403,
+        statusMessage: 'Bạn không có quyền sửa đơn hàng này',
+      })
+    }
   }
 
   const body = await readBody(event).catch(() => ({}))

@@ -1,11 +1,13 @@
 import pool from '../../utils/db'
 import { ensureProductKeySchema } from '../../utils/productKeys'
+import { assertShopManagementRole } from '../../utils/authHelpers'
 
 export default defineEventHandler(async (event) => {
   const currentUser = event.context.user
   if (!currentUser) {
     throw createError({ statusCode: 401, statusMessage: 'Chưa đăng nhập' })
   }
+  assertShopManagementRole(currentUser.role)
 
   await ensureProductKeySchema()
 
@@ -31,8 +33,8 @@ export default defineEventHandler(async (event) => {
     params.push(productIdRaw)
   }
 
-  // admin_1 chỉ xem được các key do chính mình nhập
-  if (currentUser.role === 'admin_1') {
+  // admin_1 / admin_2 chỉ xem key do chính mình nhập
+  if (currentUser.role === 'admin_1' || currentUser.role === 'admin_2') {
     where.push('pk.admin_id = ?')
     params.push(currentUser.id)
   }

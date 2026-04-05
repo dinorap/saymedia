@@ -2,6 +2,7 @@ import pool from "../../../utils/db";
 import { ensureSupportChatSchema } from "../../../utils/supportChat";
 import jwt from "jsonwebtoken";
 import { getJwtSecret } from "../../../utils/jwt";
+import { canAdminAccessSupportThread } from "../../../utils/adminHierarchy";
 
 const JWT_SECRET = getJwtSecret();
 
@@ -54,14 +55,18 @@ export default defineEventHandler(async (event) => {
       statusMessage: "Không có quyền xem phiên chat này",
     });
   }
-  if (
-    (decoded.role === "admin_1" || decoded.role === "admin_2") &&
-    thread.admin_id !== decoded.id
-  ) {
-    throw createError({
-      statusCode: 403,
-      statusMessage: "Không có quyền xem phiên chat này",
-    });
+  if (decoded.role !== "user") {
+    const ok = await canAdminAccessSupportThread(
+      decoded.id,
+      decoded.role,
+      thread.admin_id,
+    );
+    if (!ok) {
+      throw createError({
+        statusCode: 403,
+        statusMessage: "Không có quyền xem phiên chat này",
+      });
+    }
   }
 
   const [messages]: any = await pool.query(

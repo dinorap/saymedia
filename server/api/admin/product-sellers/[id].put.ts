@@ -1,14 +1,16 @@
 import pool from "../../../utils/db";
+import { assertShopManagementRole } from "../../../utils/authHelpers";
 
 export default defineEventHandler(async (event) => {
   const currentUser = event.context.user;
   if (!currentUser) {
     throw createError({ statusCode: 401, statusMessage: "Chưa đăng nhập" });
   }
-  if (currentUser.role !== "admin_0") {
+  assertShopManagementRole(currentUser.role);
+  if (currentUser.role !== "admin_0" && currentUser.role !== "admin_1") {
     throw createError({
       statusCode: 403,
-      statusMessage: "Chỉ chủ (admin_0) mới được sửa % hoa hồng đối tác",
+      statusMessage: "Không có quyền sửa % hoa hồng đối tác",
     });
   }
 
@@ -37,13 +39,29 @@ export default defineEventHandler(async (event) => {
   }
 
   const [[row]]: any = await pool.query(
-    "SELECT id, product_id, seller_admin_id FROM product_sellers WHERE id = ? LIMIT 1",
+    `
+      SELECT ps.id, ps.product_id, ps.seller_admin_id, p.admin_id AS product_owner_id
+      FROM product_sellers ps
+      JOIN products p ON p.id = ps.product_id
+      WHERE ps.id = ?
+      LIMIT 1
+    `,
     [id],
   );
   if (!row) {
     throw createError({
       statusCode: 404,
       statusMessage: "Không tìm thấy bản ghi đối tác",
+    });
+  }
+
+  if (
+    currentUser.role === "admin_1" &&
+    Number(row.product_owner_id) !== Number(currentUser.id)
+  ) {
+    throw createError({
+      statusCode: 403,
+      statusMessage: "Chỉ sửa hoa hồng trên sản phẩm của bạn",
     });
   }
 
@@ -58,4 +76,3 @@ export default defineEventHandler(async (event) => {
     commission_percent: commissionPercent,
   };
 });
-

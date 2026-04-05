@@ -1,11 +1,13 @@
 import pool from '../../../utils/db'
 import { ensureProductKeySchema } from '../../../utils/productKeys'
+import { assertShopManagementRole } from '../../../utils/authHelpers'
 
 export default defineEventHandler(async (event) => {
   const currentUser = event.context.user
   if (!currentUser) {
     throw createError({ statusCode: 401, statusMessage: 'Chưa đăng nhập' })
   }
+  assertShopManagementRole(currentUser.role)
 
   await ensureProductKeySchema()
 
@@ -17,8 +19,7 @@ export default defineEventHandler(async (event) => {
   const params: any[] = [id]
   let sql = 'DELETE FROM product_keys WHERE id = ?'
 
-  // admin_1 chỉ được xóa key do mình nhập
-  if (currentUser.role === 'admin_1') {
+  if (currentUser.role === 'admin_1' || currentUser.role === 'admin_2') {
     sql += ' AND admin_id = ?'
     params.push(currentUser.id)
   }

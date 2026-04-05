@@ -1,12 +1,15 @@
 import pool from "../../utils/db";
+import { resolveShopAdminId } from "../../utils/adminHierarchy";
 import { ensureCreditLedgerSchema } from "../../utils/creditLedger";
 import { checkRateLimit, rateLimitKey } from "../../utils/rateLimit";
+import { assertShopManagementRole } from "../../utils/authHelpers";
 
 export default defineEventHandler(async (event) => {
   const currentUser = event.context.user;
   if (!currentUser) {
     throw createError({ statusCode: 401, statusMessage: "Chưa đăng nhập" });
   }
+  assertShopManagementRole(currentUser.role);
 
   await ensureCreditLedgerSchema();
 
@@ -49,6 +52,10 @@ export default defineEventHandler(async (event) => {
   if (currentUser.role === "admin_1") {
     conditions.push("u.admin_id = ?");
     params.push(currentUser.id);
+  } else if (currentUser.role === "admin_2") {
+    const shopId = await resolveShopAdminId(currentUser.id, currentUser.role);
+    conditions.push("u.admin_id = ?");
+    params.push(shopId);
   }
   if (Number.isFinite(userId) && userId) {
     conditions.push("l.user_id = ?");

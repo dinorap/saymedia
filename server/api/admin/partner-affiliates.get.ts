@@ -1,9 +1,14 @@
 import pool from "../../utils/db";
-import { requireAdmin } from "../../utils/authHelpers";
 import { ensurePartnerSchema } from "../../utils/partner";
 
 export default defineEventHandler(async (event) => {
-  requireAdmin(event);
+  const currentUser = event.context.user;
+  if (!currentUser || currentUser.role !== "admin_0") {
+    throw createError({
+      statusCode: 403,
+      statusMessage: "Chỉ super admin xem danh sách đối tác user (admin_3)",
+    });
+  }
   await ensurePartnerSchema();
 
   const [rows]: any = await pool.query(

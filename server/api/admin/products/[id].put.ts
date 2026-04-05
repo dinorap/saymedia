@@ -1,4 +1,6 @@
 import pool from "../../../utils/db";
+import { resolveShopAdminId } from "../../../utils/adminHierarchy";
+import { assertShopManagementRole } from "../../../utils/authHelpers";
 
 const ALLOWED_TYPES = new Set(["tool", "account", "service", "other"]);
 const MAX_NAME = 200;
@@ -13,6 +15,7 @@ export default defineEventHandler(async (event) => {
   if (!currentUser) {
     throw createError({ statusCode: 401, statusMessage: "Chưa đăng nhập" });
   }
+  assertShopManagementRole(currentUser.role);
 
   const id = Number(getRouterParam(event, "id"));
   if (!Number.isFinite(id) || id <= 0) {
@@ -31,6 +34,15 @@ export default defineEventHandler(async (event) => {
       statusCode: 403,
       statusMessage: "Bạn chỉ được sửa sản phẩm do mình tạo",
     });
+  }
+  if (currentUser.role === "admin_2") {
+    const shopId = await resolveShopAdminId(currentUser.id, currentUser.role);
+    if (Number(product.admin_id) !== shopId) {
+      throw createError({
+        statusCode: 403,
+        statusMessage: "Bạn chỉ được sửa sản phẩm trong hệ thống đại lý",
+      });
+    }
   }
 
   const body = await readBody(event);

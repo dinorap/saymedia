@@ -1,5 +1,7 @@
 import pool from '../../utils/db'
 import { ensureServicesSchema } from '../../utils/services'
+import { resolveShopAdminId } from '../../utils/adminHierarchy'
+import { assertShopManagementRole } from '../../utils/authHelpers'
 
 const MAX_NAME = 120
 const MAX_DESCRIPTION = 2000
@@ -9,6 +11,7 @@ export default defineEventHandler(async (event) => {
   if (!currentUser) {
     throw createError({ statusCode: 401, statusMessage: 'Chưa đăng nhập' })
   }
+  assertShopManagementRole(currentUser.role)
 
   await ensureServicesSchema()
 
@@ -21,12 +24,17 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'Tên dịch vụ là bắt buộc' })
   }
 
+  const ownerId =
+    currentUser.role === 'admin_2'
+      ? await resolveShopAdminId(currentUser.id, currentUser.role)
+      : currentUser.id
+
   const [result]: any = await pool.query(
     `
       INSERT INTO services (admin_id, name, description, is_active)
       VALUES (?, ?, ?, ?)
     `,
-    [currentUser.id, name, description, isActive],
+    [ownerId, name, description, isActive],
   )
 
   return {

@@ -563,7 +563,7 @@ function formatCredit(v) {
 
 async function refreshCurrentUser() {
   const role = roleCookie.value;
-  const staff = ["admin_0", "admin_1", "admin_2"];
+  const staff = ["admin_0", "admin_1", "admin_support", "admin_2"];
   if (role && !staff.includes(role)) {
     try {
       const data = await $fetch("/api/auth/me");

@@ -13,7 +13,11 @@ export default defineEventHandler(async (event) => {
   if (!currentUser) {
     throw createError({ statusCode: 401, statusMessage: "Chưa đăng nhập" });
   }
-  if (currentUser.role !== "admin_0" && currentUser.role !== "admin_1") {
+  if (
+    currentUser.role !== "admin_0" &&
+    currentUser.role !== "admin_1" &&
+    currentUser.role !== "admin_2"
+  ) {
     throw createError({
       statusCode: 403,
       statusMessage: "Chỉ admin mới được upload ảnh sản phẩm",

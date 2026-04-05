@@ -1,12 +1,17 @@
 import pool from "../../utils/db";
 import { ensureCreditLedgerSchema } from "../../utils/creditLedger";
+import { resolveShopAdminId } from "../../utils/adminHierarchy";
 
 export default defineEventHandler(async (event) => {
   const currentUser = event.context.user;
   if (!currentUser) {
     throw createError({ statusCode: 401, statusMessage: "Chưa đăng nhập" });
   }
-  if (currentUser.role !== "admin_0" && currentUser.role !== "admin_1") {
+  if (
+    currentUser.role !== "admin_0" &&
+    currentUser.role !== "admin_1" &&
+    currentUser.role !== "admin_2"
+  ) {
     throw createError({
       statusCode: 403,
       statusMessage: "Không có quyền truy cập",
@@ -16,12 +21,20 @@ export default defineEventHandler(async (event) => {
   await ensureCreditLedgerSchema();
 
   const isSuperAdmin = currentUser.role === "admin_0";
+  const shopScopeId =
+    currentUser.role === "admin_2"
+      ? await resolveShopAdminId(currentUser.id, currentUser.role)
+      : currentUser.id;
 
-  // Phạm vi user: admin_0 xem toàn bộ, admin_1 chỉ xem user thuộc admin_id của mình
   const userWhere = isSuperAdmin ? "" : "WHERE u.admin_id = ?";
-  const userParams: any[] = isSuperAdmin ? [] : [currentUser.id];
+  const userParams: any[] = isSuperAdmin ? [] : [shopScopeId];
 
-  // Tổng CREDIT đang lưu hành
+  const ledgerJoin = isSuperAdmin
+    ? ""
+    : " INNER JOIN users u ON u.id = l.user_id ";
+  const ledgerShopWhere = isSuperAdmin ? "" : " AND u.admin_id = ? ";
+  const ledgerParam: any[] = isSuperAdmin ? [] : [shopScopeId];
+
   const [[totalUserBalance]]: any = await pool.query(
     `
       SELECT
@@ -32,7 +45,6 @@ export default defineEventHandler(async (event) => {
     userParams,
   );
 
-  // Tổng paid_credit và bonus_credit (nếu cột tồn tại)
   let paidBonus = { total_paid_credit: 0, total_bonus_credit: 0 };
   try {
     const [[row]]: any = await pool.query(
@@ -53,27 +65,30 @@ export default defineEventHandler(async (event) => {
     paidBonus = { total_paid_credit: 0, total_bonus_credit: 0 };
   }
 
-  // Tổng CREDIT từ nạp (paid + bonus), dựa trên credit_ledger
   const [[totalFromDeposit]]: any = await pool.query(
     `
       SELECT
         COALESCE(SUM(l.delta), 0) AS total_deposit_credit
       FROM credit_ledger l
+      ${ledgerJoin}
       WHERE l.transaction_type = 'deposit'
+      ${ledgerShopWhere}
     `,
+    ledgerParam,
   );
 
-  // Tổng CREDIT từ khuyến mại / promotion
   const [[totalFromPromotion]]: any = await pool.query(
     `
       SELECT
         COALESCE(SUM(l.delta), 0) AS total_promotion_credit
       FROM credit_ledger l
+      ${ledgerJoin}
       WHERE l.transaction_type = 'promotion'
+      ${ledgerShopWhere}
     `,
+    ledgerParam,
   );
 
-  // Tài khoản được tạo cưỡng chế (flag trên users, nếu có)
   let forcedUserCount = 0;
   try {
     const [[row]]: any = await pool.query(
@@ -82,34 +97,40 @@ export default defineEventHandler(async (event) => {
           COALESCE(COUNT(u.id), 0) AS forced_user_count
         FROM users u
         WHERE u.is_forced_created = 1
+        ${isSuperAdmin ? "" : "AND u.admin_id = ?"}
       `,
+      isSuperAdmin ? [] : [shopScopeId],
     );
     forcedUserCount = Number(row?.forced_user_count || 0);
   } catch {
     forcedUserCount = 0;
   }
 
-  // Số tài khoản có phát sinh nạp + tổng CREDIT từ nạp
   const [[depositStats]]: any = await pool.query(
     `
       SELECT
         COALESCE(COUNT(DISTINCT l.user_id), 0) AS deposit_user_count,
         COALESCE(SUM(l.delta), 0) AS deposit_credit_sum
       FROM credit_ledger l
+      ${ledgerJoin}
       WHERE l.transaction_type = 'deposit'
+      ${ledgerShopWhere}
     `,
+    ledgerParam,
   );
 
-  // Giao dịch nạp hôm nay và tháng này (từ ledger)
   const [[todayDeposit]]: any = await pool.query(
     `
       SELECT
         COALESCE(COUNT(*), 0) AS today_deposit_tx_count,
         COALESCE(SUM(l.delta), 0) AS today_deposit_credit
       FROM credit_ledger l
+      ${ledgerJoin}
       WHERE l.transaction_type = 'deposit'
         AND DATE(l.created_at) = CURDATE()
+      ${ledgerShopWhere}
     `,
+    ledgerParam,
   );
 
   const [[monthDeposit]]: any = await pool.query(
@@ -118,13 +139,15 @@ export default defineEventHandler(async (event) => {
         COALESCE(COUNT(*), 0) AS month_deposit_tx_count,
         COALESCE(SUM(l.delta), 0) AS month_deposit_credit
       FROM credit_ledger l
+      ${ledgerJoin}
       WHERE l.transaction_type = 'deposit'
         AND YEAR(l.created_at) = YEAR(CURDATE())
         AND MONTH(l.created_at) = MONTH(CURDATE())
+      ${ledgerShopWhere}
     `,
+    ledgerParam,
   );
 
-  // Tổng số user (thực) và tổng admin_1
   const [[userCountRow]]: any = await pool.query(
     `
       SELECT COALESCE(COUNT(*), 0) AS total_users
@@ -133,13 +156,20 @@ export default defineEventHandler(async (event) => {
     `,
     userParams,
   );
-  const [[adminCountRow]]: any = await pool.query(
-    `
+
+  let totalShops = 0;
+  if (isSuperAdmin) {
+    const [[adminCountRow]]: any = await pool.query(
+      `
       SELECT COALESCE(COUNT(*), 0) AS total_shops
       FROM admins a
       WHERE a.role = 'admin_1'
     `,
-  );
+    );
+    totalShops = Number(adminCountRow?.total_shops || 0);
+  } else {
+    totalShops = 1;
+  }
 
   return {
     success: true,
@@ -163,8 +193,7 @@ export default defineEventHandler(async (event) => {
       ),
       month_deposit_credit: Number(monthDeposit?.month_deposit_credit || 0),
       total_users: Number(userCountRow?.total_users || 0),
-      total_shops: Number(adminCountRow?.total_shops || 0),
+      total_shops: totalShops,
     },
   };
 });
-

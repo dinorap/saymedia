@@ -3,6 +3,7 @@ import pool from '../../utils/db'
 import { ensureAdminContactSchema } from '../../utils/adminContact'
 import { getJwtSecret } from '../../utils/jwt'
 import { ensureUserProfileSchema } from '../../utils/userProfile'
+import { isAdminStaffRole } from '../../utils/authHelpers'
 
 const JWT_SECRET = getJwtSecret()
 
@@ -51,16 +52,19 @@ export default defineEventHandler(async (event) => {
         const [rows]: any = await pool.query('SELECT email FROM users WHERE id = ?', [decoded.id])
         if (rows.length > 0) user.email = rows[0].email
       }
-    } else if (decoded.role === 'admin_0' || decoded.role === 'admin_1' || decoded.role === 'admin_2') {
+    } else if (isAdminStaffRole(decoded.role)) {
       await ensureAdminContactSchema()
       const [rows]: any = await pool.query(
-        'SELECT ref_code, contact_info, ui_theme FROM admins WHERE id = ? LIMIT 1',
+        'SELECT ref_code, contact_info, ui_theme, role FROM admins WHERE id = ? LIMIT 1',
         [decoded.id],
       )
       if (rows.length > 0) {
         user.ref_code = rows[0].ref_code
         ;(user as any).contact_info = rows[0].contact_info
         user.ui_theme = rows[0].ui_theme || null
+        if (rows[0].role) {
+          user.role = String(rows[0].role)
+        }
       }
     }
     return { success: true, user }

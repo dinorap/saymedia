@@ -7,7 +7,7 @@ export default defineNuxtRouteMiddleware(() => {
   if (typeof role === 'undefined' && import.meta.client) return
 
   const r = String(role || '')
-  if (!r || !['admin_0', 'admin_1', 'admin_2'].includes(r)) {
+  if (!r || !["admin_0", "admin_1", "admin_support", "admin_2"].includes(r)) {
     return navigateTo('/login')
   }
 })

@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken'
 import { getJwtSecret } from '../utils/jwt'
+import { isAdminStaffRole } from '../utils/authHelpers'
 
 const JWT_SECRET = getJwtSecret()
 
@@ -15,7 +16,7 @@ export default defineEventHandler((event) => {
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as { id: number; username: string; role: string; admin_id?: number }
     // Critical: /api/admin must only be accessible by admin roles.
-    if (decoded.role !== 'admin_0' && decoded.role !== 'admin_1' && decoded.role !== 'admin_2') {
+    if (!isAdminStaffRole(decoded.role)) {
       throw createError({ statusCode: 403, statusMessage: 'Không có quyền' })
     }
     event.context.user = decoded

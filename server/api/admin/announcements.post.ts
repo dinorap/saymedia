@@ -11,6 +11,12 @@ export default defineEventHandler(async (event) => {
   if (!currentUser) {
     throw createError({ statusCode: 401, statusMessage: "Chưa đăng nhập" });
   }
+  if (currentUser.role !== "admin_0") {
+    throw createError({
+      statusCode: 403,
+      statusMessage: "Chỉ super admin được đăng hoặc sửa thông báo hệ thống",
+    });
+  }
 
   await ensureAnnouncementsSchema();
 
@@ -48,8 +54,7 @@ export default defineEventHandler(async (event) => {
     });
   }
 
-  const allowPopup = currentUser.role === "admin_0";
-  const finalIsPopup = allowPopup && isPopupRequested;
+  const finalIsPopup = !!isPopupRequested;
 
   if (id && Number.isFinite(id) && id > 0) {
     await pool.query(

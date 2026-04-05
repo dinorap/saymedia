@@ -59,7 +59,8 @@ Hệ thống có 3 mức admin chính lưu trong bảng `admins.role`:
 
 - `admin_0`: Super Admin (toàn quyền).
 - `admin_1`: Admin / Đại lý chính.
-- `admin_2`: Admin chat cộng đồng (chỉ lo phần cộng đồng/chat).
+- `admin_2`: Cấp dưới bán hộ (thuộc một `admin_1`, có `parent_admin_id`).
+- `admin_support`: Admin hỗ trợ / chat cộng đồng (khác `admin_2` bán hộ).
 
 Cookie `user_role` và API `/api/auth/me` dùng để phân quyền hiển thị giao diện và API.
 
@@ -67,7 +68,7 @@ Cookie `user_role` và API `/api/auth/me` dùng để phân quyền hiển thị
 
 - **Quản lý admin**
   - Tạo/sửa/xoá admin mới qua trang `app/pages/admin/users/index.vue` (tab Admins) + API `/api/admin/admins.*`.
-  - Chỉ `admin_0` mới gọi được `/api/admin/admins.post.ts` để tạo admin mới (bao gồm cả `admin_0`, `admin_1`, `admin_2`).
+  - `admin_0` gọi `/api/admin/admins.post.ts` để tạo mọi loại admin (`admin_0`, `admin_1`, `admin_2`, `admin_support`).
   - Khoá/mở khoá tài khoản admin (`is_active`), xem mã `ref_code`, quản lý liên hệ (contact info).
 - **Quản lý user**
   - Xem toàn bộ user trong hệ thống, lọc theo admin quản lý.
@@ -99,11 +100,14 @@ Cookie `user_role` và API `/api/auth/me` dùng để phân quyền hiển thị
 - **Quản lý đơn hàng liên quan**
   - Xem các `orders` có `admin_id` là mình (do user dưới hệ thống của mình tạo).
   - Xử lý ghi chú, cập nhật trạng thái nằm trong phạm vi đơn hàng của mình.
+- **Quản lý cấp dưới (admin_2)**
+  - Tạo tài khoản `admin_2` (bán hộ) qua tab Admins + `/api/admin/admins.post.ts` — server gắn `parent_admin_id` = chính `admin_1`, có giới hạn số lượng (biến môi trường `ADMIN_MAX_SUBORDINATES`).
+  - Xem/sửa/khoá/xoá chỉ các `admin_2` thuộc shop mình (`/api/admin/admins.get.ts` …).
 - **Giới hạn**
-  - Không được tạo admin mới, không truy cập log hệ thống (`/api/admin/logs.get.ts` chặn).
-  - Không xem/đụng tới user, sản phẩm, đơn hàng của admin khác.
+  - Không tạo `admin_0` / `admin_1` / `admin_support`, không truy cập log hệ thống (`/api/admin/logs.get.ts` chặn).
+  - Không xem/đụng tới user, sản phẩm, đơn hàng của admin khác (ngoài phạm vi shop/cấp dưới đã mô tả).
 
-### admin_2 – Admin chat cộng đồng
+### admin_support – Admin hỗ trợ / chat cộng đồng
 
 - **Vai trò chính**: quản lý cộng đồng/chat, không tham gia phần tài chính – sản phẩm.
 - **Chức năng đi kèm (tùy thiết kế UI)**

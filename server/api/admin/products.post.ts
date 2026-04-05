@@ -1,4 +1,6 @@
 import pool from "../../utils/db";
+import { resolveShopAdminId } from "../../utils/adminHierarchy";
+import { assertShopManagementRole } from "../../utils/authHelpers";
 
 const ALLOWED_TYPES = new Set(["tool", "account", "service", "other"]);
 const MAX_NAME = 200;
@@ -13,6 +15,7 @@ export default defineEventHandler(async (event) => {
   if (!currentUser) {
     throw createError({ statusCode: 401, statusMessage: "Chưa đăng nhập" });
   }
+  assertShopManagementRole(currentUser.role);
 
   const body = await readBody(event);
   const name = String(body?.name || "").trim().slice(0, MAX_NAME);
@@ -60,6 +63,11 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: "Loại sản phẩm không hợp lệ" });
   }
 
+  const ownerAdminId =
+    currentUser.role === "admin_2"
+      ? await resolveShopAdminId(currentUser.id, currentUser.role)
+      : currentUser.id;
+
   const [result]: any = await pool.query(
     `
       INSERT INTO products (
@@ -78,7 +86,7 @@ export default defineEventHandler(async (event) => {
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
     [
-      currentUser.id,
+      ownerAdminId,
       name,
       description || null,
       youtubeUrl || null,

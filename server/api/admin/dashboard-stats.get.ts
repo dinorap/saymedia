@@ -1,22 +1,29 @@
 import pool from "../../utils/db";
 import { ensureAdminWalletSchema } from "../../utils/adminWallet";
 import { ensureCommerceSchema } from "../../utils/commerce";
+import { resolveShopAdminId } from "../../utils/adminHierarchy";
+import { assertShopManagementRole } from "../../utils/authHelpers";
 
 export default defineEventHandler(async (event) => {
   const currentUser = event.context.user;
   if (!currentUser) {
     throw createError({ statusCode: 401, statusMessage: "Chưa đăng nhập" });
   }
+  assertShopManagementRole(currentUser.role);
   await ensureCommerceSchema();
 
   const isSuperAdmin = currentUser.role === "admin_0";
+  const shopScopeId =
+    !isSuperAdmin && currentUser.role === "admin_2"
+      ? await resolveShopAdminId(currentUser.id, currentUser.role)
+      : currentUser.id;
 
   // ----- Users -----
   // User mới hôm nay / 7 ngày qua
   const userScopeWhere = isSuperAdmin
     ? "WHERE 1 = 1"
     : "WHERE u.admin_id = ?";
-  const userScopeParams: any[] = isSuperAdmin ? [] : [currentUser.id];
+  const userScopeParams: any[] = isSuperAdmin ? [] : [shopScopeId];
 
   const [[userTodayRow]]: any = await pool.query(
     `
@@ -41,17 +48,32 @@ export default defineEventHandler(async (event) => {
   );
 
   // ----- Orders (CREDIT) -----
+  const orderFromSql = isSuperAdmin
+    ? "FROM orders o"
+    : `
+      FROM orders o
+      INNER JOIN users uo ON uo.id = o.user_id
+    `;
   const orderScopeWhere = isSuperAdmin
     ? "WHERE o.status = 'completed'"
-    : "WHERE o.status = 'completed' AND o.admin_id = ?";
-  const orderScopeParams: any[] = isSuperAdmin ? [] : [currentUser.id];
+    : `
+      WHERE o.status = 'completed'
+        AND (
+          uo.admin_id = ?
+          OR o.seller_admin_id = ?
+          OR o.product_owner_admin_id = ?
+        )
+    `;
+  const orderScopeParams: any[] = isSuperAdmin
+    ? []
+    : [shopScopeId, currentUser.id, shopScopeId];
 
   const [[ordersTodayRow]]: any = await pool.query(
     `
       SELECT
         COUNT(*) AS completed_orders_today,
         COALESCE(SUM(COALESCE(o.amount_credit, ROUND(o.amount))), 0) AS completed_amount_today
-      FROM orders o
+      ${orderFromSql}
       ${orderScopeWhere}
         AND DATE(o.created_at) = CURDATE()
     `,
@@ -63,7 +85,7 @@ export default defineEventHandler(async (event) => {
       SELECT
         COUNT(*) AS completed_orders_month,
         COALESCE(SUM(COALESCE(o.amount_credit, ROUND(o.amount))), 0) AS completed_amount_month
-      FROM orders o
+      ${orderFromSql}
       ${orderScopeWhere}
         AND YEAR(o.created_at) = YEAR(CURDATE())
         AND MONTH(o.created_at) = MONTH(CURDATE())
@@ -75,7 +97,7 @@ export default defineEventHandler(async (event) => {
   const depositWhereBase = isSuperAdmin
     ? "WHERE pt.status = 'success'"
     : "WHERE pt.status = 'success' AND u.admin_id = ?";
-  const depositParamsBase: any[] = isSuperAdmin ? [] : [currentUser.id];
+  const depositParamsBase: any[] = isSuperAdmin ? [] : [shopScopeId];
 
   const [[depositsTodayRow]]: any = await pool.query(
     `
@@ -109,7 +131,7 @@ export default defineEventHandler(async (event) => {
   const walletScopeWhere = isSuperAdmin
     ? "AND a.role = 'admin_1'"
     : "AND w.admin_id = ? AND a.role = 'admin_1'";
-  const walletParams: any[] = isSuperAdmin ? [] : [currentUser.id];
+  const walletParams: any[] = isSuperAdmin ? [] : [shopScopeId];
 
   const [[walletRow]]: any = await pool.query(
     `
@@ -117,7 +139,7 @@ export default defineEventHandler(async (event) => {
         (
           COALESCE(SUM(
             CASE
-              WHEN w.wallet_type IN ('sale_commission','product_revenue')
+              WHEN w.wallet_type IN ('sale_commission','subordinate_commission','product_revenue')
                 THEN CASE WHEN o.id IS NULL OR o.status = 'completed' THEN w.amount_credit ELSE 0 END
               WHEN w.wallet_type = 'payout' THEN -w.amount_credit
               ELSE 0
@@ -148,7 +170,7 @@ export default defineEventHandler(async (event) => {
       WHERE 1 = 1
       ${walletScopeWhere}
     `,
-    isSuperAdmin ? walletParams : [...walletParams, currentUser.id],
+    isSuperAdmin ? walletParams : [...walletParams, shopScopeId],
   );
 
   return {

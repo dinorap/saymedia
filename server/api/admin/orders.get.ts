@@ -2,12 +2,15 @@ import pool from '../../utils/db'
 import { ensureOrderRefundSchema } from '../../utils/orderRefund'
 import { ensureCommerceSchema } from '../../utils/commerce'
 import { checkRateLimit, rateLimitKey } from '../../utils/rateLimit'
+import { resolveShopAdminId } from '../../utils/adminHierarchy'
+import { assertShopManagementRole } from '../../utils/authHelpers'
 
 export default defineEventHandler(async (event) => {
   const currentUser = event.context.user
   if (!currentUser) {
     throw createError({ statusCode: 401, statusMessage: 'Chưa đăng nhập' })
   }
+  assertShopManagementRole(currentUser.role)
 
   const query = getQuery(event)
   await ensureOrderRefundSchema()
@@ -68,6 +71,12 @@ export default defineEventHandler(async (event) => {
       '(u.admin_id = ? OR o.seller_admin_id = ? OR o.product_owner_admin_id = ?)',
     )
     params.push(currentUser.id, currentUser.id, currentUser.id)
+  } else if (currentUser.role === 'admin_2') {
+    const shopId = await resolveShopAdminId(currentUser.id, currentUser.role)
+    conditions.push(
+      '(u.admin_id = ? OR o.seller_admin_id = ? OR o.product_owner_admin_id = ?)',
+    )
+    params.push(shopId, currentUser.id, shopId)
   } else if (adminId && !isNaN(adminId)) {
     conditions.push('u.admin_id = ?')
     params.push(adminId)

@@ -11,7 +11,12 @@
           :placeholder="$t('admin.annSearchPlaceholder')"
         />
       </div>
-      <button type="button" class="btn-add btn-add--right" @click="openModal()">
+      <button
+        v-if="isSuperAdmin"
+        type="button"
+        class="btn-add btn-add--right"
+        @click="openModal()"
+      >
         + {{ $t("admin.annWriteButton") }}
       </button>
     </div>

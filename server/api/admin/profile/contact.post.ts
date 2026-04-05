@@ -7,7 +7,11 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 401, statusMessage: "Chưa đăng nhập" });
   }
 
-  if (currentUser.role !== "admin_0" && currentUser.role !== "admin_1") {
+  if (
+    currentUser.role !== "admin_0" &&
+    currentUser.role !== "admin_1" &&
+    currentUser.role !== "admin_2"
+  ) {
     throw createError({
       statusCode: 403,
       statusMessage: "Chỉ tài khoản quản trị mới được cập nhật thông tin liên hệ",

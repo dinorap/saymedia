@@ -1,11 +1,14 @@
 import pool from '../../utils/db'
+import { resolveShopAdminId } from '../../utils/adminHierarchy'
 import { ensureServicesSchema } from '../../utils/services'
+import { assertShopManagementRole } from '../../utils/authHelpers'
 
 export default defineEventHandler(async (event) => {
   const currentUser = event.context.user
   if (!currentUser) {
     throw createError({ statusCode: 401, statusMessage: 'Chưa đăng nhập' })
   }
+  assertShopManagementRole(currentUser.role)
 
   await ensureServicesSchema()
 
@@ -25,6 +28,10 @@ export default defineEventHandler(async (event) => {
   if (currentUser.role === 'admin_1') {
     where.push('s.admin_id = ?')
     params.push(currentUser.id)
+  } else if (currentUser.role === 'admin_2') {
+    const shopId = await resolveShopAdminId(currentUser.id, currentUser.role)
+    where.push('s.admin_id = ?')
+    params.push(shopId)
   }
   if (search) {
     where.push('(s.name LIKE ? OR s.description LIKE ?)')

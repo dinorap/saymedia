@@ -2,12 +2,15 @@ import pool from "../../../utils/db";
 import { ensureAdminWalletSchema } from "../../../utils/adminWallet";
 import { getVndPerCredit } from "../../../utils/payment";
 import { ensureCommerceSchema } from "../../../utils/commerce";
+import { resolveShopAdminId } from "../../../utils/adminHierarchy";
+import { assertShopManagementRole } from "../../../utils/authHelpers";
 
 export default defineEventHandler(async (event) => {
   const currentUser = event.context.user;
   if (!currentUser) {
     throw createError({ statusCode: 401, statusMessage: "Chưa đăng nhập" });
   }
+  assertShopManagementRole(currentUser.role);
   await ensureCommerceSchema();
 
   await ensureAdminWalletSchema();
@@ -35,6 +38,9 @@ export default defineEventHandler(async (event) => {
         adminIds = [owner.id, ...adminIds];
       }
     }
+  } else if (currentUser.role === "admin_2") {
+    const shopId = await resolveShopAdminId(currentUser.id, currentUser.role);
+    adminIds = Array.from(new Set([shopId, currentUser.id]));
   } else {
     adminIds = [currentUser.id];
   }
@@ -42,6 +48,39 @@ export default defineEventHandler(async (event) => {
   if (!adminIds.length) {
     return { partners: [], vndPerCredit: 1000 };
   }
+
+  /** Đơn gán theo seller (COALESCE(seller, admin_id)); cấp dưới admin_2 có id riêng — cần gộp vào đại lý admin_1 khi thống kê đơn. */
+  const childrenByShop = new Map<number, number[]>();
+  const admin1InScope = new Set<number>();
+  const [roleRows]: any = await pool.query(
+    `SELECT id, role FROM admins WHERE id IN (${adminIds.map(() => "?").join(",")})`,
+    adminIds,
+  );
+  for (const r of roleRows || []) {
+    if (String(r?.role) === "admin_1") admin1InScope.add(Number(r.id));
+  }
+  if (admin1InScope.size) {
+    const idsArr = Array.from(admin1InScope);
+    const ph = idsArr.map(() => "?").join(",");
+    const [chRows]: any = await pool.query(
+      `SELECT id, parent_admin_id FROM admins WHERE parent_admin_id IN (${ph}) AND role = 'admin_2'`,
+      idsArr,
+    );
+    for (const c of chRows || []) {
+      const pid = Number(c.parent_admin_id);
+      const cid = Number(c.id);
+      if (!Number.isFinite(cid)) continue;
+      if (!childrenByShop.has(pid)) childrenByShop.set(pid, []);
+      childrenByShop.get(pid)!.push(cid);
+    }
+  }
+  const orderStatIds = Array.from(
+    new Set([
+      ...adminIds,
+      ...Array.from(childrenByShop.values()).flat(),
+    ]),
+  );
+  const orderPlaceholders = orderStatIds.map(() => "?").join(",");
 
   const placeholders = adminIds.map(() => "?").join(",");
   const params: any[] = [...adminIds];
@@ -60,9 +99,9 @@ export default defineEventHandler(async (event) => {
     SELECT
       w.admin_id,
       SUM(w.amount_credit) AS balance_credit,
-      SUM(CASE WHEN w.wallet_type IN ('sale_commission','product_revenue') THEN CASE WHEN o.id IS NULL OR o.status = 'completed' THEN w.amount_credit ELSE 0 END ELSE 0 END) AS total_earned,
+      SUM(CASE WHEN w.wallet_type IN ('sale_commission','subordinate_commission','product_revenue') THEN CASE WHEN o.id IS NULL OR o.status = 'completed' THEN w.amount_credit ELSE 0 END ELSE 0 END) AS total_earned,
       SUM(CASE WHEN w.wallet_type = 'payout' THEN w.amount_credit ELSE 0 END) AS total_payout,
-      SUM(CASE WHEN w.wallet_type = 'sale_commission' THEN CASE WHEN o.id IS NULL OR o.status = 'completed' THEN w.amount_credit ELSE 0 END ELSE 0 END) AS affiliate_received_credit
+      SUM(CASE WHEN w.wallet_type IN ('sale_commission','subordinate_commission') THEN CASE WHEN o.id IS NULL OR o.status = 'completed' THEN w.amount_credit ELSE 0 END ELSE 0 END) AS affiliate_received_credit
     FROM admin_wallet w
     LEFT JOIN orders o ON w.order_id = o.id
     WHERE w.admin_id IN (${placeholders}) ${dateWhere}
@@ -72,7 +111,7 @@ export default defineEventHandler(async (event) => {
   );
 
   const orderDateConditions: string[] = [];
-  const orderDateParams: any[] = [...adminIds];
+  const orderDateParams: any[] = [...orderStatIds];
   if (fromDate) {
     orderDateConditions.push(" AND o.created_at >= ?");
     orderDateParams.push(fromDate + " 00:00:00");
@@ -88,7 +127,7 @@ export default defineEventHandler(async (event) => {
       COUNT(*) AS order_count,
       SUM(COALESCE(o.amount_credit, ROUND(o.amount))) AS total_gross_amount
     FROM orders o
-    WHERE o.status = 'completed' AND COALESCE(o.seller_admin_id, o.admin_id) IN (${placeholders})${orderDateConditions.join("")}
+    WHERE o.status = 'completed' AND COALESCE(o.seller_admin_id, o.admin_id) IN (${orderPlaceholders})${orderDateConditions.join("")}
     GROUP BY COALESCE(o.seller_admin_id, o.admin_id)
     `,
     orderDateParams
@@ -103,16 +142,14 @@ export default defineEventHandler(async (event) => {
   }
 
   // ===== Tách doanh thu tự bán vs bán hộ (theo orders) =====
-  // - self: o.admin_id = shop AND (seller_admin_id IS NULL OR seller_admin_id = o.admin_id)
-  // - affiliate: o.seller_admin_id = shop AND o.admin_id != o.seller_admin_id
   const selfOrderCountMap = new Map<number, number>();
   const selfGrossMap = new Map<number, number>();
   const affiliateOrderCountMap = new Map<number, number>();
   const affiliateGrossMap = new Map<number, number>();
 
-  if (adminIds.length) {
-    const placeholders2 = adminIds.map(() => "?").join(",");
-    const params2: any[] = [...adminIds, ...adminIds];
+  if (orderStatIds.length) {
+    const placeholders2 = orderPlaceholders;
+    const params2: any[] = [...orderStatIds, ...orderStatIds];
     let dateSql = "";
     if (fromDate) {
       dateSql += " AND o.created_at >= ?";
@@ -242,6 +279,12 @@ export default defineEventHandler(async (event) => {
 
   const vndPerCredit = getVndPerCredit();
 
+  const rollupChildStats = (id: number, m: Map<number, number>) => {
+    let v = m.get(id) || 0;
+    for (const k of childrenByShop.get(id) || []) v += m.get(k) || 0;
+    return v;
+  };
+
   const partners = adminIds.map((id) => {
     const admin = adminMap.get(id);
     const wallet =
@@ -251,7 +294,7 @@ export default defineEventHandler(async (event) => {
         total_payout: 0,
         affiliate_received_credit: 0,
       };
-    const grossAmount = orderAmountMap.get(id) || 0;
+    const grossAmount = rollupChildStats(id, orderAmountMap);
     let balanceCredit = wallet.balance_credit;
     const ownerPlatformFee = platformFeeByOwner.get(id) || 0;
     if (ownerPlatformFee && id !== platformAdminId) {
@@ -261,12 +304,12 @@ export default defineEventHandler(async (event) => {
       balanceCredit += totalPlatformFeeForPlatformAdmin;
     }
 
-    const selfOrderCount = selfOrderCountMap.get(id) || 0;
-    const selfGrossAmount = selfGrossMap.get(id) || 0;
+    const selfOrderCount = rollupChildStats(id, selfOrderCountMap);
+    const selfGrossAmount = rollupChildStats(id, selfGrossMap);
     const selfPlatformFee = ownerPlatformFee || 0;
     const selfNetAmount = Math.max(0, selfGrossAmount - selfPlatformFee);
-    const affiliateOrderCount = affiliateOrderCountMap.get(id) || 0;
-    const affiliateGrossAmount = affiliateGrossMap.get(id) || 0;
+    const affiliateOrderCount = rollupChildStats(id, affiliateOrderCountMap);
+    const affiliateGrossAmount = rollupChildStats(id, affiliateGrossMap);
 
     return {
       admin_id: id,
@@ -278,7 +321,7 @@ export default defineEventHandler(async (event) => {
       total_payout: wallet.total_payout,
       affiliate_received_credit: wallet.affiliate_received_credit,
       balance_vnd: balanceCredit * vndPerCredit,
-      order_count: orderCountMap.get(id) || 0,
+      order_count: rollupChildStats(id, orderCountMap),
 
       // split fields for UI
       self_order_count: selfOrderCount,

@@ -4,12 +4,14 @@ import {
   VALID_KEY_DURATIONS,
   type ProductKeyDuration,
 } from '../../utils/productKeys'
+import { assertShopManagementRole } from '../../utils/authHelpers'
 
 export default defineEventHandler(async (event) => {
   const currentUser = event.context.user
   if (!currentUser) {
     throw createError({ statusCode: 401, statusMessage: 'Chưa đăng nhập' })
   }
+  assertShopManagementRole(currentUser.role)
 
   await ensureProductKeySchema()
 
@@ -64,7 +66,12 @@ export default defineEventHandler(async (event) => {
   let inserted = 0
   let skipped = 0
 
-  const adminIdForKey = currentUser.role === 'admin_1' || currentUser.role === 'admin_0' ? currentUser.id : null
+  const adminIdForKey =
+    currentUser.role === 'admin_1' ||
+    currentUser.role === 'admin_0' ||
+    currentUser.role === 'admin_2'
+      ? currentUser.id
+      : null
 
   for (const k of keys) {
     try {

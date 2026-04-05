@@ -1,6 +1,8 @@
 import pool from '../../utils/db'
+import { resolveShopAdminId } from '../../utils/adminHierarchy'
 import { cleanupExpiredPendingTransactions, convertVndToCredit } from '../../utils/payment'
 import { checkRateLimit, rateLimitKey } from '../../utils/rateLimit'
+import { assertShopManagementRole } from '../../utils/authHelpers'
 
 export default defineEventHandler(async (event) => {
   const currentUser = event.context.user
@@ -8,6 +10,7 @@ export default defineEventHandler(async (event) => {
   if (!currentUser) {
     throw createError({ statusCode: 401, statusMessage: 'Chưa đăng nhập' })
   }
+  assertShopManagementRole(currentUser.role)
 
   const query = getQuery(event)
   const adminId = query.admin_id ? parseInt(String(query.admin_id), 10) : null
@@ -55,10 +58,14 @@ export default defineEventHandler(async (event) => {
   const conditions: string[] = []
   const params: any[] = []
 
-  // Phân quyền: admin_1 chỉ xem giao dịch của khách thuộc mình
+  // Phân quyền: admin_1 chỉ xem giao dịch của khách thuộc mình; admin_2 theo shop (admin_1)
   if (currentUser.role === 'admin_1') {
     conditions.push('u.admin_id = ?')
     params.push(currentUser.id)
+  } else if (currentUser.role === 'admin_2') {
+    const shopId = await resolveShopAdminId(currentUser.id, currentUser.role)
+    conditions.push('u.admin_id = ?')
+    params.push(shopId)
   } else if (adminId && !isNaN(adminId)) {
     conditions.push('u.admin_id = ?')
     params.push(adminId)

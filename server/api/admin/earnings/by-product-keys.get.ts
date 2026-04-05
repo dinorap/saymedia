@@ -1,6 +1,7 @@
 import pool from "../../../utils/db";
 import { ensureAdminWalletSchema } from "../../../utils/adminWallet";
 import { ensureCommerceSchema } from "../../../utils/commerce";
+import { assertShopManagementRole } from "../../../utils/authHelpers";
 
 type KeyStats = {
   duration: string;
@@ -16,6 +17,7 @@ export default defineEventHandler(async (event) => {
   if (!currentUser) {
     throw createError({ statusCode: 401, statusMessage: "Chưa đăng nhập" });
   }
+  assertShopManagementRole(currentUser.role);
   await ensureCommerceSchema();
 
   await ensureAdminWalletSchema();
@@ -45,6 +47,12 @@ export default defineEventHandler(async (event) => {
   );
   const platformAdminId: number | null = platformAdmin?.id || null;
 
+  const [[targetRoleRow]]: any = await pool.query(
+    "SELECT role FROM admins WHERE id = ? LIMIT 1",
+    [targetAdminId],
+  );
+  const targetRole = String(targetRoleRow?.role || "");
+
   const dateConditions: string[] = [];
   const dateParams: any[] = [];
   if (fromDate) {
@@ -55,6 +63,20 @@ export default defineEventHandler(async (event) => {
     dateConditions.push(" AND o.created_at <= ?");
     dateParams.push(toDate + " 23:59:59");
   }
+
+  const shopScopeSql =
+    targetRole === "admin_1"
+      ? `AND (
+        u.admin_id = ?
+        OR o.seller_admin_id = ?
+        OR o.product_owner_admin_id = ?
+      )`
+      : "AND COALESCE(o.seller_admin_id, o.admin_id) = ?";
+
+  const shopScopeParams =
+    targetRole === "admin_1"
+      ? [targetAdminId, targetAdminId, targetAdminId]
+      : [targetAdminId];
 
   const [rows]: any = await pool.query(
     `
@@ -71,18 +93,19 @@ export default defineEventHandler(async (event) => {
       owner.role AS owner_role,
       COALESCE(w.amount_credit, 0) AS wallet_credit
     FROM orders o
+    JOIN users u ON u.id = o.user_id
     JOIN products p ON o.product_id = p.id
     JOIN admins owner ON COALESCE(o.product_owner_admin_id, o.admin_id) = owner.id
     LEFT JOIN admin_wallet w
       ON w.order_id = o.id
      AND w.admin_id = ?
-     AND w.wallet_type IN ('sale_commission','product_revenue')
+     AND w.wallet_type IN ('sale_commission','subordinate_commission','product_revenue')
     WHERE o.product_id = ?
       AND o.status = 'completed'${dateConditions.join("")}
-      AND COALESCE(o.seller_admin_id, o.admin_id) = ?
+      ${shopScopeSql}
     ORDER BY o.created_at DESC
     `,
-    [targetAdminId, productIdRaw, ...dateParams, targetAdminId],
+    [targetAdminId, productIdRaw, ...dateParams, ...shopScopeParams],
   );
 
   const statsMap = new Map<string, KeyStats>();

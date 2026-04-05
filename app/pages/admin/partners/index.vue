@@ -158,7 +158,10 @@
       </template>
     </div>
 
-    <div class="card summary-card partner-user-card">
+    <div
+      v-if="isSuperAdmin"
+      class="card summary-card partner-user-card"
+    >
       <h2 class="card-title">{{ $t("admin.partnersUi.userPartnerTitle") }}</h2>
       <p class="partner-user-hint">{{ $t("admin.partnersUi.userPartnerHint") }}</p>
       <div v-if="userPartnersLoading" class="table-loading">{{ $t("admin.loading") }}</div>
@@ -476,6 +479,10 @@ async function approvePartnerPayout(id: number) {
 
 async function fetchUserPartners(opts: { silent?: boolean } = {}) {
   const silent = !!opts.silent;
+  if (!isSuperAdmin.value) {
+    userPartners.value = [];
+    return;
+  }
   if (!silent) userPartnersLoading.value = true;
   try {
     const res = await $fetch<{ data: any[] }>("/api/admin/partner-affiliates");
@@ -650,8 +657,8 @@ onMounted(async () => {
   }
   autoRefreshTimer = setInterval(() => {
     fetchSummary({ silent: true });
-    fetchUserPartners({ silent: true });
     if (isSuperAdmin.value) {
+      fetchUserPartners({ silent: true });
       fetchPendingPayouts({ silent: true });
     }
   }, 5000);

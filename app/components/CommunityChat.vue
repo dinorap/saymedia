@@ -17,7 +17,7 @@
             class="chat-avatar"
             :class="{
               'chat-avatar--mine': isMine(m),
-              'chat-avatar--admin': m.authorRole === 'admin_2',
+              'chat-avatar--admin': (m.authorRole === 'admin_support' || m.authorRole === 'admin_2'),
             }"
           >
             <span>{{ m.authorName?.charAt(0)?.toUpperCase() }}</span>
@@ -27,18 +27,18 @@
             :class="{
               'chat-message--mine': isMine(m),
               'chat-message--other': !isMine(m),
-              'chat-message--admin': m.authorRole === 'admin_2',
+              'chat-message--admin': (m.authorRole === 'admin_support' || m.authorRole === 'admin_2'),
             }"
           >
             <div class="chat-meta">
               <span
                 class="chat-name"
                 :class="{
-                  'chat-name--admin': m.authorRole === 'admin_2',
+                  'chat-name--admin': (m.authorRole === 'admin_support' || m.authorRole === 'admin_2'),
                 }"
               >
                 {{ m.authorName }}
-                <span v-if="m.authorRole === 'admin_2'" class="chat-admin-tag"
+                <span v-if="(m.authorRole === 'admin_support' || m.authorRole === 'admin_2')" class="chat-admin-tag"
                   >(admin)</span
                 >
               </span>

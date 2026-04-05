@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken'
 import pool from '../../utils/db'
 import { addAuditLog } from '../../utils/audit'
 import { getJwtSecret } from '../../utils/jwt'
+import { isAdminStaffRole } from '../../utils/authHelpers'
 
 const JWT_SECRET = getJwtSecret()
 
@@ -19,7 +20,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 401, statusMessage: 'Phiên đăng nhập hết hạn' })
   }
 
-  const isAdmin = decoded.role === 'admin_0' || decoded.role === 'admin_1'
+  const isAdmin = isAdminStaffRole(decoded.role)
   const body = await readBody(event)
   const { old_password, new_password } = body
 

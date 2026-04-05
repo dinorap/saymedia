@@ -1,16 +1,20 @@
 import pool from "../../utils/db";
+import { assertShopManagementRole } from "../../utils/authHelpers";
 
 export default defineEventHandler(async (event) => {
   const currentUser = event.context.user;
   if (!currentUser) {
     throw createError({ statusCode: 401, statusMessage: "Chưa đăng nhập" });
   }
+  assertShopManagementRole(currentUser.role);
 
   const query = getQuery(event);
   const productIdRaw = query.product_id ? Number(query.product_id) : null;
 
-  // admin_0: xem danh sách shop bán theo từng sản phẩm (lọc theo product_id nếu có)
-  if (currentUser.role === "admin_0") {
+  if (
+    currentUser.role === "admin_0" ||
+    (currentUser.role === "admin_1" && productIdRaw)
+  ) {
     if (!productIdRaw || !Number.isFinite(productIdRaw) || productIdRaw <= 0) {
       throw createError({
         statusCode: 400,
@@ -18,7 +22,6 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    // Đảm bảo sản phẩm thuộc về chủ (admin_0) hoặc cho phép xem mọi sản phẩm nếu cần
     const [[product]]: any = await pool.query(
       `
         SELECT id, name, admin_id
@@ -32,6 +35,16 @@ export default defineEventHandler(async (event) => {
       throw createError({
         statusCode: 404,
         statusMessage: "Không tìm thấy sản phẩm",
+      });
+    }
+
+    if (
+      currentUser.role === "admin_1" &&
+      Number(product.admin_id) !== Number(currentUser.id)
+    ) {
+      throw createError({
+        statusCode: 403,
+        statusMessage: "Chỉ xem đối tác bán hộ trên sản phẩm của bạn",
       });
     }
 
@@ -66,8 +79,7 @@ export default defineEventHandler(async (event) => {
     };
   }
 
-  // admin_1: xem danh sách sản phẩm mình đang bán (cho chủ hoặc admin khác)
-  if (currentUser.role === "admin_1") {
+  if (currentUser.role === "admin_1" || currentUser.role === "admin_2") {
     const [rows]: any = await pool.query(
       `
         SELECT
@@ -96,10 +108,8 @@ export default defineEventHandler(async (event) => {
     };
   }
 
-  // Các role khác tạm thời không hỗ trợ
   throw createError({
     statusCode: 403,
     statusMessage: "Không có quyền xem danh sách đối tác sản phẩm",
   });
 });
-

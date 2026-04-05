@@ -175,7 +175,12 @@ async function loginWithPassword() {
       body: { username: username.value.trim(), password: password.value },
     });
     roleCookie.value = res.role;
-    if (res.role === "admin_0" || res.role === "admin_1") {
+    if (
+      res.role === "admin_0" ||
+      res.role === "admin_1" ||
+      res.role === "admin_support" ||
+      res.role === "admin_2"
+    ) {
       await navigateTo("/admin");
     } else {
       const next = typeof route.query.next === "string" ? route.query.next : "";
@@ -223,7 +228,12 @@ async function verifyOtp() {
       body: { email: email.value.trim(), otp: otp.value.trim() },
     });
     roleCookie.value = res.role;
-    if (res.role === "admin_0" || res.role === "admin_1") {
+    if (
+      res.role === "admin_0" ||
+      res.role === "admin_1" ||
+      res.role === "admin_support" ||
+      res.role === "admin_2"
+    ) {
       await navigateTo("/admin");
     } else {
       const next = typeof route.query.next === "string" ? route.query.next : "";

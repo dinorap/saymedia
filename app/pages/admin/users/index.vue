@@ -2,7 +2,7 @@
   <div class="users-page">
     <div class="tabs">
       <button
-        v-if="isSuperAdmin"
+        v-if="canManageAdminsTab"
         type="button"
         class="tab-btn"
         :class="{ active: activeTab === 'admins' }"
@@ -24,13 +24,19 @@
     <div v-show="activeTab === 'admins'" class="tab-panel">
       <div class="panel-header">
         <div class="users-toolbar">
-          <div class="filter-group">
+          <div v-if="isSuperAdmin || isAdminOne" class="filter-group">
             <label>{{ $t("admin.role") }}</label>
             <select v-model="adminRoleFilter" class="input input--sm">
               <option value="">{{ $t("admin.all") }}</option>
-              <option value="admin_0">admin_0</option>
-              <option value="admin_1">admin_1</option>
-              <option value="admin_2">admin_2</option>
+              <template v-if="isSuperAdmin">
+                <option value="admin_0">admin_0</option>
+                <option value="admin_1">admin_1</option>
+                <option value="admin_2">admin_2</option>
+                <option value="admin_support">admin_support</option>
+              </template>
+              <template v-else>
+                <option value="admin_2">admin_2</option>
+              </template>
             </select>
           </div>
           <div class="search-group">
@@ -691,12 +697,42 @@
                 "
               />
             </div>
-            <div class="form-row">
+            <div v-if="isSuperAdmin" class="form-row">
               <label>{{ $t("admin.role") }}</label>
               <select v-model="adminForm.role" class="input">
                 <option value="admin_0">{{ $t("admin.admin0") }}</option>
                 <option value="admin_1">{{ $t("admin.admin1") }}</option>
-                <option value="admin_2">admin_2 (chat cộng đồng)</option>
+                <option value="admin_2">admin_2 (cấp dưới bán hộ)</option>
+                <option value="admin_support">admin_support (hỗ trợ / chat)</option>
+              </select>
+            </div>
+            <div v-else-if="isAdminOne && !editingAdmin" class="form-row">
+              <label>{{ $t("admin.role") }}</label>
+              <input
+                class="input"
+                type="text"
+                value="admin_2 (cấp dưới bán hộ)"
+                disabled
+              />
+            </div>
+            <div
+              v-if="isSuperAdmin && !editingAdmin && adminForm.role === 'admin_2'"
+              class="form-row"
+            >
+              <label>admin_1 (cấp trên)</label>
+              <select
+                v-model.number="adminForm.parent_admin_id"
+                class="input"
+                required
+              >
+                <option disabled :value="0">— Chọn đại lý —</option>
+                <option
+                  v-for="a in admins.filter((x) => x.role === 'admin_1')"
+                  :key="a.id"
+                  :value="a.id"
+                >
+                  #{{ a.id }} — {{ a.username }}
+                </option>
               </select>
             </div>
             <div v-if="editingAdmin" class="form-row">
@@ -879,15 +915,27 @@ const { show: showToast } = useToast();
 const { confirm: askConfirm } = useConfirm();
 const roleCookie = useCookie("user_role", { path: "/" });
 const isSuperAdmin = computed(() => roleCookie.value === "admin_0");
+const isAdminOne = computed(() => roleCookie.value === "admin_1");
+const canManageAdminsTab = computed(
+  () => isSuperAdmin.value || isAdminOne.value,
+);
 
 const activeTab = ref("users");
 watch(
   isSuperAdmin,
   (v) => {
     if (v) activeTab.value = "admins";
-    else if (activeTab.value === "admins") activeTab.value = "users";
+    else if (activeTab.value === "admins" && !canManageAdminsTab.value) {
+      activeTab.value = "users";
+    }
   },
   { immediate: true },
+);
+watch(
+  canManageAdminsTab,
+  (ok) => {
+    if (!ok && activeTab.value === "admins") activeTab.value = "users";
+  },
 );
 
 const admins = ref([]);
@@ -1143,6 +1191,7 @@ const adminForm = reactive({
   username: "",
   password: "",
   role: "admin_1",
+  parent_admin_id: 0,
   is_active: true,
 });
 const adminError = ref("");
@@ -1152,7 +1201,8 @@ function openAdminModal(admin = null) {
   editingAdmin.value = admin;
   adminForm.username = admin?.username ?? "";
   adminForm.password = "";
-  adminForm.role = admin?.role ?? "admin_1";
+  adminForm.role = admin?.role ?? (isAdminOne.value ? "admin_2" : "admin_1");
+  adminForm.parent_admin_id = 0;
   adminForm.is_active = admin ? !!admin.is_active : true;
   adminError.value = "";
   adminModalOpen.value = true;
@@ -1161,14 +1211,16 @@ function openAdminModal(admin = null) {
 function roleBadgeClass(role) {
   if (role === "admin_0") return "badge--primary";
   if (role === "admin_1") return "badge--secondary";
-  if (role === "admin_2") return "badge--danger";
+  if (role === "admin_2") return "badge--muted";
+  if (role === "admin_support") return "badge--danger";
   return "badge--secondary";
 }
 
 function roleLabel(role) {
   if (role === "admin_0") return t("admin.admin0");
   if (role === "admin_1") return t("admin.admin1");
-  if (role === "admin_2") return "admin_2 (community)";
+  if (role === "admin_2") return "admin_2 (cấp dưới)";
+  if (role === "admin_support") return "admin_support (hỗ trợ)";
   return role || "-";
 }
 
@@ -1178,9 +1230,11 @@ async function saveAdmin() {
   try {
     if (editingAdmin.value) {
       const body = {
-        role: adminForm.role,
         is_active: adminForm.is_active,
       };
+      if (isSuperAdmin.value) {
+        body.role = adminForm.role;
+      }
       if (adminForm.password?.trim()) {
         body.password = adminForm.password.trim();
       }
@@ -1192,13 +1246,29 @@ async function saveAdmin() {
       await fetchAdmins();
       showToast(t("admin.updateSuccess"), "success");
     } else {
+      if (
+        isSuperAdmin.value &&
+        adminForm.role === "admin_2" &&
+        !adminForm.parent_admin_id
+      ) {
+        adminError.value = "Chọn đại lý (admin_1) cấp trên cho admin_2.";
+        return;
+      }
+      const postBody = {
+        username: adminForm.username.trim(),
+        password: adminForm.password,
+      };
+      if (isSuperAdmin.value) {
+        postBody.role = adminForm.role;
+        if (adminForm.role === "admin_2") {
+          postBody.parent_admin_id = adminForm.parent_admin_id;
+        }
+      } else if (isAdminOne.value) {
+        postBody.role = "admin_2";
+      }
       await $fetch("/api/admin/admins", {
         method: "POST",
-        body: {
-          username: adminForm.username,
-          password: adminForm.password,
-          role: adminForm.role,
-        },
+        body: postBody,
       });
       adminModalOpen.value = false;
       await fetchAdmins();
@@ -1383,12 +1453,12 @@ async function submitAdjustCredit() {
 }
 
 onMounted(() => {
-  if (isSuperAdmin.value) {
+  if (canManageAdminsTab.value) {
     fetchAdmins();
   }
   fetchUsers(1);
   autoRefreshTimer = setInterval(() => {
-    if (isSuperAdmin.value && activeTab.value === "admins") {
+    if (canManageAdminsTab.value && activeTab.value === "admins") {
       fetchAdmins({ silent: true });
     }
     fetchUsers(userPage.value || 1, { silent: true });

@@ -2,12 +2,15 @@ CREATE TABLE admins (
     id INT AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(50) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
-    role ENUM('admin_0', 'admin_1', 'admin_2') NOT NULL,
+    role ENUM('admin_0', 'admin_1', 'admin_2', 'admin_support') NOT NULL,
+    parent_admin_id INT NULL,
     ref_code VARCHAR(12) UNIQUE NOT NULL,
     is_active TINYINT(1) DEFAULT 1,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_admins_parent FOREIGN KEY (parent_admin_id) REFERENCES admins(id) ON DELETE RESTRICT
 );
 CREATE INDEX idx_ref_code ON admins(ref_code);
+CREATE INDEX idx_admins_parent ON admins(parent_admin_id);
 
 CREATE TABLE users (
     id INT AUTO_INCREMENT PRIMARY KEY,

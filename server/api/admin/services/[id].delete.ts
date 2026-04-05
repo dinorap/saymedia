@@ -1,11 +1,14 @@
 import pool from '../../../utils/db'
 import { ensureServicesSchema } from '../../../utils/services'
+import { resolveShopAdminId } from '../../../utils/adminHierarchy'
+import { assertShopManagementRole } from '../../../utils/authHelpers'
 
 export default defineEventHandler(async (event) => {
   const currentUser = event.context.user
   if (!currentUser) {
     throw createError({ statusCode: 401, statusMessage: 'Chưa đăng nhập' })
   }
+  assertShopManagementRole(currentUser.role)
 
   await ensureServicesSchema()
 
@@ -26,6 +29,15 @@ export default defineEventHandler(async (event) => {
       statusCode: 403,
       statusMessage: 'Bạn chỉ được xóa dịch vụ do mình tạo',
     })
+  }
+  if (currentUser.role === 'admin_2') {
+    const shopId = await resolveShopAdminId(currentUser.id, currentUser.role)
+    if (Number(service.admin_id) !== shopId) {
+      throw createError({
+        statusCode: 403,
+        statusMessage: 'Bạn chỉ được xóa dịch vụ trong hệ thống đại lý',
+      })
+    }
   }
 
   await pool.query('DELETE FROM services WHERE id = ?', [id])

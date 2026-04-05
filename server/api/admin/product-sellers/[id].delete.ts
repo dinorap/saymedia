@@ -1,10 +1,12 @@
 import pool from "../../../utils/db";
+import { assertShopManagementRole } from "../../../utils/authHelpers";
 
 export default defineEventHandler(async (event) => {
   const currentUser = event.context.user;
   if (!currentUser) {
     throw createError({ statusCode: 401, statusMessage: "Chưa đăng nhập" });
   }
+  assertShopManagementRole(currentUser.role);
   if (currentUser.role !== "admin_0") {
     throw createError({
       statusCode: 403,

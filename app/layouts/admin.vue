@@ -4,74 +4,89 @@
 
     <!-- Sidebar -->
     <aside class="sidebar">
-      <NuxtLink to="/admin" class="sidebar-logo">
+      <NuxtLink
+        :to="isSupportOnly ? '/admin/support' : '/admin'"
+        class="sidebar-logo"
+      >
         <img src="/logo.png" alt="SayMedia AI" class="sidebar-logo-img" />
       </NuxtLink>
       <nav class="sidebar-nav">
-        <NuxtLink
-          to="/admin"
-          class="sidebar-item"
-          active-class="sidebar-item--active"
-        >
-          <span class="sidebar-item-icon" aria-hidden="true">▣</span>
-          <span class="sidebar-item-label">{{ $t("admin.dashboard") }}</span>
-        </NuxtLink>
-        <NuxtLink to="/admin/users" class="sidebar-item">
-          <span class="sidebar-item-icon" aria-hidden="true">👥</span>
-          <span class="sidebar-item-label">{{ $t("admin.users") }}</span>
-        </NuxtLink>
-        <NuxtLink to="/admin/orders" class="sidebar-item">
-          <span class="sidebar-item-icon" aria-hidden="true">🧾</span>
-          <span class="sidebar-item-label">{{ $t("admin.orders") }}</span>
-        </NuxtLink>
-        <NuxtLink to="/admin/deposits" class="sidebar-item">
-          <span class="sidebar-item-icon" aria-hidden="true">💰</span>
-          <span class="sidebar-item-label">{{ $t("admin.deposits") }}</span>
-        </NuxtLink>
-        <NuxtLink
-          v-if="currentUser?.role !== 'admin_1'"
-          to="/admin/deposit-promotions"
-          class="sidebar-item"
-        >
-          <span class="sidebar-item-icon" aria-hidden="true">🎟️</span>
-          <span class="sidebar-item-label">
-            {{ $t("depositPromotions.title") }}
-          </span>
-        </NuxtLink>
-        <NuxtLink to="/admin/products" class="sidebar-item">
-          <span class="sidebar-item-icon" aria-hidden="true">🛒</span>
-          <span class="sidebar-item-label">{{ $t("admin.products") }}</span>
-        </NuxtLink>
-        <NuxtLink to="/admin/product-keys" class="sidebar-item">
-          <span class="sidebar-item-icon" aria-hidden="true">🔑</span>
-          <span class="sidebar-item-label">
-            {{ $t("admin.productKeys") || "Key sản phẩm" }}
-          </span>
-        </NuxtLink>
-        <NuxtLink to="/admin/revenue" class="sidebar-item">
-          <span class="sidebar-item-icon" aria-hidden="true">📈</span>
-          <span class="sidebar-item-label">{{ $t("admin.revenue") }}</span>
-        </NuxtLink>
-        <NuxtLink to="/admin/partners" class="sidebar-item">
-          <span class="sidebar-item-icon" aria-hidden="true">🤝</span>
-          <span class="sidebar-item-label">{{
-            $t("admin.partners") || "Đối tác & Doanh thu"
-          }}</span>
-        </NuxtLink>
-        <NuxtLink to="/admin/ledger" class="sidebar-item">
-          <span class="sidebar-item-icon" aria-hidden="true">📚</span>
-          <span class="sidebar-item-label">{{
-            $t("admin.creditLedger") || "Sổ sao kê tín chỉ"
-          }}</span>
-        </NuxtLink>
-        <NuxtLink
-          v-if="currentUser?.role !== 'admin_1'"
-          to="/admin/logs"
-          class="sidebar-item"
-        >
-          <span class="sidebar-item-icon" aria-hidden="true">📄</span>
-          <span class="sidebar-item-label">{{ $t("admin.logs") }}</span>
-        </NuxtLink>
+        <template v-if="showShopManagementNav">
+          <NuxtLink
+            to="/admin"
+            class="sidebar-item"
+            active-class="sidebar-item--active"
+          >
+            <span class="sidebar-item-icon" aria-hidden="true">▣</span>
+            <span class="sidebar-item-label">{{ $t("admin.dashboard") }}</span>
+          </NuxtLink>
+          <NuxtLink to="/admin/users" class="sidebar-item">
+            <span class="sidebar-item-icon" aria-hidden="true">👥</span>
+            <span class="sidebar-item-label">{{ $t("admin.users") }}</span>
+          </NuxtLink>
+          <NuxtLink to="/admin/orders" class="sidebar-item">
+            <span class="sidebar-item-icon" aria-hidden="true">🧾</span>
+            <span class="sidebar-item-label">{{ $t("admin.orders") }}</span>
+          </NuxtLink>
+          <NuxtLink to="/admin/deposits" class="sidebar-item">
+            <span class="sidebar-item-icon" aria-hidden="true">💰</span>
+            <span class="sidebar-item-label">{{ $t("admin.deposits") }}</span>
+          </NuxtLink>
+          <NuxtLink
+            v-if="currentUser?.role === 'admin_0'"
+            to="/admin/deposit-promotions"
+            class="sidebar-item"
+          >
+            <span class="sidebar-item-icon" aria-hidden="true">🎟️</span>
+            <span class="sidebar-item-label">
+              {{ $t("depositPromotions.title") }}
+            </span>
+          </NuxtLink>
+          <NuxtLink to="/admin/products" class="sidebar-item">
+            <span class="sidebar-item-icon" aria-hidden="true">🛒</span>
+            <span class="sidebar-item-label">{{ $t("admin.products") }}</span>
+          </NuxtLink>
+          <NuxtLink to="/admin/product-keys" class="sidebar-item">
+            <span class="sidebar-item-icon" aria-hidden="true">🔑</span>
+            <span class="sidebar-item-label">
+              {{ $t("admin.productKeys") || "Key sản phẩm" }}
+            </span>
+          </NuxtLink>
+          <NuxtLink to="/admin/revenue" class="sidebar-item">
+            <span class="sidebar-item-icon" aria-hidden="true">📈</span>
+            <span class="sidebar-item-label">{{ $t("admin.revenue") }}</span>
+          </NuxtLink>
+          <NuxtLink to="/admin/partners" class="sidebar-item">
+            <span class="sidebar-item-icon" aria-hidden="true">🤝</span>
+            <span class="sidebar-item-label">{{
+              $t("admin.partners") || "Đối tác & Doanh thu"
+            }}</span>
+          </NuxtLink>
+          <NuxtLink
+            v-if="currentUser?.role === 'admin_0' || currentUser?.role === 'admin_1'"
+            to="/admin/subordinate-commission"
+            class="sidebar-item"
+          >
+            <span class="sidebar-item-icon" aria-hidden="true">🌿</span>
+            <span class="sidebar-item-label">{{
+              $t("admin.subordinateCommissionTitle")
+            }}</span>
+          </NuxtLink>
+          <NuxtLink to="/admin/ledger" class="sidebar-item">
+            <span class="sidebar-item-icon" aria-hidden="true">📚</span>
+            <span class="sidebar-item-label">{{
+              $t("admin.creditLedger") || "Sổ sao kê tín chỉ"
+            }}</span>
+          </NuxtLink>
+          <NuxtLink
+            v-if="currentUser?.role === 'admin_0'"
+            to="/admin/logs"
+            class="sidebar-item"
+          >
+            <span class="sidebar-item-icon" aria-hidden="true">📄</span>
+            <span class="sidebar-item-label">{{ $t("admin.logs") }}</span>
+          </NuxtLink>
+        </template>
         <NuxtLink to="/admin/support" class="sidebar-item">
           <span class="sidebar-item-icon" aria-hidden="true">💬</span>
           <span class="sidebar-item-label">
@@ -282,6 +297,11 @@ const { locale, setLocale, t } = useI18n();
 const { show: showToast } = useToast();
 
 const currentUser = ref(null);
+const showShopManagementNav = computed(() => {
+  const r = currentUser.value?.role;
+  return r === "admin_0" || r === "admin_1" || r === "admin_2";
+});
+const isSupportOnly = computed(() => currentUser.value?.role === "admin_support");
 const sidebarCollapsed = ref(false);
 const siteTheme = ref("default");
 const showThemeMenu = ref(false);

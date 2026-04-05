@@ -1,5 +1,7 @@
 import pool from "../../utils/db";
 import { ensureCommerceSchema } from "../../utils/commerce";
+import { resolveShopAdminId } from "../../utils/adminHierarchy";
+import { assertShopManagementRole } from "../../utils/authHelpers";
 
 interface RevenueBucket {
   period: string;
@@ -19,20 +21,33 @@ export default defineEventHandler(async (event) => {
   if (!currentUser) {
     throw createError({ statusCode: 401, statusMessage: "Chưa đăng nhập" });
   }
+  assertShopManagementRole(currentUser.role);
   await ensureCommerceSchema();
 
   const isSuperAdmin = currentUser.role === "admin_0";
-  // Scope orders:
-  // - admin_0: toàn hệ thống
-  // - admin_1: đơn được ghi nhận doanh số cho mình (orders.admin_id)
-  //            + đơn của sản phẩm mình sở hữu (orders.product_owner_admin_id)
+  const shopScopeId =
+    currentUser.role === "admin_2"
+      ? await resolveShopAdminId(currentUser.id, currentUser.role)
+      : currentUser.id;
+
+  // Scope orders (khớp orders.get): KH của shop / người bán / chủ SP — khi admin_2 bán thì orders.admin_id = admin_2 (không phải shop).
   const scopeWhere = isSuperAdmin
     ? ""
-    : " WHERE (o.admin_id = ? OR o.product_owner_admin_id = ?)";
-  const scopeParams = isSuperAdmin ? [] : [currentUser.id, currentUser.id];
+    : `
+      WHERE (
+        u.admin_id = ?
+        OR o.seller_admin_id = ?
+        OR o.product_owner_admin_id = ?
+      )
+    `;
+  const scopeParams = isSuperAdmin
+    ? []
+    : currentUser.role === "admin_2"
+      ? [shopScopeId, currentUser.id, shopScopeId]
+      : [shopScopeId, shopScopeId, shopScopeId];
 
   const userWhere = isSuperAdmin ? "" : " WHERE admin_id = ?";
-  const userParams = isSuperAdmin ? [] : [currentUser.id];
+  const userParams = isSuperAdmin ? [] : [shopScopeId];
 
   const [[usersRow]]: any = await pool.query(
     `SELECT COUNT(*) AS total_users FROM users${userWhere}`,
@@ -45,17 +60,20 @@ export default defineEventHandler(async (event) => {
     );
     totalAdmins = Number(adminsRow?.total_admins || 0);
   } else {
-    // Với admin_1 chỉ cần quan tâm tới chính shop của mình
     totalAdmins = 1;
   }
+
+  const ordersFrom = isSuperAdmin
+    ? "FROM orders o"
+    : "FROM orders o INNER JOIN users u ON u.id = o.user_id";
 
   const [[ordersRow]]: any = await pool.query(
     `
       SELECT
         COUNT(*) AS total_orders,
-        SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) AS completed_orders,
-        SUM(CASE WHEN status = 'completed' THEN amount ELSE 0 END) AS completed_amount
-      FROM orders o
+        SUM(CASE WHEN o.status = 'completed' THEN 1 ELSE 0 END) AS completed_orders,
+        SUM(CASE WHEN o.status = 'completed' THEN o.amount ELSE 0 END) AS completed_amount
+      ${ordersFrom}
       ${scopeWhere}
     `,
     scopeParams,
@@ -64,7 +82,17 @@ export default defineEventHandler(async (event) => {
   const depositWhere = isSuperAdmin
     ? " WHERE pt.status = 'success'"
     : " WHERE pt.status = 'success' AND u.admin_id = ?";
-  const depositParams = isSuperAdmin ? [] : [currentUser.id];
+  const depositParams = isSuperAdmin ? [] : [shopScopeId];
+
+  /** Tự bán vs bán hộ: dựa trên seller và chủ SP (không dùng orders.admin_id vì khi cấp dưới bán, admin_id = seller). */
+  const shopSelfAffSelect = `
+          SUM(CASE WHEN o.status = 'completed' AND COALESCE(o.seller_admin_id, o.admin_id) = o.product_owner_admin_id THEN COALESCE(o.amount_credit, ROUND(o.amount)) ELSE 0 END) AS self_amount,
+          SUM(CASE WHEN o.status = 'completed' AND o.seller_admin_id IS NOT NULL AND o.seller_admin_id <> o.product_owner_admin_id THEN COALESCE(o.amount_credit, ROUND(o.amount)) ELSE 0 END) AS affiliate_amount`;
+
+  const ordersFromForAgg = isSuperAdmin
+    ? "FROM orders o"
+    : "FROM orders o INNER JOIN users u ON u.id = o.user_id";
+
   const [[depositRow]]: any = await pool.query(
     `
       SELECT
@@ -116,7 +144,7 @@ export default defineEventHandler(async (event) => {
       ORDER BY pt.created_at DESC
       LIMIT 5
     `,
-    isSuperAdmin ? [] : [currentUser.id],
+    isSuperAdmin ? [] : [shopScopeId],
   );
 
   // ===== Aggregations by day / month / year =====
@@ -169,15 +197,14 @@ export default defineEventHandler(async (event) => {
           COUNT(*) AS total_orders,
           SUM(CASE WHEN o.status = 'completed' THEN 1 ELSE 0 END) AS completed_orders,
           SUM(CASE WHEN o.status = 'completed' THEN COALESCE(o.amount_credit, ROUND(o.amount)) ELSE 0 END) AS completed_amount,
-          SUM(CASE WHEN o.status = 'completed' AND o.product_owner_admin_id = ? AND o.admin_id = o.product_owner_admin_id THEN COALESCE(o.amount_credit, ROUND(o.amount)) ELSE 0 END) AS self_amount,
-          SUM(CASE WHEN o.status = 'completed' AND o.admin_id = ? AND o.product_owner_admin_id <> ? THEN COALESCE(o.amount_credit, ROUND(o.amount)) ELSE 0 END) AS affiliate_amount
-        FROM orders o
+          ${shopSelfAffSelect}
+        ${ordersFromForAgg}
         ${scopeWhere}
           AND o.created_at >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)
         GROUP BY DATE(o.created_at)
         ORDER BY period ASC
       `,
-    isSuperAdmin ? [] : [currentUser.id, currentUser.id, currentUser.id, ...scopeParams],
+    isSuperAdmin ? [] : scopeParams,
   );
 
   for (const row of ordersByDay || []) {
@@ -223,15 +250,14 @@ export default defineEventHandler(async (event) => {
           COUNT(*) AS total_orders,
           SUM(CASE WHEN o.status = 'completed' THEN 1 ELSE 0 END) AS completed_orders,
           SUM(CASE WHEN o.status = 'completed' THEN COALESCE(o.amount_credit, ROUND(o.amount)) ELSE 0 END) AS completed_amount,
-          SUM(CASE WHEN o.status = 'completed' AND o.product_owner_admin_id = ? AND o.admin_id = o.product_owner_admin_id THEN COALESCE(o.amount_credit, ROUND(o.amount)) ELSE 0 END) AS self_amount,
-          SUM(CASE WHEN o.status = 'completed' AND o.admin_id = ? AND o.product_owner_admin_id <> ? THEN COALESCE(o.amount_credit, ROUND(o.amount)) ELSE 0 END) AS affiliate_amount
-        FROM orders o
+          ${shopSelfAffSelect}
+        ${ordersFromForAgg}
         ${scopeWhere}
           AND o.created_at >= DATE_SUB(CURDATE(), INTERVAL 5 MONTH)
         GROUP BY DATE_FORMAT(o.created_at, '%Y-%m')
         ORDER BY period ASC
       `,
-    isSuperAdmin ? [] : [currentUser.id, currentUser.id, currentUser.id, ...scopeParams],
+    isSuperAdmin ? [] : scopeParams,
   );
 
   for (const row of ordersByMonth || []) {
@@ -277,15 +303,14 @@ export default defineEventHandler(async (event) => {
           COUNT(*) AS total_orders,
           SUM(CASE WHEN o.status = 'completed' THEN 1 ELSE 0 END) AS completed_orders,
           SUM(CASE WHEN o.status = 'completed' THEN COALESCE(o.amount_credit, ROUND(o.amount)) ELSE 0 END) AS completed_amount,
-          SUM(CASE WHEN o.status = 'completed' AND o.product_owner_admin_id = ? AND o.admin_id = o.product_owner_admin_id THEN COALESCE(o.amount_credit, ROUND(o.amount)) ELSE 0 END) AS self_amount,
-          SUM(CASE WHEN o.status = 'completed' AND o.admin_id = ? AND o.product_owner_admin_id <> ? THEN COALESCE(o.amount_credit, ROUND(o.amount)) ELSE 0 END) AS affiliate_amount
-        FROM orders o
+          ${shopSelfAffSelect}
+        ${ordersFromForAgg}
         ${scopeWhere}
           AND YEAR(o.created_at) >= YEAR(CURDATE()) - 2
         GROUP BY YEAR(o.created_at)
         ORDER BY period ASC
       `,
-    isSuperAdmin ? [] : [currentUser.id, currentUser.id, currentUser.id, ...scopeParams],
+    isSuperAdmin ? [] : scopeParams,
   );
 
   for (const row of ordersByYear || []) {

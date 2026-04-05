@@ -6,6 +6,7 @@ let schemaReady = false
 
 export type AdminWalletType =
   | "sale_commission"   // Hoa hồng shop bán hộ
+  | "subordinate_commission" // Gương hoa hồng cấp dưới (admin_2) — cộng vào admin_1 để đối soát trả từ admin_0
   | "product_revenue"   // Doanh thu chủ/shop (phần còn lại sau commission)
   | "payout"            // admin_0 đã chuyển tiền cho shop (âm)
   | "adjust"            // Điều chỉnh thủ công
@@ -77,6 +78,25 @@ export async function recordOrderEarnings(
        VALUES (?, ?, 'sale_commission', ?, 'order', ?, ?)`,
       [sellerAdminId, commissionCredit, orderId, String(orderId), note]
     )
+    const [[sellerInfo]]: any = await conn.query(
+      `SELECT role, parent_admin_id FROM admins WHERE id = ? LIMIT 1`,
+      [sellerAdminId],
+    )
+    if (
+      sellerInfo &&
+      String(sellerInfo.role) === "admin_2" &&
+      sellerInfo.parent_admin_id != null
+    ) {
+      const parentId = Number(sellerInfo.parent_admin_id)
+      if (Number.isFinite(parentId) && parentId > 0) {
+        const rollupNote = `Hoa hồng cấp dưới #${sellerAdminId} (đối soát trả từ admin_0): ${note}`
+        await conn.query(
+          `INSERT INTO admin_wallet (admin_id, amount_credit, wallet_type, order_id, reference_type, reference_id, note)
+           VALUES (?, ?, 'subordinate_commission', ?, 'order', ?, ?)`,
+          [parentId, commissionCredit, orderId, String(orderId), rollupNote],
+        )
+      }
+    }
   }
   if (ownerCredit > 0) {
     await conn.query(
