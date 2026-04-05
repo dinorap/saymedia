@@ -4,6 +4,7 @@ import { setOtp } from '../../../utils/otpStore'
 import { enqueueOtpEmail } from '../../../utils/emailQueue'
 import { checkOtpRateLimit } from '../../../utils/otpRateLimit'
 import { getJwtSecret } from '../../../utils/jwt'
+import { resolveAssigneeAdminId } from '../../../utils/registerAssignee'
 
 const JWT_SECRET = getJwtSecret()
 const COOKIE_NAME = 'register_ref_claim'
@@ -46,8 +47,10 @@ export default defineEventHandler(async (event) => {
     deleteCookie(event, COOKIE_NAME, { path: '/' })
   }
 
+  const adminIdResolved = await resolveAssigneeAdminId(adminId)
+
   const code = String(Math.floor(100000 + Math.random() * 900000))
-  setOtp(e, code, { username: u, password, admin_id: adminId })
+  setOtp(e, code, { username: u, password, admin_id: adminIdResolved })
   enqueueOtpEmail(e, code, 'đăng ký')
   return { success: true, message: 'Đã gửi mã OTP đến email của bạn!' }
 })

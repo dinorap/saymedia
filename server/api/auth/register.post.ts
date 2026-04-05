@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken'
 import pool from '../../utils/db'
 import { addAuditLog } from '../../utils/audit'
 import { getJwtSecret } from '../../utils/jwt'
+import { resolveAssigneeAdminId } from '../../utils/registerAssignee'
 
 const JWT_SECRET = getJwtSecret()
 const COOKIE_NAME = 'register_ref_claim'
@@ -32,6 +33,8 @@ export default defineEventHandler(async (event) => {
     deleteCookie(event, COOKIE_NAME, { path: '/' })
   }
 
+  const adminIdResolved = await resolveAssigneeAdminId(adminId)
+
   const [byUsername]: any = await pool.query('SELECT id FROM users WHERE username = ?', [username.trim()])
   if (byUsername.length > 0) {
     throw createError({ statusCode: 400, statusMessage: 'Tên đăng nhập đã tồn tại!' })
@@ -47,7 +50,7 @@ export default defineEventHandler(async (event) => {
     // Lưu user vào cơ sở dữ liệu
     const [result]: any = await pool.query(
       'INSERT INTO users (username, email, password_hash, admin_id) VALUES (?, ?, ?, ?)',
-      [username.trim(), email.trim(), hashedPassword, adminId]
+      [username.trim(), email.trim(), hashedPassword, adminIdResolved]
     );
 
     await addAuditLog({
@@ -55,14 +58,14 @@ export default defineEventHandler(async (event) => {
       action: 'user_registered',
       targetType: 'user',
       targetId: result.insertId,
-      metadata: { admin_id: adminId, email: email.trim() },
+      metadata: { admin_id: adminIdResolved, email: email.trim() },
     })
 
     return { 
       success: true, 
       message: 'Đăng ký thành công!', 
       userId: result.insertId,
-      assignedToAdmin: adminId 
+      assignedToAdmin: adminIdResolved
     };
   } catch (error: any) {
     if (error.code === 'ER_DUP_ENTRY') {

@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs'
 import pool from '../../../utils/db'
 import { consumeOtp } from '../../../utils/otpStore'
+import { resolveAssigneeAdminId } from '../../../utils/registerAssignee'
 
 export default defineEventHandler(async (event) => {
   const body = await readBody(event)
@@ -30,16 +31,18 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'Email đã được đăng ký!' })
   }
 
+  const adminIdResolved = await resolveAssigneeAdminId(payload.admin_id)
+
   const hashedPassword = await bcrypt.hash(payload.password, 10)
   const [result]: any = await pool.query(
     'INSERT INTO users (username, email, password_hash, admin_id) VALUES (?, ?, ?, ?)',
-    [payload.username, e, hashedPassword, payload.admin_id || 1]
+    [payload.username, e, hashedPassword, adminIdResolved]
   )
 
   return {
     success: true,
     message: 'Đăng ký thành công!',
     userId: result.insertId,
-    assignedToAdmin: payload.admin_id || 1
+    assignedToAdmin: adminIdResolved
   }
 })

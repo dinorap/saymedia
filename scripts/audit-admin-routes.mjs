@@ -142,3 +142,12 @@ test("login OTP: không lộ Email chưa đăng ký ở bước xác thực", ()
   const s = read("server/api/auth/login.post.ts");
   assert.ok(!s.includes("Email chưa đăng ký!"));
 });
+
+test("đăng ký: resolveAssigneeAdminId — admin ref phải active (FK users.admin_id)", () => {
+  const u = read("server/utils/registerAssignee.ts");
+  assert.ok(u.includes("resolveAssigneeAdminId"));
+  assert.ok(u.includes("is_active = 1"));
+  assert.ok(read("server/api/auth/register.post.ts").includes("resolveAssigneeAdminId"));
+  assert.ok(read("server/api/auth/register/send-otp.post.ts").includes("resolveAssigneeAdminId"));
+  assert.ok(read("server/api/auth/register/verify.post.ts").includes("resolveAssigneeAdminId"));
+});

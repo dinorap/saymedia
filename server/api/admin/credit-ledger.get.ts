@@ -44,7 +44,7 @@ export default defineEventHandler(async (event) => {
   } else {
     limit = Math.min(100, Math.max(10, limit));
   }
-  const offset = (page - 1) * limit;;
+  const offset = (page - 1) * limit;
 
   const conditions: string[] = [];
   const params: any[] = [];
