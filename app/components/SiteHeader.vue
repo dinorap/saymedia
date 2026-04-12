@@ -834,7 +834,8 @@ onUnmounted(() => {
   right: 0;
   z-index: 999;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  /* Cột phải (actions) rộng hơn cột trái để email/tên dài luôn một dòng; cột giữa auto */
+  grid-template-columns: minmax(0, 0.88fr) auto minmax(260px, 1.28fr);
   align-items: center;
   column-gap: 20px;
   padding: 16px 150px;
@@ -856,6 +857,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   min-width: 0;
+  max-width: 100%;
 }
 
 .site-partner-invite {
@@ -997,7 +999,8 @@ onUnmounted(() => {
 
 .site-header-nav {
   justify-self: center;
-  max-width: 100%;
+  max-width: min(100%, 52vw);
+  min-width: 0;
 }
 
 .site-nav-links {
@@ -1034,9 +1037,11 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 10px;
   min-width: 0;
+  width: 100%;
+  max-width: 100%;
 }
 
 .site-mobile-controls {
@@ -1194,6 +1199,7 @@ onUnmounted(() => {
   background: rgba(255, 255, 255, 0.04);
   color: var(--text-primary);
   transition: var(--transition-fast);
+  flex-shrink: 0;
 }
 
 .site-cart-btn:hover {
@@ -1255,6 +1261,7 @@ onUnmounted(() => {
   min-width: 112px;
   max-width: min(240px, 30vw);
   box-sizing: border-box;
+  flex-shrink: 0;
 }
 
 .site-header-credit:hover {
@@ -1368,6 +1375,7 @@ onUnmounted(() => {
   padding: 0 8px;
   box-sizing: border-box;
   border-radius: 10px;
+  flex-shrink: 0;
 }
 
 .site-lang-btn {
@@ -1418,13 +1426,14 @@ onUnmounted(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  max-width: min(200px, 22vw);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .site-btn-login {
+  max-width: min(200px, 22vw);
+  flex-shrink: 0;
   background: transparent;
   color: var(--text-primary);
   border: 1px solid var(--blue-border);
@@ -1443,10 +1452,14 @@ onUnmounted(() => {
 .site-user-dropdown {
   position: relative;
   min-width: 0;
-  flex-shrink: 1;
+  flex: 1 1 auto;
+  max-width: 100%;
 }
 
 .site-btn-user-name {
+  max-width: min(420px, 100%);
+  min-width: 0;
+  flex: 1 1 auto;
   background: transparent;
   color: var(--text-primary);
   border: 1px solid var(--blue-border);

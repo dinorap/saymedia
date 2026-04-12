@@ -3,19 +3,23 @@ import { useCartStore } from "~/stores/cart";
 import { isCustomerRole } from "~/composables/useCustomerRole";
 
 /**
- * Composable giỏ hàng: chỉ lưu DB (user đã đăng nhập). Khách không đăng nhập: giỏ in-memory, mất khi tải lại trang.
+ * Composable giỏ hàng: đồng bộ DB khi đã đăng nhập (user/admin_3).
+ * Khách: chỉ Pinia (giữ khi điều hướng trong SPA; mất khi F5 / đóng tab vì không lưu localStorage).
  */
 export function useCart() {
   const store = useCartStore();
   const { cart } = storeToRefs(store);
   const roleCookie = process.client ? useCookie("user_role", { path: "/" }) : null;
 
-  // Chỉ lưu giỏ trên DB khi đã đăng nhập (user). Khách: giỏ in-memory, mất khi reload.
+  // Chỉ lưu giỏ trên DB khi đã đăng nhập (user). Khách: giỏ in-memory (Pinia), mất khi reload trang.
+  // Lưu ý: không được gọi reset() khi khách điều hướng sang trang khác — mỗi lần mount gọi lại useCart();
+  // trước đây `loadedFromServer === true` + khách → reset làm mất giỏ trước khi vào /cart.
   if (process.client) {
     const role = roleCookie?.value;
     if (!isCustomerRole(role)) {
-      if (store.loadedFromServer) store.reset();
-      else store.loadedFromServer = true;
+      if (!store.loadedFromServer) {
+        store.loadedFromServer = true;
+      }
     } else if (!store.loadedFromServer) {
       $fetch("/api/cart/my")
         .then((res: any) => {

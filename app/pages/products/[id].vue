@@ -362,7 +362,7 @@
 
             <div class="buy-price">
               <div class="price">
-                {{ formatVnd(currentPrice) }}
+                {{ formatVnd(lineTotalPrice) }}
                 <span class="unit">{{ $t("product.points") }}</span>
               </div>
               <p v-if="stockForSelected != null" class="buy-stock-hint">
@@ -464,7 +464,7 @@
       :product="product"
       :balance="currentUser?.credit"
       :quantity="quantity"
-      @update:quantity="(val) => (quantity.value = val)"
+      @update:quantity="onConfirmQuantityUpdate"
       @confirm="doPurchase"
     />
 
@@ -694,6 +694,17 @@ const maxQty = computed<number>(() => {
   return Math.min(100, s);
 });
 
+/** Đơn giá × số lượng (đồng bộ logic clamp với ô nhập / giỏ hàng) */
+const lineTotalPrice = computed<number>(() => {
+  const unit = Number(currentPrice.value) || 0;
+  const max = maxQty.value;
+  let q = Number(quantity.value);
+  if (!Number.isFinite(q) || q < 0) q = max >= 1 ? 1 : 0;
+  if (max >= 1 && q > max) q = max;
+  if (max <= 0) q = 0;
+  return unit * q;
+});
+
 function clampQuantity() {
   const max = maxQty.value;
   const q = quantity.value;
@@ -702,6 +713,12 @@ function clampQuantity() {
     return;
   }
   if (q > max) quantity.value = max;
+}
+
+function onConfirmQuantityUpdate(val: unknown) {
+  const n = Number(val);
+  quantity.value = Number.isFinite(n) && n > 0 ? n : 1;
+  clampQuantity();
 }
 
 watch(selectedDuration, () => clampQuantity());
