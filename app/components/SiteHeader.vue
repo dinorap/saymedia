@@ -14,41 +14,42 @@
         locale === "vi" ? "Đối tác" : "Partner"
       }}</span>
     </button>
-    <div class="site-header-brand">
-      <NuxtLink to="/" class="site-logo">
-        <img src="/logo.png" alt="SayMedia AI" class="site-logo-img" />
-      </NuxtLink>
-    </div>
-    <nav class="site-header-nav site-nav-links" aria-label="Main">
-      <NuxtLink to="/">{{ $t("nav.home") }}</NuxtLink>
-      <NuxtLink to="/products">{{ $t("nav.services") }}</NuxtLink>
-      <NuxtLink to="/announcements">{{ $t("admin.announcements") }}</NuxtLink>
-      <NuxtLink to="/about">{{ $t("nav.about") }}</NuxtLink>
-      <NuxtLink to="/contact">{{ $t("nav.contact") }}</NuxtLink>
-      <NuxtLink to="/pricing">{{ $t("nav.pricing") }}</NuxtLink>
-    </nav>
-    <div class="site-header-actions">
-      <div class="site-lang-switcher">
-        <button
-          type="button"
-          class="site-lang-btn"
-          :class="{ active: locale === 'en' }"
-          @click="setLocale('en')"
-        >
-          EN
-        </button>
-        <span class="site-lang-sep">|</span>
-        <button
-          type="button"
-          class="site-lang-btn"
-          :class="{ active: locale === 'vi' }"
-          @click="setLocale('vi')"
-        >
-          VI
-        </button>
+    <div class="site-header-main">
+      <div class="site-header-brand">
+        <NuxtLink to="/" class="site-logo">
+          <img src="/logo.png" alt="SayMedia AI" class="site-logo-img" />
+        </NuxtLink>
       </div>
-      <NuxtLink to="/cart" class="site-cart-btn">
-        <span class="site-cart-icon" aria-hidden="true">
+      <nav class="site-header-nav site-nav-links" aria-label="Main">
+        <NuxtLink to="/">{{ $t("nav.home") }}</NuxtLink>
+        <NuxtLink to="/products">{{ $t("nav.services") }}</NuxtLink>
+        <NuxtLink to="/announcements">{{ $t("admin.announcements") }}</NuxtLink>
+        <NuxtLink to="/about">{{ $t("nav.about") }}</NuxtLink>
+        <NuxtLink to="/contact">{{ $t("nav.contact") }}</NuxtLink>
+        <NuxtLink to="/pricing">{{ $t("nav.pricing") }}</NuxtLink>
+      </nav>
+      <div class="site-header-actions">
+        <div class="site-lang-switcher">
+          <button
+            type="button"
+            class="site-lang-btn"
+            :class="{ active: locale === 'en' }"
+            @click="setLocale('en')"
+          >
+            EN
+          </button>
+          <span class="site-lang-sep">|</span>
+          <button
+            type="button"
+            class="site-lang-btn"
+            :class="{ active: locale === 'vi' }"
+            @click="setLocale('vi')"
+          >
+            VI
+          </button>
+        </div>
+        <NuxtLink to="/cart" class="site-cart-btn">
+          <span class="site-cart-icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none">
             <path
               d="M7 7h14l-2 8H8L7 7Z"
@@ -67,70 +68,71 @@
               fill="currentColor"
             />
           </svg>
-        </span>
-        <span class="site-cart-text">{{ $t("cart.title") }}</span>
-        <span v-if="cartCount" class="site-cart-badge">{{ cartCount }}</span>
-      </NuxtLink>
-      <button
-        v-if="currentUser && isCustomerRole(currentUser.role)"
-        type="button"
-        class="site-header-credit"
-        :title="
-          locale === 'vi'
-            ? `Nạp tiền — ${$t('product.balance')}: ${formatCredit(currentUser.credit)}`
-            : `Deposit — ${$t('product.balance')}: ${formatCredit(currentUser.credit)}`
-        "
-        @click="goDeposit"
-      >
-        <span class="site-header-credit-icon" aria-hidden="true">◎</span>
-        <span class="site-header-credit-text">
-          <span class="site-header-credit-label">{{
-            $t("product.balance")
-          }}</span>
-          <span class="site-header-credit-value">{{
-            formatCredit(currentUser.credit)
-          }}</span>
-        </span>
-      </button>
-      <template v-if="currentUser">
-        <div
-          class="site-user-dropdown"
-          @mouseenter="
-            cancelClose();
-            openDropdown();
+          </span>
+          <span class="site-cart-text">{{ $t("cart.title") }}</span>
+          <span v-if="cartCount" class="site-cart-badge">{{ cartCount }}</span>
+        </NuxtLink>
+        <button
+          v-if="currentUser && isCustomerRole(currentUser.role)"
+          type="button"
+          class="site-header-credit"
+          :title="
+            locale === 'vi'
+              ? `Nạp tiền — ${$t('product.balance')}: ${formatCredit(currentUser.credit)}`
+              : `Deposit — ${$t('product.balance')}: ${formatCredit(currentUser.credit)}`
           "
-          @mouseleave="scheduleClose()"
+          @click="goDeposit"
         >
-          <button
-            type="button"
-            class="site-btn-user-name"
-            @click="openDropdown()"
+          <span class="site-header-credit-icon" aria-hidden="true">◎</span>
+          <span class="site-header-credit-text">
+            <span class="site-header-credit-label">{{
+              $t("product.balance")
+            }}</span>
+            <span class="site-header-credit-value">{{
+              formatCredit(currentUser.credit)
+            }}</span>
+          </span>
+        </button>
+        <template v-if="currentUser">
+          <div
+            class="site-user-dropdown"
+            @mouseenter="
+              cancelClose();
+              openDropdown();
+            "
+            @mouseleave="scheduleClose()"
           >
-            {{ currentUser.username }}
-          </button>
-          <div v-show="showDropdown" class="site-user-dropdown-menu">
-            <div class="site-user-dropdown-menu-inner">
-              <button
-                type="button"
-                class="site-dropdown-item"
-                @click="goProfile"
-              >
-                {{ $t("auth.profile") }}
-              </button>
-              <button
-                type="button"
-                class="site-dropdown-item"
-                @click="doLogout"
-              >
-                {{ $t("auth.logout") }}
-              </button>
+            <button
+              type="button"
+              class="site-btn-user-name"
+              @click="openDropdown()"
+            >
+              {{ currentUser.username }}
+            </button>
+            <div v-show="showDropdown" class="site-user-dropdown-menu">
+              <div class="site-user-dropdown-menu-inner">
+                <button
+                  type="button"
+                  class="site-dropdown-item"
+                  @click="goProfile"
+                >
+                  {{ $t("auth.profile") }}
+                </button>
+                <button
+                  type="button"
+                  class="site-dropdown-item"
+                  @click="doLogout"
+                >
+                  {{ $t("auth.logout") }}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      </template>
-      <button v-else class="site-btn-login" @click="navigateTo('/login')">
-        {{ $t("auth.login") }}
-      </button>
+        </template>
+        <button v-else class="site-btn-login" @click="navigateTo('/login')">
+          {{ $t("auth.login") }}
+        </button>
+      </div>
     </div>
     <div class="site-mobile-controls">
       <NuxtLink to="/cart" class="site-mobile-cart" @click="closeMobileMenu">
@@ -833,11 +835,9 @@ onUnmounted(() => {
   left: 0;
   right: 0;
   z-index: 999;
-  display: grid;
-  /* Cột phải (actions) rộng hơn cột trái để email/tên dài luôn một dòng; cột giữa auto */
-  grid-template-columns: minmax(0, 0.88fr) auto minmax(260px, 1.28fr);
+  display: flex;
   align-items: center;
-  column-gap: 20px;
+  gap: 0;
   padding: 16px 150px;
   border-bottom: 1px solid var(--blue-border);
   background: linear-gradient(
@@ -852,6 +852,16 @@ onUnmounted(() => {
 }
 
 /* Nút đối tác: nằm trong vùng padding trái của header, không tăng padding → logo giữ đúng chỗ cũ */
+/* Một hàng: logo | menu (giữa viewport) | nút — hai cột 1fr chia đều phần thừa */
+.site-header-main {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 20px;
+  min-width: 0;
+}
+
 .site-header-brand {
   justify-self: start;
   display: flex;
@@ -1040,8 +1050,8 @@ onUnmounted(() => {
   flex-wrap: nowrap;
   gap: 10px;
   min-width: 0;
-  width: 100%;
   max-width: 100%;
+  width: max-content;
 }
 
 .site-mobile-controls {
@@ -1776,6 +1786,13 @@ onUnmounted(() => {
   }
   .site-logo-img {
     height: 42px;
+  }
+  .site-header-main {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    min-width: 0;
+    gap: 0;
   }
   .site-header-nav,
   .site-header-actions {

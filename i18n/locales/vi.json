@@ -642,7 +642,13 @@
   },
   "orderHistory": {
     "link": "Link",
-    "openLink": "Mở link tải"
+    "openLink": "Mở link tải",
+    "empty": "Chưa có đơn hàng nào",
+    "filterEmpty": "Không có đơn hàng nào phù hợp với bộ lọc.",
+    "time": "Thời gian",
+    "amount": "Số điểm",
+    "status": "Trạng thái",
+    "loadError": "Không lấy được lịch sử đơn hàng"
   },
   "profile": {
     "balanceLabel": "Số dư hiện tại",

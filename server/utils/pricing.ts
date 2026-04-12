@@ -194,6 +194,10 @@ const pricingOptionSchema = z.object({
   video: z.string().default(""),
   devicePricePerMonth: z.string().default(""),
   benefits: z.array(z.string()).default([]),
+  /** Ghi đè sản phẩm gắn key cho option này (null = dùng linkedProductId của cả bảng) */
+  linkedProductId: z.coerce.number().int().positive().optional().nullable(),
+  /** Loại key (product_keys.valid_duration), ưu tiên khi mua combo */
+  keyDuration: z.string().trim().max(24).optional().nullable(),
 });
 
 const pricingPackageSchema = z.object({
@@ -210,6 +214,8 @@ const pricingPackageSchema = z.object({
 
 export const pricingSetDataSchema = z.object({
   displayName: z.string().default(""),
+  /** Sản phẩm (tool key) dùng cho mua combo báo giá YouTube */
+  linkedProductId: z.coerce.number().int().positive().optional().nullable(),
   packages: z.array(pricingPackageSchema).min(0).max(10).default([]),
 });
 

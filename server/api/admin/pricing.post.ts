@@ -38,10 +38,17 @@ export default defineEventHandler(async (event) => {
   }
 
   // Chỉ lưu nội dung; các trường còn lại (id/created_at...) do DB tự quản lý.
-  const payload = {
+  const payload: Record<string, unknown> = {
     displayName: body.data.displayName || "",
     packages: Array.isArray(body.data.packages) ? body.data.packages : [],
   };
+  if (pricingType === "youtube_long_video") {
+    payload.linkedProductId =
+      body.data.linkedProductId != null &&
+      Number(body.data.linkedProductId) > 0
+        ? Math.trunc(Number(body.data.linkedProductId))
+        : null;
+  }
 
   const json = JSON.stringify(payload);
   const [result]: any = await pool.query(

@@ -642,7 +642,13 @@
   },
   "orderHistory": {
     "link": "Link",
-    "openLink": "Open download link"
+    "openLink": "Open download link",
+    "empty": "No orders yet",
+    "filterEmpty": "No orders match your filters.",
+    "time": "Time",
+    "amount": "Credits",
+    "status": "Status",
+    "loadError": "Could not load order history"
   },
   "profile": {
     "balanceLabel": "Current balance",

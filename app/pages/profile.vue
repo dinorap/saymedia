@@ -665,6 +665,7 @@ async function loadQuickStats() {
 onMounted(async () => {
   await loadProfile({});
   await loadQuickStats();
+  await consumeOrdersQuery();
   await openDepositFromUrlQuery();
   useAutoRefresh(
     async () => {
@@ -684,6 +685,25 @@ watch(
       await loadProfile({});
     }
     await openDepositFromUrlQuery();
+  },
+);
+
+/** Mở modal đơn hàng khi URL có ?orders=1 (sau khi route/profile đã sẵn sàng). */
+async function consumeOrdersQuery() {
+  const o = route.query.orders;
+  if (o !== "1" && o !== "true") return;
+  showOrderHistoryModal.value = true;
+  const q = { ...route.query };
+  delete q.orders;
+  await navigateTo({ path: "/profile", query: q }, { replace: true });
+}
+
+watch(
+  () => route.query.orders,
+  (orders) => {
+    if (orders === "1" || orders === "true") {
+      void consumeOrdersQuery();
+    }
   },
 );
 

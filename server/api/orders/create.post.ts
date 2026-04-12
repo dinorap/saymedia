@@ -16,6 +16,8 @@ import { addSocialProofItem } from "../../utils/socialProof";
 import { orderCreateSchema, parseBodyOrThrow } from "../../utils/schemas";
 import { VALID_KEY_DURATIONS, ensureProductKeySchema } from "../../utils/productKeys";
 import { getJwtSecret } from "../../utils/jwt";
+import { ensurePricingSetsSchema } from "../../utils/pricing";
+import { resolveYoutubePricingCombo } from "../../utils/pricingBundle";
 
 const JWT_SECRET = getJwtSecret();
 
@@ -51,15 +53,69 @@ export default defineEventHandler(async (event) => {
   const body = parseBodyOrThrow(await readBody(event), orderCreateSchema);
   const productId = body.product_id;
   const sellerRef = (body as any).seller_ref ? String((body as any).seller_ref).trim() : null;
-  const quantityRaw = (body as any).quantity ?? 1;
+  const pricingBundle = (body as any).pricing_bundle as
+    | { pricing_type: string; package_index: number; sub_package_index: number }
+    | undefined;
+
+  const runtimeConf = useRuntimeConfig();
+  const vndPerCredit = Number(runtimeConf.depositVndPerCredit || 1000);
+
+  let quantityRaw = (body as any).quantity ?? 1;
   let quantity = Number(quantityRaw);
   if (!Number.isFinite(quantity) || quantity <= 0) quantity = 1;
   quantity = Math.min(100, Math.max(1, Math.round(quantity)));
+
   const rawDuration =
     typeof body.duration === "string" ? body.duration.trim() : "";
-  const duration = VALID_KEY_DURATIONS.includes(rawDuration as any)
+  let duration = VALID_KEY_DURATIONS.includes(rawDuration as any)
     ? rawDuration
     : null;
+
+  let useYoutubeCombo = false;
+  let comboCreditsFixed: number | null = null;
+  let comboMeta: { parentName: string; subName: string; vndParsed: number } | null =
+    null;
+
+  if (pricingBundle?.pricing_type === "youtube_long_video") {
+    await ensurePricingSetsSchema();
+    const [pRows]: any = await pool.query(
+      `SELECT data FROM pricing_sets WHERE pricing_type = ? LIMIT 1`,
+      ["youtube_long_video"],
+    );
+    const raw = pRows?.[0]?.data;
+    let parsed: any = null;
+    try {
+      parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
+    } catch {
+      parsed = null;
+    }
+    try {
+      const resolved = resolveYoutubePricingCombo(
+        parsed,
+        {
+          pricing_type: "youtube_long_video",
+          package_index: pricingBundle.package_index,
+          sub_package_index: pricingBundle.sub_package_index,
+        },
+        productId,
+        vndPerCredit,
+      );
+      duration = resolved.duration as any;
+      quantity = resolved.quantity;
+      useYoutubeCombo = true;
+      comboCreditsFixed = resolved.comboCredits;
+      comboMeta = {
+        parentName: resolved.parentName,
+        subName: resolved.subName,
+        vndParsed: resolved.vndParsed,
+      };
+    } catch (e: any) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: String(e?.message || "Gói combo không hợp lệ"),
+      });
+    }
+  }
 
   const conn = await pool.getConnection();
   try {
@@ -153,7 +209,9 @@ export default defineEventHandler(async (event) => {
     if (!duration) {
       throw createError({
         statusCode: 400,
-        statusMessage: "Vui lòng chọn loại key (duration) để mua sản phẩm này",
+        statusMessage: useYoutubeCombo
+          ? "Không xác định được loại key từ gói combo"
+          : "Vui lòng chọn loại key (duration) để mua sản phẩm này",
       });
     }
 
@@ -215,16 +273,21 @@ export default defineEventHandler(async (event) => {
     }
 
     // Quy ước: giá/amount của order là "credit" nguyên.
-    // Với sản phẩm key: unitPrice lấy từ product_keys.price (BIGINT) → luôn là số nguyên.
-    // Với sản phẩm thường (nếu có): bắt buộc giá cũng phải là số nguyên.
+    // Combo báo giá YouTube: thành tiền = điểm quy đổi từ VNĐ trong bảng giá (rẻ hơn/ khác mua lẻ).
+    // Mua lẻ: unitPrice * quantity từ product_keys.
     const unitPriceInt = Math.trunc(unitPrice);
-    if (!Number.isFinite(unitPriceInt) || unitPriceInt <= 0 || unitPriceInt !== unitPrice) {
+    if (
+      !useYoutubeCombo &&
+      (!Number.isFinite(unitPriceInt) || unitPriceInt <= 0 || unitPriceInt !== unitPrice)
+    ) {
       throw createError({
         statusCode: 400,
         statusMessage: "Giá sản phẩm phải là số nguyên (credit)",
       });
     }
-    const amountCredit = unitPriceInt * quantity;
+    const amountCredit = useYoutubeCombo
+      ? Math.trunc(Number(comboCreditsFixed || 0))
+      : unitPriceInt * quantity;
     if (!Number.isFinite(amountCredit) || amountCredit <= 0) {
       throw createError({
         statusCode: 400,
@@ -235,7 +298,23 @@ export default defineEventHandler(async (event) => {
     const initialStatus = "completed"; // tự duyệt luôn
     let note: string | null = null;
     if (duration != null && duration !== "") {
+      const retailLine =
+        !useYoutubeCombo || !Number.isFinite(unitPriceInt)
+          ? ""
+          : `Giá mua lẻ tham chiếu: ${unitPriceInt} điểm/key × ${quantity} = ${unitPriceInt * quantity} điểm`;
+      const comboLines =
+        useYoutubeCombo && comboMeta
+          ? [
+              "— Mua combo (bảng giá YouTube) —",
+              `Nhóm: ${comboMeta.parentName}`,
+              `Gói: ${comboMeta.subName}`,
+              `VNĐ niêm yết (tham chiếu): ${comboMeta.vndParsed.toLocaleString("vi-VN")} ₫`,
+              `Thanh toán: ${amountCredit} điểm`,
+              retailLine ? `${retailLine}` : "",
+            ].filter(Boolean)
+          : [];
       const lines: string[] = [
+        ...(comboLines.length ? comboLines : []),
         `Loại key: ${duration}`,
         `Số lượng: ${quantity ?? 1}`,
         "Key:",
@@ -332,6 +411,7 @@ export default defineEventHandler(async (event) => {
       success: true,
       orderId,
       newCredit: creditResult.afterBalance,
+      ...(deliveredKeys.length ? { deliveredKeys } : {}),
     };
   } catch (e) {
     try {

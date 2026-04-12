@@ -44,6 +44,31 @@
         <input v-model="editing.displayName" type="text" class="admin-input" />
       </div>
 
+      <div
+        v-if="activeType === 'youtube_long_video'"
+        class="admin-form-row pricing-linked-product-row"
+      >
+        <label>Sản phẩm (combo — phát key)</label>
+        <select
+          class="admin-input"
+          :value="editing.linkedProductId ?? ''"
+          @change="onLinkedProductChange"
+        >
+          <option value="">— Chưa chọn —</option>
+          <option
+            v-for="p in productOptions"
+            :key="p.id"
+            :value="String(p.id)"
+          >
+            {{ p.name }} (#{{ p.id }})
+          </option>
+        </select>
+        <p class="pricing-admin-hint">
+          Chọn sản phẩm trước; mỗi gói nhỏ chọn «Loại key» đúng với key đang có trong kho
+          (10d, 30d, lifetime…). Trừ điểm = VNĐ (ô Giá) ÷ tỷ lệ nạp; số key = «Thiết bị».
+        </p>
+      </div>
+
       <div class="pricing-edit-grid">
         <section
           v-for="(pkg, idx) in editing.packages"
@@ -152,13 +177,30 @@
                   />
                 </div>
                 <div class="pricing-field">
-                  <label>Số ngày sử dụng</label>
-                  <input
-                    v-model.number="op.days"
+                  <label>Loại key (theo kho sản phẩm)</label>
+                  <select
                     class="admin-input"
-                    type="number"
-                    min="0"
-                  />
+                    :disabled="!editing.linkedProductId"
+                    :value="optionDurationSelectValue(op)"
+                    @change="onYoutubeOptionKeyDuration(idx, oi, $event)"
+                  >
+                    <option value="">
+                      {{
+                        editing.linkedProductId
+                          ? linkedKeyDurations.length
+                            ? "— Chọn —"
+                            : "Chưa có key trong kho"
+                          : "Chọn sản phẩm combo trước"
+                      }}
+                    </option>
+                    <option
+                      v-for="dur in linkedKeyDurations"
+                      :key="dur"
+                      :value="dur"
+                    >
+                      {{ formatKeyDurationLabel(dur) }}
+                    </option>
+                  </select>
                 </div>
                 <div class="pricing-field">
                   <label>Giá</label>
@@ -223,6 +265,9 @@ type OptionUI = {
   price: string;
   video: string;
   devicePricePerMonth: string;
+  linkedProductId?: number | null;
+  /** product_keys.valid_duration — ưu tiên khi mua combo */
+  keyDuration?: string | null;
 };
 
 type PackageUI = {
@@ -238,6 +283,7 @@ type PackageUI = {
 
 type EditingState = {
   displayName: string;
+  linkedProductId: number | null;
   packages: PackageUI[];
 };
 
@@ -260,8 +306,76 @@ const activeType = ref<PricingSetType>("tool_affiliate");
 
 const editing = ref<EditingState>({
   displayName: "",
+  linkedProductId: null,
   packages: [],
 });
+
+const productOptions = ref<Array<{ id: number; name: string }>>([]);
+const linkedKeyDurations = ref<string[]>([]);
+
+async function refreshLinkedKeyDurations() {
+  linkedKeyDurations.value = [];
+  if (activeType.value !== "youtube_long_video") return;
+  const pid = editing.value.linkedProductId;
+  if (!pid) return;
+  try {
+    const res = await $fetch(`/api/admin/products/${pid}/key-durations`);
+    const list = (res as { data?: { durations?: string[] } })?.data?.durations;
+    linkedKeyDurations.value = Array.isArray(list) ? list : [];
+  } catch {
+    linkedKeyDurations.value = [];
+  }
+}
+
+function formatKeyDurationLabel(d: string): string {
+  const m = /^(\d+)d$/i.exec(d);
+  if (m) return `${d} (${m[1]} ngày)`;
+  return d;
+}
+
+function optionDurationSelectValue(op: OptionUI): string {
+  const kd = String(op.keyDuration || "").trim();
+  if (kd && linkedKeyDurations.value.includes(kd)) return kd;
+  const days = Math.trunc(Number(op.days ?? 0));
+  if (days > 0) {
+    const xd = `${days}d`;
+    if (linkedKeyDurations.value.includes(xd)) return xd;
+  }
+  return "";
+}
+
+function onYoutubeOptionKeyDuration(pkgIdx: number, optIdx: number, ev: Event) {
+  const t = (ev.target as HTMLSelectElement).value;
+  const op = editing.value.packages[pkgIdx]?.subPackages?.[optIdx];
+  if (!op) return;
+  if (!t) {
+    op.keyDuration = null;
+    op.days = 0;
+    return;
+  }
+  op.keyDuration = t;
+  const m = /^(\d+)d$/i.exec(t);
+  op.days = m ? parseInt(m[1], 10) : 0;
+}
+
+async function loadProductOptions() {
+  try {
+    const res = await $fetch("/api/admin/products?page=1&limit=100");
+    const rows = Array.isArray((res as any)?.data) ? (res as any).data : [];
+    productOptions.value = rows.map((r: any) => ({
+      id: Number(r.id),
+      name: String(r.name || `#${r.id}`),
+    }));
+  } catch {
+    productOptions.value = [];
+  }
+}
+
+function onLinkedProductChange(ev: Event) {
+  const t = ev.target as HTMLSelectElement;
+  editing.value.linkedProductId = t.value ? Number(t.value) : null;
+  void refreshLinkedKeyDurations();
+}
 
 function createBlankOption(): OptionUI {
   return {
@@ -271,6 +385,8 @@ function createBlankOption(): OptionUI {
     price: "",
     video: "",
     devicePricePerMonth: "",
+    linkedProductId: null,
+    keyDuration: null,
   };
 }
 
@@ -300,6 +416,13 @@ function deepClone<T>(v: T): T {
 
 function normalizeForUI(setData: any, type: PricingSetType): EditingState {
   const displayName = String(setData?.displayName || "");
+  const linkedRaw = setData?.linkedProductId;
+  const linkedProductId =
+    type === "youtube_long_video" &&
+    linkedRaw != null &&
+    Number(linkedRaw) > 0
+      ? Math.trunc(Number(linkedRaw))
+      : null;
   const packagesRaw = Array.isArray(setData?.packages) ? setData.packages : [];
   const packages: PackageUI[] = packagesRaw.map((p: any) => {
     const benefitsText = Array.isArray(p?.benefits)
@@ -326,6 +449,11 @@ function normalizeForUI(setData: any, type: PricingSetType): EditingState {
         price: String(op?.price ?? ""),
         video: String(op?.video ?? ""),
         devicePricePerMonth: String(op?.devicePricePerMonth ?? ""),
+        linkedProductId:
+          op?.linkedProductId != null && Number(op.linkedProductId) > 0
+            ? Math.trunc(Number(op.linkedProductId))
+            : null,
+        keyDuration: op?.keyDuration != null ? String(op.keyDuration).trim() || null : null,
       }));
 
       // Nếu data cũ không có subPackages, fallback tạo 1 option từ fields hiện có.
@@ -338,6 +466,8 @@ function normalizeForUI(setData: any, type: PricingSetType): EditingState {
             price: String(p?.price ?? ""),
             video: String(p?.video ?? ""),
             devicePricePerMonth: String(p?.devicePricePerMonth ?? ""),
+            linkedProductId: null,
+            keyDuration: null,
           },
         ];
       }
@@ -354,7 +484,7 @@ function normalizeForUI(setData: any, type: PricingSetType): EditingState {
   }
   if (packages.length > 10) packages.splice(10);
 
-  return { displayName, packages };
+  return { displayName, linkedProductId, packages };
 }
 
 function textToBenefits(text: string): string[] {
@@ -368,8 +498,11 @@ function textToBenefits(text: string): string[] {
 async function fetchPricing() {
   try {
     // refresh=1 để tránh cache cũ
-    const res = await $fetch("/api/admin/pricing?refresh=1");
-    if (res?.success && res?.data) {
+    const res = (await $fetch("/api/admin/pricing?refresh=1")) as {
+      success?: boolean;
+      data?: { sets?: typeof tabMeta.value; byType?: Record<string, any> };
+    };
+    if (res?.success && res.data) {
       tabMeta.value = res.data.sets || [];
       byType.value = res.data.byType || byType.value;
       const first = tabMeta.value?.[0]?.type;
@@ -378,6 +511,7 @@ async function fetchPricing() {
         byType.value[activeType.value],
         activeType.value,
       );
+      await refreshLinkedKeyDurations();
     }
   } catch (e: any) {
     console.error("[admin pricing]", e);
@@ -387,9 +521,10 @@ async function fetchPricing() {
   }
 }
 
-function resetEditingForActive() {
+async function resetEditingForActive() {
   const setData = byType.value[activeType.value];
   editing.value = normalizeForUI(setData, activeType.value);
+  await refreshLinkedKeyDurations();
 }
 
 function addPackage() {
@@ -425,14 +560,21 @@ function deleteOption(pkgIdx: number, optIdx: number) {
 }
 
 watch(activeType, () => {
-  if (!loading.value) resetEditingForActive();
+  if (!loading.value) void resetEditingForActive();
 });
+
+watch(
+  () => [activeType.value, editing.value.linkedProductId] as const,
+  () => {
+    void refreshLinkedKeyDurations();
+  },
+);
 
 async function saveActive() {
   if (saving.value) return;
   saving.value = true;
   try {
-    const data = {
+    const data: Record<string, unknown> = {
       displayName: editing.value.displayName || "",
       packages: editing.value.packages.map((p) => ({
         planName: p.planName || "",
@@ -467,11 +609,26 @@ async function saveActive() {
                 video: op.video || "",
                 devicePricePerMonth: op.devicePricePerMonth || "",
                 benefits: [],
+                linkedProductId:
+                  op.linkedProductId != null && Number(op.linkedProductId) > 0
+                    ? Math.trunc(Number(op.linkedProductId))
+                    : null,
+                keyDuration:
+                  op.keyDuration != null && String(op.keyDuration).trim()
+                    ? String(op.keyDuration).trim()
+                    : null,
               })),
             }
           : {}),
       })),
     };
+    if (activeType.value === "youtube_long_video") {
+      data.linkedProductId =
+        editing.value.linkedProductId != null &&
+        Number(editing.value.linkedProductId) > 0
+          ? Math.trunc(Number(editing.value.linkedProductId))
+          : null;
+    }
 
     await $fetch("/api/admin/pricing", {
       method: "POST",
@@ -494,7 +651,10 @@ async function saveActive() {
   }
 }
 
-onMounted(fetchPricing);
+onMounted(async () => {
+  await fetchPricing();
+  await loadProductOptions();
+});
 </script>
 
 <style scoped>
@@ -546,6 +706,18 @@ onMounted(fetchPricing);
 
 .pricing-title-row label {
   margin-bottom: 0.35rem;
+}
+
+.pricing-linked-product-row label {
+  margin-bottom: 0.35rem;
+}
+
+.pricing-admin-hint {
+  margin: 0.35rem 0 0;
+  font-size: 0.82rem;
+  color: var(--text-muted, #94a3b8);
+  line-height: 1.45;
+  max-width: 52rem;
 }
 
 .pricing-edit-grid {

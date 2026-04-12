@@ -22,7 +22,7 @@
               <input v-model="toDate" type="date" />
             </div>
             <div class="filter-group">
-              <label>{{ $t("payment.history.status") }}</label>
+              <label>{{ $t("orderHistory.status") }}</label>
               <select v-model="statusFilter" class="filter-select">
                 <option value="">{{ $t("admin.all") || "Tất cả" }}</option>
                 <option value="pending">Đang chờ</option>
@@ -48,10 +48,10 @@
             {{ error }}
           </div>
           <div v-else-if="!items.length" class="history-state">
-            {{ $t("payment.history.empty") }}
+            {{ $t("orderHistory.empty") }}
           </div>
           <div v-else-if="!filteredItems.length" class="history-state">
-            Không có bản ghi nào phù hợp với bộ lọc.
+            {{ $t("orderHistory.filterEmpty") }}
           </div>
           <div v-else class="history-table-wrap">
             <table class="history-table">
@@ -59,9 +59,9 @@
                 <tr>
                   <th>#</th>
                   <th>{{ $t("admin.productName") || "Sản phẩm" }}</th>
-                  <th>{{ $t("payment.history.time") }}</th>
-                  <th>{{ $t("payment.history.amount") }}</th>
-                  <th>{{ $t("payment.history.status") }}</th>
+                  <th>{{ $t("orderHistory.time") }}</th>
+                  <th>{{ $t("orderHistory.amount") }}</th>
+                  <th>{{ $t("orderHistory.status") }}</th>
                   <th>{{ $t("admin.orderNote") || "Ghi chú" }}</th>
                   <th>{{ $t("admin.reason") || "Lý do" }}</th>
                   <th>{{ $t("orderHistory.link") || "Link" }}</th>
@@ -450,7 +450,7 @@ async function loadHistory(opts) {
     if (!silent) {
       error.value =
         e?.data?.statusMessage ||
-        t("payment.history.loadError") ||
+        t("orderHistory.loadError") ||
         "Không lấy được lịch sử đơn hàng";
     }
   } finally {

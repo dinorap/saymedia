@@ -10,6 +10,12 @@ export const loginSchema = z.object({
 
 export type LoginBody = z.infer<typeof loginSchema>;
 
+const pricingBundleSchema = z.object({
+  pricing_type: z.literal("youtube_long_video"),
+  package_index: z.number().int().min(0).max(19),
+  sub_package_index: z.number().int().min(0).max(19),
+});
+
 /** Tạo đơn hàng */
 export const orderCreateSchema = z.object({
   product_id: z.coerce.number().int().positive("Sản phẩm không hợp lệ"),
@@ -27,6 +33,8 @@ export const orderCreateSchema = z.object({
     .min(1, "Số lượng tối thiểu là 1")
     .max(100, "Số lượng tối đa là 100")
     .optional(),
+  /** Mua theo giá combo bảng báo giá YouTube (server đối chiếu lại VNĐ → điểm) */
+  pricing_bundle: pricingBundleSchema.optional(),
 });
 
 export type OrderCreateBody = z.infer<typeof orderCreateSchema>;
